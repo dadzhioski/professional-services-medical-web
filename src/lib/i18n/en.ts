@@ -1,4 +1,10 @@
 const messages = {
+  "systemStatus.heading": "System status",
+  "systemStatus.service": "Service",
+  "systemStatus.version": "Version",
+  "systemStatus.status": "Status",
+  "systemStatus.up": "UP",
+  "systemStatus.unavailable": "Service status is currently unavailable. Please try again later.",
   "app.title": "Medical web",
   "app.description": "Medical web development foundation.",
   "navigation.skipToContent": "Skip to main content",
