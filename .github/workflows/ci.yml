@@ -1,0 +1,144 @@
+name: Medical web CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: web-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  policy-and-secrets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
+      - run: node scripts/check-api-client-version.mjs
+      - run: node --test scripts/*.test.mjs
+      - run: node scripts/security.mjs secrets
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    env:
+      API_INTERNAL_URL: http://127.0.0.1:9
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
+          registry-url: https://npm.pkg.github.com
+          scope: '@dadzhioski'
+      - run: npm install --global npm@11.17.0 --ignore-scripts
+      - name: Explain private dependency boundary
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo '::error::Fork validation requires an approved credential-free private-package access arrangement. No registry credentials are supplied to fork code.'
+          exit 1
+      - name: Install exact dependencies without lifecycle scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --run
+      - run: npm run build
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: npm run e2e
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: browser-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+      - name: Build runtime image
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: make image
+      - run: make image-smoke-test
+      - run: make container-scan
+      - name: Save verified image for trusted publishing
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: docker save professional-services-medical-web:$GITHUB_SHA --output reports/verified-image.tar
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: verified-image-${{ github.sha }}
+          path: reports/verified-image.tar
+          if-no-files-found: error
+          retention-days: 1
+  dependency-security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
+      - run: npm install --global npm@11.17.0 --ignore-scripts
+      - run: npm audit --audit-level=high
+  publish-image:
+    needs: [policy-and-secrets, verify, dependency-security]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'dadzhioski/professional-services-medical-web' && vars.PUBLISHING_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: web-image-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: verified-image-${{ github.sha }}
+          path: verified
+      - name: Publish verified image once
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ghcr.io/dadzhioski/professional-services-medical-web:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          page=1
+          while :; do
+            status=$(curl --silent --show-error --output versions.json --write-out '%{http_code}' \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              "$GITHUB_API_URL/users/dadzhioski/packages/container/professional-services-medical-web/versions?per_page=100&page=$page")
+            if [ "$status" = 404 ] && [ "$page" = 1 ]; then break; fi
+            [ "$status" = 200 ] || { echo "Package lookup failed: HTTP $status"; exit 1; }
+            jq -e 'type == "array" and all(.[]; .metadata.container.tags | type == "array")' versions.json >/dev/null
+            if jq -e --arg sha "$GITHUB_SHA" 'any(.[].metadata.container.tags[]; . == $sha)' versions.json >/dev/null; then
+              echo 'Refusing to overwrite an existing full-SHA image'; exit 1
+            fi
+            [ "$(jq length versions.json)" -eq 100 ] || break
+            page=$((page + 1))
+          done
+          docker load --input verified/verified-image.tar
+          source_image="professional-services-medical-web:$GITHUB_SHA"
+          expected=$(docker image inspect "$source_image" --format '{{.Id}}')
+          docker tag "$source_image" "$IMAGE"
+          docker push "$IMAGE"
+          docker pull "$IMAGE"
+          [ "$(docker image inspect "$IMAGE" --format '{{.Id}}')" = "$expected" ]
+          docker image inspect "$IMAGE" --format '{{json .RepoDigests}}' >> "$GITHUB_STEP_SUMMARY"

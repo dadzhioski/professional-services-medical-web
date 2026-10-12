@@ -13,7 +13,12 @@
     "test": "vitest run",
     "build": "next build",
     "dev": "next dev",
-    "start": "next start"
+    "start": "node scripts/start.mjs",
+    "e2e": "playwright test",
+    "check:api-client-version": "node scripts/check-api-client-version.mjs",
+    "test:policy": "node --test scripts/*.test.mjs",
+    "security:secrets": "node scripts/security.mjs secrets",
+    "security:dependencies": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@dadzhioski/professional-services-api-client": "0.2.0",
@@ -23,6 +28,7 @@
     "server-only": "0.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.0",
     "@tailwindcss/postcss": "4.3.3",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",

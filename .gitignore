@@ -8,6 +8,7 @@ node_modules/
 .next/
 out/
 coverage/
+reports/
 playwright-report/
 test-results/
 *.tsbuildinfo

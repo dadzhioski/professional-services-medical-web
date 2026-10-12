@@ -50,6 +50,9 @@ configuration and mocked transport; the running app has no mock fallback.
 | `npm test -- --run` | Task verification equivalent |
 | `npm run build` | Production build without fetching API status |
 | `npm run start` | Serve the production build on port 3000 |
+| `npm run e2e` | Production standalone SSR, outage/recovery, accessibility and responsive browser checks |
+| `npm run check:api-client-version` | Exact registry-client and lockfile policy |
+| `npm run test:policy` | Negative policy and security-gate tests |
 
 `/healthz` returns HTTP 200, exactly `{"status":"ok"}`, and
 `Cache-Control: no-store`, independently of backend availability.
@@ -143,7 +146,8 @@ pages reuse semantic landmarks, a focusable main target, skip link, visible focu
 styles, and a responsive source-owned Surface. The status fields use a description
 list. Tests cover structural accessibility with axe and server-rendered markup.
 jsdom does not verify visual contrast, responsive layout, or real keyboard use;
-browser checks and Playwright remain WEB-M0-004.
+Playwright now checks keyboard focus, responsive overflow and axe contrast on
+desktop and mobile Chromium; see [CI and images](docs/ci-and-images.md).
 
 No personal data, forms, cookies, external fonts, or analytics are introduced.
 
@@ -169,6 +173,7 @@ Caddy edge. The [API repository](https://github.com/dadzhioski/professional-serv
 owns backend code, canonical contracts, client generation/publication,
 database migrations, and API deployment.
 
-Playwright, CI policy checks, and Docker images remain WEB-M0-004. Caddy/Compose
+Playwright, CI policy checks, and Docker images are documented in
+[CI and images](docs/ci-and-images.md). Caddy/Compose
 files remain templates for WEB-M0-005. Deployment and rollback remain WEB-M0-006;
 real production deployment requires protected human approval.
