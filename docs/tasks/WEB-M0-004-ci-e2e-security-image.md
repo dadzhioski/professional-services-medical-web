@@ -1,6 +1,6 @@
 # WEB-M0-004: Add web CI, E2E, security gates, and immutable image publishing
 
-- **Status:** IMPLEMENTED (pending security resolution, hosted acceptance, and owner review)
+- **Status:** IMPLEMENTED (pending hosted acceptance and owner review; temporary dependency exception approved)
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M0-003
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0004
@@ -99,7 +99,7 @@ Report exact client version, workflow permissions, image identifier, E2E results
   contents:read/packages:write. Other jobs have contents:read only. There is no
   production permission. Full action SHAs and scanner/base-image digests are
   pinned. No shared dependency/build cache is used.
-- Remaining blocker: npm audit reports five high entries in the existing lint
+- Initial blocker: npm audit reports five high entries in the existing lint
   chain, rooted in braces GHSA-vfj7-8cjw-p6xm. Compatible `npm audit fix` did not
   resolve them. No forced framework downgrade or vulnerability exception added.
 - Fork PRs receive no registry credential and explicitly fail private-client
@@ -110,3 +110,24 @@ Report exact client version, workflow permissions, image identifier, E2E results
   published and no production deployment was attempted. Human review of
   package authentication and workflow permissions remains required by this task.
 - See `docs/ci-and-images.md` for commands, permissions, and release setup.
+
+## Approved audit exception follow-up (2026-10-12)
+
+- Owner explicitly approved the previously proposed exception for the existing
+  development-only GHSA-vfj7-8cjw-p6xm chain, expiring 2026-10-26 at 00:00 UTC.
+  Approval does not extend to runtime findings, other advisories or critical
+  severity. No dependency was downgraded and no vulnerability was repaired.
+- Added a dependency-free audit wrapper, exact version/path/dev-only checks,
+  recursive advisory provenance checks and an enforced deadline. Registry errors
+  and malformed/inconsistent reports fail closed. Accepted findings stay visible
+  in logs. CI, npm and Make now use the same gate.
+- Live `npm run security:dependencies` passes with five explicit accepted
+  findings. Raw `npm audit` still reports the five highs, as expected.
+- All 30 policy tests pass, including expiry, production-use, changed-version,
+  nested-installation, extra-advisory, critical-severity and registry-error cases.
+  Lint, type checking, 59 unit tests, production build and six Playwright tests
+  pass. API client remains exactly 0.2.0; package-lock and application code are
+  unchanged. SSR, browser accessibility and privacy behavior are unchanged.
+- Container build/scan and hosted GitHub execution were not repeated for this
+  audit-policy-only change. Runtime security policy remains unchanged and its
+  existing negative tests pass. Publishing permissions were not changed.

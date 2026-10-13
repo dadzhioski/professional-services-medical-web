@@ -81,8 +81,11 @@ production permission, or database operation.
 
 ## Security gates and retained evidence
 
-`npm audit --audit-level=high` includes development dependencies. High and critical
-findings fail, including unfixed findings. No vulnerability exceptions exist.
+`npm run security:dependencies` runs `npm audit --json --audit-level=high`,
+including development dependencies, and applies the owner-approved exception
+below. High and critical findings otherwise fail, including unfixed findings.
+CI and `make security-check` use this same gate. Running raw `npm audit` still
+reports the accepted vulnerability and exits nonzero; it has not been fixed.
 Gitleaks scans all fetched Git history and source files selected by Git, including
 untracked non-ignored files. A temporary synthetic token must trigger detection;
 the disposable directory is then removed. No real token is used for this probe.
@@ -93,7 +96,35 @@ also fail the command. Local reports live under ignored
 secret findings. Browser failure artifacts expire in seven days; verified image
 handoffs expire in one day and are created only on trusted main pushes.
 
-The existing braces advisory GHSA-vfj7-8cjw-p6xm in the Next.js lint dependency
-chain remains a release blocker if still reported. A forced downgrade to a
-different Next.js major is not an acceptable automatic fix. Any exception needs
-the human review required by WEB-M0-004 and an explicit scope and expiration.
+### Approved temporary development dependency exception
+
+The repository owner approved this exception in chat on 2026-10-12, explicitly
+responding "yes do the exception for these vulnerabilities" to the proposal for
+GHSA-vfj7-8cjw-p6xm. Approval expires **2026-10-26 at 00:00 UTC**. It covers only:
+
+| Development package | Installed version | Vulnerability source |
+| --- | --- | --- |
+| eslint-config-next | 16.4.0 | @next/eslint-plugin-next |
+| @next/eslint-plugin-next | 16.4.0 | fast-glob |
+| fast-glob | 3.3.1 | micromatch |
+| micromatch | 4.0.8 | braces |
+| braces | 3.0.3 | GHSA-vfj7-8cjw-p6xm |
+
+The advisory can cause stack exhaustion from deeply nested brace patterns. The
+accepted scope is the existing lint toolchain, not the deployed application.
+There is no compatible patched release; npm's proposed forced fix downgrades
+the Next.js lint configuration to another major version. This is temporary risk
+acceptance, not remediation.
+
+The machine-readable policy is `scripts/dependency-audit-exception.json`. The
+gate checks the entire advisory chain and lockfile: each package must have its
+approved version, exactly one expected top-level installation, and `dev: true`.
+It rejects changed paths/versions, production use, extra advisories in the chain,
+critical severity, malformed reports, audit errors, and expired approval. Each
+accepted package, advisory URL, and deadline remain visible in CI output.
+Unrelated high/critical findings always fail. Runtime-image scanning has no
+exception and remains unchanged.
+
+Before expiry, check upstream for a compatible fix, update the dependencies and
+remove this policy when the advisory disappears. Any extension requires renewed
+owner approval; there is no automatic renewal or environment-variable bypass.

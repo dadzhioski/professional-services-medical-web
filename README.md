@@ -161,8 +161,10 @@ server-only **0.0.1**. Package and lock files are authoritative.
 
 Next.js lint plugins declare ESLint 9 compatibility; ESLint 9.39.5 is pinned
 despite its deprecation notice. The existing audit reports five high entries
-from braces GHSA-vfj7-8cjw-p6xm in the development lint chain. No exception or
-forced downgrade is introduced here; recheck upstream fixes in WEB-M0-004.
+from braces GHSA-vfj7-8cjw-p6xm in the development lint chain. The owner approved
+a narrow development-only exception until 2026-10-26 at 00:00 UTC; run
+`npm run security:dependencies` for the enforced gate. Raw `npm audit` still
+reports the findings. See [exception scope and expiry](docs/ci-and-images.md#approved-temporary-development-dependency-exception).
 npm also warns that unrs-resolver postinstall is not allowlisted; no blanket
 install-script approval is added.
 

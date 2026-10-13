@@ -7,4 +7,4 @@ container-scan:
 	node scripts/security.mjs container
 security-check:
 	node scripts/security.mjs secrets
-	npm audit --audit-level=high
+	npm run security:dependencies

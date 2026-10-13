@@ -95,7 +95,7 @@ jobs:
           node-version: '24.19.0'
           package-manager-cache: false
       - run: npm install --global npm@11.17.0 --ignore-scripts
-      - run: npm audit --audit-level=high
+      - run: npm run security:dependencies
   publish-image:
     needs: [policy-and-secrets, verify, dependency-security]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'dadzhioski/professional-services-medical-web' && vars.PUBLISHING_ENABLED == 'true'

@@ -18,7 +18,7 @@
     "check:api-client-version": "node scripts/check-api-client-version.mjs",
     "test:policy": "node --test scripts/*.test.mjs",
     "security:secrets": "node scripts/security.mjs secrets",
-    "security:dependencies": "npm audit --audit-level=high"
+    "security:dependencies": "node scripts/audit-dependencies.mjs"
   },
   "dependencies": {
     "@dadzhioski/professional-services-api-client": "0.2.0",
