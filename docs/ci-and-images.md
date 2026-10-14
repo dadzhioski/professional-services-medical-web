@@ -46,7 +46,21 @@ libssl3 pinned to 3.5.9-r0 to address CVE-2026-14456. The runtime starts
 `node server.js`, listens on port 3000 as UID/GID 10001,
 and requires `API_INTERNAL_URL` at startup. Smoke tests use disposable containers
 and a private test network, bind a random port only to loopback, and clean up.
-Production Caddy/Compose integration remains WEB-M0-005.
+Production-shaped Caddy/Compose integration is implemented by WEB-M0-005;
+see [deployment verification](../deployment/README.md). CI builds the separate
+`professional-services-medical-edge:<full SHA>` image, validates its configuration,
+tests isolated routing/outages/restarts/accessibility, and scans its OS/Go inventory.
+Both verified images are saved together and published by a package matrix under
+the existing publishing guard. Neither job deploys the images.
+
+The edge image rebuilds Caddy 2.11.7 with Go 1.26.9 and `golang.org/x/net@v0.60.0`
+because the upstream binary contains four high findings (CVE-2026-78667,
+CVE-2026-78669 and CVE-2026-97031). Compiler and runtime base images are pinned
+by digest in `deployment/Dockerfile.caddy`; no security exception is added.
+Run `make edge-image` before validation and `make edge-container-scan` to check
+the rebuilt artifact. This additional package needs the same reviewed GHCR
+publication permissions as the web package. Builds use the public Go module
+proxy/checksum database, with exact Caddy and networking dependency versions.
 
 ## Permissions and review
 

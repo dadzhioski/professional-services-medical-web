@@ -7,6 +7,13 @@ const clean = () => ({ Results: [
 ] });
 test("accepts clean inventories", () => assert.deepEqual(checkContainerReport(clean()), { highOrCritical: 0, secrets: 0 }));
 test("fails closed on missing scan coverage", () => assert.throws(() => checkContainerReport({ Results: [] })));
+test("Caddy gate requires Go inventory in addition to OS inventory", () => {
+  assert.throws(() => checkContainerReport(clean(), "gobinary"));
+  const report = clean(); report.Results[1].Type = "gobinary";
+  assert.deepEqual(checkContainerReport(report, "gobinary"), { highOrCritical: 0, secrets: 0 });
+  report.Results[1].Vulnerabilities = [{ Severity: "CRITICAL" }];
+  assert.throws(() => checkContainerReport(report, "gobinary"));
+});
 test("blocks unfixed high vulnerabilities", () => {
   const report = clean(); report.Results[0].Vulnerabilities = [{ Severity: "HIGH" }];
   assert.throws(() => checkContainerReport(report));

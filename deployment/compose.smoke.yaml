@@ -1,0 +1,10 @@
+# Requires Compose >= 2.24.4 for !override. Reuses production routing and images.
+services:
+  caddy:
+    environment:
+      SITE_ADDRESS: http://:80
+    ports: !override
+      - target: 80
+        published: "0"
+        host_ip: 127.0.0.1
+        protocol: tcp
