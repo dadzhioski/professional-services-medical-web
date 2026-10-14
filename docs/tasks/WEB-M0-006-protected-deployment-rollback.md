@@ -1,6 +1,6 @@
 # WEB-M0-006: Add protected web deployment and rollback
 
-- **Status:** PLANNED
+- **Status:** IMPLEMENTED — local synthetic verification complete; protected GitHub/VPS proof, real API compatibility and human review pending
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M0-005
 - **Related ADRs:** WEB-ADR-0004, WEB-ADR-0005
@@ -41,12 +41,12 @@ Deploy and roll back only the web/Caddy Compose project through a protected, aud
 ## Acceptance criteria
 
 - [ ] Deployment cannot run on a normal merge or without approval.
-- [ ] Mutable or untested web image input is rejected.
-- [ ] API-unavailable preflight blocks a dependent web release.
-- [ ] Previous web release record is produced.
+- [x] Mutable or untested web image input is rejected.
+- [x] API-unavailable preflight blocks a dependent web release.
+- [x] Previous web release record is produced.
 - [ ] Non-production deployment passes health, SSR, and routing checks.
 - [ ] Non-production rollback restores the previous web release without touching API/PostgreSQL.
-- [ ] Required secret names and host permissions are documented without values.
+- [x] Required secret names and host permissions are documented without values.
 
 ## Verification
 

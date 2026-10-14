@@ -37,3 +37,13 @@ edge-container-scan:
 .PHONY: edge-image
 edge-image:
 	node scripts/edge-image.mjs
+
+.PHONY: validate-workflows test-deploy-scripts web-release-smoke web-rollback-smoke
+validate-workflows:
+	node scripts/security.mjs workflows
+test-deploy-scripts:
+	node --test scripts/deployment.test.mjs
+web-release-smoke:
+	node scripts/integration.mjs release-smoke
+web-rollback-smoke:
+	node scripts/integration.mjs rollback-smoke

@@ -22,6 +22,7 @@ jobs:
           node-version: '24.19.0'
           package-manager-cache: false
       - run: node scripts/check-api-client-version.mjs
+      - run: make validate-workflows
       - run: node --test scripts/*.test.mjs
       - run: node scripts/security.mjs secrets
   verify:
@@ -88,9 +89,13 @@ jobs:
         run: make integration-down
       - run: make container-scan
       - run: make edge-container-scan
+      - name: Verify isolated release and rollback transactions
+        run: |
+          make web-release-smoke
+          make web-rollback-smoke
       - name: Save verified image for trusted publishing
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: docker save professional-services-medical-web:$GITHUB_SHA professional-services-medical-edge:$GITHUB_SHA --output reports/verified-image.tar
+        run: docker save "professional-services-medical-web:$GITHUB_SHA" "professional-services-medical-edge:$GITHUB_SHA" --output reports/verified-image.tar
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
@@ -126,6 +131,13 @@ jobs:
       group: web-image-publication-${{ matrix.package }}
       cancel-in-progress: false
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: verified-image-${{ github.sha }}
@@ -161,3 +173,38 @@ jobs:
           docker pull "$IMAGE"
           [ "$(docker image inspect "$IMAGE" --format '{{.Id}}')" = "$expected" ]
           docker image inspect "$IMAGE" --format '{{json .RepoDigests}}' >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p reports
+          node scripts/image.mjs release-part
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-part-${{ matrix.package }}-${{ github.run_attempt }}
+          path: reports/*.json
+          if-no-files-found: error
+          retention-days: 90
+  release-evidence:
+    needs: [publish-image]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'dadzhioski/professional-services-medical-web' && vars.PUBLISHING_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: release-part-*-${{ github.run_attempt }}
+          path: reports
+          merge-multiple: true
+      - run: node scripts/image.mjs release-manifest
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-${{ github.sha }}-${{ github.run_attempt }}
+          path: reports/release.json
+          if-no-files-found: error
+          retention-days: 90

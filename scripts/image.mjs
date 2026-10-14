@@ -1,20 +1,93 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { resolve, join } from "node:path";
+import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { checkClient } from "./check-api-client-version.mjs";
-import { validateImage } from "./production-config.mjs";
+import { validateImage, releaseRepository, releaseImages, validateReleaseManifest, validateReleaseEvidence } from "./production-config.mjs";
 const run = (cmd, args, options = {}) => execFileSync(cmd, args, { stdio: "inherit", ...options });
 const capture = (cmd, args) => run(cmd, args, { encoding: "utf8", stdio: "pipe" }).trim();
 const fetchBounded = url => fetch(url, { signal: AbortSignal.timeout(10_000) });
+export const hashBytes = bytes => createHash("sha256").update(bytes).digest("hex");
+
+// Only fixed GitHub API paths are accepted; never follow authenticated redirects.
+export async function githubJson(path, token) {
+  assert.ok(path.startsWith(`/repos/${releaseRepository}/actions/`) && !path.includes(".."));
+  const response = await fetch(`https://api.github.com${path}`, { redirect: "error", signal: AbortSignal.timeout(12_000),
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" } });
+  assert.equal(response.status, 200, "GitHub release evidence unavailable");
+  return response.json();
+}
+
+export async function getReleaseEvidence(sha, token) {
+  assert.match(sha, /^[a-f0-9]{40}$/);
+  assert.ok(token);
+  const base = `/repos/${releaseRepository}/actions`;
+  const runs = await githubJson(`${base}/workflows/ci.yml/runs?head_sha=${sha}&event=push&status=success&per_page=100`, token);
+  const run = runs.workflow_runs.find(r => r.head_sha === sha && r.head_branch === "main" && r.conclusion === "success");
+  assert.ok(run, "No successful trusted main CI run");
+  const detail = await githubJson(`${base}/runs/${run.id}`, token);
+  const artifacts = await githubJson(`${base}/runs/${run.id}/artifacts?per_page=100`, token);
+  const artifact = artifacts.artifacts.find(a => a.name === `release-${sha}-${detail.run_attempt}`);
+  assert.ok(artifact && !artifact.expired && artifact.size_in_bytes < 65536, "Release evidence missing or expired");
+  const redirect = await fetch(`https://api.github.com${base}/artifacts/${artifact.id}/zip`, { redirect: "manual",
+    signal: AbortSignal.timeout(12_000), headers: { Authorization: `Bearer ${token}` } });
+  assert.equal(redirect.status, 302);
+  const location = new URL(redirect.headers.get("location"));
+  assert.equal(location.protocol, "https:");
+  assert.equal(location.username, ""); assert.equal(location.password, "");
+  assert.ok(location.hostname.endsWith(".blob.core.windows.net") || location.hostname.endsWith(".actions.githubusercontent.com"));
+  // Signed artifact URL is fetched without the GitHub credential.
+  const response = await fetch(location, { redirect: "error", signal: AbortSignal.timeout(12_000) });
+  assert.equal(response.status, 200);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  assert.ok(bytes.length < 65536);
+  assert.equal(`sha256:${hashBytes(bytes)}`, artifact.digest);
+  const directory = mkdtempSync(join(tmpdir(), "web-evidence-"));
+  try {
+    const archive = join(directory, "release.zip");
+    writeFileSync(archive, bytes, { mode: 0o600 });
+    const options = { encoding: "utf8", stdio: "pipe", timeout: 12_000, maxBuffer: 65536 };
+    assert.equal(execFileSync("unzip", ["-Z1", archive], options).trim(), "release.json");
+    const manifest = JSON.parse(execFileSync("unzip", ["-p", archive, "release.json"], options));
+    validateReleaseEvidence(manifest, detail, artifact);
+    return manifest;
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+}
+
+export function imageReleasePart(service, sha) {
+  assert.ok(Object.hasOwn(releaseImages, service));
+  assert.match(sha, /^[a-f0-9]{40}$/);
+  const image = `${releaseImages[service]}:${sha}`;
+  const detail = JSON.parse(capture("docker", ["image", "inspect", image]))[0];
+  const digests = detail.RepoDigests.filter(d => d.startsWith(`${releaseImages[service]}@`));
+  assert.equal(digests.length, 1);
+  return { image, digest: digests[0].split("@")[1], revision: detail.Config.Labels["org.opencontainers.image.revision"],
+    ...(service === "web" ? { clientVersion: detail.Config.Labels["io.professional-services.api-client.version"] } : {}) };
+}
+
+async function main() {
 const revision = capture("git", ["rev-parse", "HEAD"]);
-export const image = process.env.IMAGE ?? `professional-services-medical-web:${revision}`;
+const image = process.env.IMAGE ?? `professional-services-medical-web:${revision}`;
 validateImage(image);
 const version = checkClient(JSON.parse(readFileSync("package.json")), JSON.parse(readFileSync("package-lock.json")));
 if (process.argv[2] === "build") {
   if (!image.endsWith(`:${revision}`)) throw new Error("Build tag must match the current commit");
   const npmrc = process.env.NPM_CONFIG_USERCONFIG ?? process.env.npm_config_userconfig ?? resolve(process.env.USERPROFILE ?? process.env.HOME, ".npmrc");
   run("docker", ["build", "--platform", "linux/amd64", "--secret", `id=npmrc,src=${npmrc}`, ...(process.env.NODE_AUTH_TOKEN ? ["--secret", "id=npm_token,env=NODE_AUTH_TOKEN"] : []), "--build-arg", `REVISION=${revision}`, "--build-arg", `API_CLIENT_VERSION=${version}`, "--tag", image, "."]);
+} else if (process.argv[2] === "release-part") {
+  const service = process.env.PACKAGE === "professional-services-medical-web" ? "web" : "caddy";
+  assert.ok(["professional-services-medical-web", "professional-services-medical-edge"].includes(process.env.PACKAGE));
+  writeFileSync(`reports/${service}.json`, JSON.stringify(imageReleasePart(service, revision)));
+} else if (process.argv[2] === "release-manifest") {
+  const manifest = { schema: 1, repository: releaseRepository, sha: revision, runId: process.env.GITHUB_RUN_ID,
+    attempt: Number(process.env.GITHUB_RUN_ATTEMPT), clientVersion: version,
+    web: JSON.parse(readFileSync("reports/web.json")), caddy: JSON.parse(readFileSync("reports/caddy.json")),
+    configuration: { compose: hashBytes(readFileSync("deployment/compose.yaml")), caddy: hashBytes(readFileSync("deployment/Caddyfile")) } };
+  validateReleaseManifest(manifest, revision);
+  writeFileSync("reports/release.json", JSON.stringify(manifest, null, 2));
 } else if (process.argv[2] === "smoke") {
   const id = `web-smoke-${process.pid}`;
   const network = `${id}-network`;
@@ -62,4 +135,8 @@ if (process.argv[2] === "build") {
     for (const name of containers.reverse()) run("docker", ["rm", "--force", name]);
     if (createdNetwork) run("docker", ["network", "rm", network]);
   }
+}
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  main().catch(() => { console.error("Image operation failed; raw output withheld"); process.exitCode = 1; });
 }
