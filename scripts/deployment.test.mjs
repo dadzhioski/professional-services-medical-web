@@ -161,9 +161,20 @@ test("request input has a size bound and rejects malformed JSON", async () => {
 test("API identity requires the selected running image and real api alias", () => {
   const value = { Config: { Image: request().apiImage, Labels: {} }, Image: "sha256:id", State: { Running: true },
     NetworkSettings: { Networks: { edge: { Aliases: ["api"] } } } };
-  verifyApiIdentity(value, request().apiImage, "sha256:id", "edge");
+  const digest = `@sha256:${"c".repeat(64)}`;
+  const selected = { Id: "sha256:id", RepoDigests: [`example/api${digest}`] };
+  verifyApiIdentity(value, request().apiImage, selected, "edge");
+  value.Config.Image = `${request().apiImage}${digest}`;
+  verifyApiIdentity(value, request().apiImage, selected, "edge");
+  for (const image of [`${request().apiImage}@sha256:${"d".repeat(64)}`, `${request().apiImage}@sha256:short`,
+    `${request().apiImage}0`, `other/api:${"b".repeat(40)}${digest}`]) {
+    value.Config.Image = image;
+    assert.throws(() => verifyApiIdentity(value, request().apiImage, selected, "edge"));
+  }
+  value.Config.Image = request().apiImage;
+  assert.throws(() => verifyApiIdentity(value, request().apiImage, { ...selected, Id: "sha256:other" }, "edge"));
   value.Config.Labels["io.professional-services.web-smoke"] = "fixture";
-  assert.throws(() => verifyApiIdentity(value, request().apiImage, "sha256:id", "edge"));
+  assert.throws(() => verifyApiIdentity(value, request().apiImage, selected, "edge"));
 });
 
 test("HTTP verification checks raw SSR, metadata, headers and API version", async t => {

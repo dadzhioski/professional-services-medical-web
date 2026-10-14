@@ -409,7 +409,7 @@ export async function deployHost(stream = process.stdin) {
   let expectedIds;
   const project = "professional-services-medical-web";
   const network = "professional-services-edge";
-  const apiIdentity = record => verifyApiIdentity(inspect("container", host.apiContainer), record.apiImage, inspect("image", record.apiImage).Id, network);
+  const apiIdentity = record => verifyApiIdentity(inspect("container", host.apiContainer), record.apiImage, inspect("image", record.apiImage), network);
   const composeRelease = (record, args) => docker(["compose", "--project-name", project, "--env-file", "/dev/null", "-f", join(configuration, "compose.yaml"), ...args], {
     WEB_IMAGE: record.manifest.web.image, CADDY_IMAGE: record.manifest.caddy.image, SITE_ADDRESS: new URL(host.origin).hostname, EDGE_NETWORK: network,
   });
