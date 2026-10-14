@@ -3,12 +3,13 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import assert from "node:assert/strict";
 import { checkClient } from "./check-api-client-version.mjs";
+import { validateImage } from "./production-config.mjs";
 const run = (cmd, args, options = {}) => execFileSync(cmd, args, { stdio: "inherit", ...options });
 const capture = (cmd, args) => run(cmd, args, { encoding: "utf8", stdio: "pipe" }).trim();
 const fetchBounded = url => fetch(url, { signal: AbortSignal.timeout(10_000) });
 const revision = capture("git", ["rev-parse", "HEAD"]);
 export const image = process.env.IMAGE ?? `professional-services-medical-web:${revision}`;
-if (!/^[a-z0-9./_-]+:[a-f0-9]{40}$/.test(image)) throw new Error("IMAGE must have a full commit SHA tag");
+validateImage(image);
 const version = checkClient(JSON.parse(readFileSync("package.json")), JSON.parse(readFileSync("package-lock.json")));
 if (process.argv[2] === "build") {
   if (!image.endsWith(`:${revision}`)) throw new Error("Build tag must match the current commit");

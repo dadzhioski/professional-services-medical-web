@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { checkContainerReport } from "./check-container-report.mjs";
+import { validateImage } from "./production-config.mjs";
 const gitleaks = "ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f";
 const trivy = "aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa";
 const docker = args => execFileSync("docker", args, { stdio: "inherit" });
@@ -30,11 +31,14 @@ if (process.argv[2] === "secrets") {
     if (probe.status !== 1) throw new Error("Secret scanner failed controlled detection probe");
     console.log("Controlled secret detected; disposable probe removed.");
   } finally { rmSync(temp, { recursive: true, force: true }); }
-} else if (process.argv[2] === "container") {
+} else if (["container", "edge-container"].includes(process.argv[2])) {
+  const edge = process.argv[2] === "edge-container";
   const revision = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  const image = process.env.IMAGE ?? `professional-services-medical-web:${revision}`;
-  if (!/^[a-z0-9./_-]+:[a-f0-9]{40}$/.test(image)) throw new Error("Expected full SHA image tag");
-  docker(["save", image, "--output", "reports/image.tar"]);
-  docker(["run", "--rm", "-v", `${resolve("reports")}:/reports`, trivy, "image", "--quiet", "--input", "/reports/image.tar", "--scanners", "vuln,secret", "--format", "json", "--output", "/reports/security/container.json"]);
-  console.log(checkContainerReport(JSON.parse(readFileSync("reports/security/container.json"))));
-} else { throw new Error("Expected secrets or container"); }
+  const image = edge ? process.env.CADDY_IMAGE ?? `professional-services-medical-edge:${revision}`
+    : process.env.IMAGE ?? `professional-services-medical-web:${revision}`;
+  validateImage(image);
+  const name = edge ? "edge-container" : "container";
+  docker(["save", image, "--output", `reports/${name}.tar`]);
+  docker(["run", "--rm", "-v", `${resolve("reports")}:/reports`, trivy, "image", "--quiet", "--input", `/reports/${name}.tar`, "--scanners", "vuln,secret", "--format", "json", "--output", `/reports/security/${name}.json`]);
+  console.log(checkContainerReport(JSON.parse(readFileSync(`reports/security/${name}.json`)), edge ? "gobinary" : "node-pkg"));
+} else { throw new Error("Expected secrets, container, or edge-container"); }

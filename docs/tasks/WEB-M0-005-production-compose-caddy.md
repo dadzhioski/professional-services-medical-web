@@ -1,6 +1,6 @@
 # WEB-M0-005: Add production web Compose, Caddy, and routing tests
 
-- **Status:** PLANNED
+- **Status:** IMPLEMENTED — synthetic verification complete; real API compatibility and human review pending
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M0-004, API-M0-007
 - **Related ADRs:** WEB-ADR-0004, WEB-ADR-0005
@@ -38,14 +38,20 @@ Run the immutable web image behind the single public Caddy instance and prove sa
 
 ## Acceptance criteria
 
-- [ ] Compose config validates with synthetic values.
-- [ ] Only Caddy publishes host HTTP/HTTPS ports.
-- [ ] Web health and server-rendered status page pass through Caddy.
+- [x] Compose config validates with synthetic values.
+- [x] Only Caddy publishes host HTTP/HTTPS ports.
+- [x] Web health and server-rendered status page pass through Caddy.
 - [ ] `/api/v1/system/status` reaches the API through Caddy with its path preserved.
-- [ ] API-unavailable behavior is safe and tested.
-- [ ] Missing, shortened, mutable, and `latest` image tags are rejected.
-- [ ] Restart does not restart or require control of backend containers.
-- [ ] Logs contain no secret, token, or internal stack trace.
+- [x] API-unavailable behavior is safe and tested.
+- [x] Missing, shortened, mutable, and `latest` image tags are rejected.
+- [x] Restart does not restart or require control of backend containers.
+- [x] Logs contain no secret, token, or internal stack trace.
+
+Path preservation passes against a synthetic transport fixture. The unchecked
+API criterion requires an independently provisioned API-M0-007 release and an
+explicit API image/version. No backend lifecycle operation is performed here.
+See [deployment instructions](../../deployment/README.md) and
+[verification evidence](../WEB-M0-005-verification.md).
 
 ## Verification
 

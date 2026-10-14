@@ -4,9 +4,13 @@ services:
   web:
     image: ${WEB_IMAGE:?WEB_IMAGE with an immutable full-SHA tag is required}
     restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1.0
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     environment:
       NODE_ENV: production
-      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:8080}
+      API_INTERNAL_URL: http://api:8080
     expose:
       - "3000"
     networks:
@@ -20,8 +24,17 @@ services:
         max-file: "5"
 
   caddy:
-    image: caddy:${CADDY_IMAGE_TAG:?CADDY_IMAGE_TAG is required}
+    image: ${CADDY_IMAGE:?CADDY_IMAGE with an immutable full-SHA tag is required}
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, wget, -q, -T, "3", -O, /dev/null, "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 4s
+      retries: 3
+      start_period: 10s
     depends_on:
       - web
     environment:
@@ -44,7 +57,7 @@ services:
 
 networks:
   edge:
-    name: professional-services-edge
+    name: ${EDGE_NETWORK:-professional-services-edge}
     external: true
 
 volumes:

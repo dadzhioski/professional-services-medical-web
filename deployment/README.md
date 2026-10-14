@@ -1,45 +1,79 @@
-# Web and public-edge deployment boundary
+# Web and public-edge deployment
 
-This directory owns only Next.js, Caddy, TLS, public routing, web deployment, and web rollback. It must never acquire PostgreSQL, Flyway, backup, restore, or API deployment credentials.
+WEB-M0-005 implements the web-owned edge described by WEB-ADR-0004 and WEB-ADR-0005. Production execution and protected deployment/rollback remain WEB-M0-006. This project defines only web and Caddy; the API repository independently provides `api:8080`.
 
-## Intended host layout
+## Prerequisites and inputs
 
-```text
-/opt/professional-services/web/     checked-out deployment assets
+Use Docker Engine with Linux containers, Compose **2.24.4 or newer**, Node 24.19.0, npm 11.17.0, and GNU Make (or run the Node commands listed in Makefile on Windows). Configure private-package read access before building the web image. Production requires an approved domain, correct DNS, inbound TCP 80/443 and UDP 443 if using HTTP/3, outbound certificate-authority access, and storage for Caddy state. No real DNS/certificate/production operation is needed for local verification.
+
+Keep actual configuration outside Git. `.env.production.example` contains synthetic values only. The validator accepts `WEB_IMAGE` and `SITE_ADDRESS` from the process environment. A production image must use a bare 40-character lowercase commit-SHA tag, matching CI publication; `sha-` prefixes, short hashes and mutable tags fail validation. Run validation before any later deployment command; Compose interpolation by itself only checks presence and is not the SHA policy gate.
+
+| Input | Contract |
+| --- | --- |
+| `WEB_IMAGE` | Full-SHA web image; local smoke defaults to the current HEAD image |
+| `SITE_ADDRESS` | One approved DNS hostname, optionally prefixed by `https://`; validation defaults to `medical.example.test` |
+| `EDGE_NETWORK` | Host bootstrap defaults to `professional-services-edge`; integration always uses its own random network |
+| API client | Exact `@dadzhioski/professional-services-api-client@0.2.0`; smoke checks the image label against package/lock files |
+| `CADDY_IMAGE` | Full-SHA `professional-services-medical-edge` image; local checks default to current HEAD |
+
+The edge image rebuilds Caddy 2.11.7 with Go 1.26.9 and `golang.org/x/net@v0.60.0` to fix four high scanner findings in the upstream binary. Compiler and runtime base digests are pinned in `Dockerfile.caddy`; no new Caddy plugins are added. Build it with `make edge-image`. Release context is available in the [upstream releases](https://github.com/caddyserver/caddy/releases/tag/v2.11.7). Local images built with uncommitted changes are development evidence, not publishable releases.
+
+## Runtime boundary
+
+Only Caddy publishes 80/tcp, 443/tcp and 443/udp. Web exposes 3000 only inside the external edge network under alias `web`. Its API origin is fixed server-side to `http://api:8080`; it is never a `NEXT_PUBLIC_*` value. The API and PostgreSQL are not services in this project.
+
+`make edge-network` idempotently creates the external host network. Ordinary shutdown must preserve it. Caddy owns named `caddy-data` and `caddy-config` volumes; never use `down --volumes` on the production project. `/etc/caddy/Caddyfile` is mounted read-only. Web runs as the image's non-root user with all capabilities dropped. Both services use `unless-stopped` and `no-new-privileges`.
+
+Initial limits are 512 MiB/1 CPU for web and 256 MiB/0.5 CPU for Caddy. These are starting limits, not load-tested capacity claims; measure memory, latency and OOM events under expected traffic before production.
+
+Web's image health check calls its own `/healthz`, independently of the API. Caddy's health check reads its loopback-only admin configuration endpoint on 2019; that endpoint is never published. End-to-end checks additionally verify `/healthz` through the public edge. An API outage does not require either web or Caddy to restart.
+
+## Routing and privacy
+
+- `/api/*` reaches `api:8080` with the complete path and query preserved. Bare `/api` follows the web route and currently returns 404.
+- Other paths reach `web:3000`; `/system-status` remains dynamically server-rendered and renders its translated fallback after a bounded API failure.
+- API proxy dial timeout is 2 seconds and header/read/write timeouts are 6 seconds. Web proxy dial timeout is 2 seconds and header/read/write timeouts are 10 seconds. The web API wrapper retains its five-second abort.
+- Proxy-generated failures have an empty response body and safe HTTP error status. Ordinary API responses, including business errors, retain their contract; the edge does not sanitize arbitrary API business payloads.
+- Caddy trusts no external forwarded-header sender. Tests inject spoofed forwarded values and verify replacement. Adding another trusted proxy requires review.
+- Responses remove `Server`, set `nosniff` and `strict-origin-when-cross-origin`, and set one-year HSTS on HTTPS only, without preload or includeSubDomains. No new CSP is introduced.
+- Access logs omit the complete request object, response headers, user ID and error trace/ID. They retain status, timing, size and a constant `api`/`web` route category instead of arbitrary URLs. Raw `http.log.error` logs are excluded because they contain upstream/request details; safe access statuses and health checks remain observable. Runtime startup/TLS diagnostics remain available.
+- Docker rotates each service's logs at 10 MiB, retaining five files (approximately 50 MiB/service). This is a size bound, not a time-based retention promise. Never enable debug/request-body logging or credentials logging in production.
+
+See Caddy's [logging reference](https://caddyserver.com/docs/caddyfile/directives/log) and [proxy reference](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy) for the reviewed directives. No runtime application secret is required for the current status page. Registry/build credentials remain transient and outside Compose/source control. Future runtime secret injection must be separately reviewed.
+
+## Isolated local verification
+
+Build the current web image, then run:
+
+```sh
+make image
+make edge-image
+make validate-production-config
+make integration-up
+make integration-routing-test
+make integration-api-unavailable-test
+make integration-restart-test
+make integration-browser-test
+make integration-down
+make edge-container-scan
 ```
 
-`compose.yaml` and `Caddyfile` are initial topology contracts. `WEB-M0-005` must validate and harden them against the actual web/API images before production use.
+Always run `integration-down` after a failed manual run, too. `make integration-test` runs validation, startup, routing/outage/restart and cleanup in a finally block; the browser target is separate and requires the stack to remain up. CI uses the individual targets and an unconditional cleanup step. `make edge-network` is a host-bootstrap command, not a prerequisite for isolated smoke; test startup owns its own external network.
 
-## Shared network contract
+The smoke override uses the production Caddyfile and images, explicitly replaces production port bindings with one random loopback HTTP port, and requests no certificate. Each run owns a random Compose project, labeled network and synthetic transport container. `reports/integration-state.json` records only synthetic resource identities and the discovered origin. One run per checkout is supported; a second startup refuses to overwrite its state. Outage controls listen only on fixture loopback and are invoked through Docker exec. Only the harness-owned fixture can be disconnected; no actual API container is controlled.
 
-- external Docker network: `professional-services-edge`
-- Next.js alias: `web`, internal port `3000`
-- Spring Boot alias: `api`, internal port `8080`
-- Caddy is the only publisher of host ports 80/443
+Tests prove path/query preservation, spoofed-forwarding rejection, raw SSR, static assets, independent health, HTTP error/stall/refused/missing-DNS failure modes, recovery, token/query/cookie canary absence in logs, and persistent Caddy volume markers. Restart and force-recreation compare the fixture identity/start time/restart count and rediscover the ephemeral port. Desktop/mobile browser checks prove JavaScript-disabled content, focus/skip-link behavior, overflow and axe results for success and outage states.
 
-Create the shared network idempotently during host bootstrap:
+Smoke cleanup removes only its own project/volumes, labeled fixture and labeled network. It never removes the host edge network or backend resources. CI prints sanitized check summaries rather than uploading raw container logs. The Caddy and web scans reject high/critical vulnerabilities and secrets and require OS plus application inventories.
 
-```bash
-docker network inspect professional-services-edge >/dev/null 2>&1 || \
-  docker network create professional-services-edge
-```
+## Independently deployed API compatibility
 
-Ordinary shutdown must not remove the shared network.
+Synthetic fixtures prove transport behavior, not real release compatibility. Provision a disposable non-production API using its own repository and expose a matching web/Caddy stack on a loopback HTTP port. This repository provides no backend startup or teardown command.
 
-## Routing contract
+Set `API_IMAGE` to the chosen full-SHA API image, `EXPECTED_API_VERSION` to the expected status version, `API_CONTAINER` to that running container, `COMPATIBILITY_WEB_CONTAINER` and `COMPATIBILITY_CADDY_CONTAINER` to the matching web/edge containers, and `COMPATIBILITY_ORIGIN=http://127.0.0.1:<port>`. Run `make integration-compatibility-test`.
 
-- `/api/*` is proxied to `api:8080` with the `/api` prefix preserved;
-- all other paths are proxied to `web:3000`;
-- backend and database lifecycle remain outside this Compose project.
+The checker is read-only: it verifies image identity, shared aliases, actual Caddy port binding, client metadata, API status/version, SSR and health. It rejects the synthetic fixture label and requires all inputs explicitly. Missing prerequisites mean this check is unexecuted, not passed. Local inspection during implementation found no running independent API.
 
-For local smoke testing set `SITE_ADDRESS=http://localhost`. Production uses the approved domain and Caddy-managed HTTPS.
+## Human review before production
 
-## Release rules
-
-- use an immutable web image tagged with the full Git commit SHA;
-- record the exact generated API-client version embedded in that image;
-- validate routing against a compatible healthy API before replacement;
-- record the previous web image/configuration;
-- rollback only web/Caddy; never restart API or PostgreSQL.
-
-Scripts and workflows are intentionally created and proven by WEB-M0-005 and WEB-M0-006, not assumed complete in this planning template.
+Review the concrete public bindings, domain/TLS/HSTS behavior, forwarding trust, size-bounded log policy, omission of raw proxy errors, secret boundary, and security headers in this change. Production deployment still requires protected human approval and belongs to WEB-M0-006. Domainless tests do not prove real certificate issuance, DNS, production capacity or production rollback.
