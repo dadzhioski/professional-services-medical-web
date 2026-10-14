@@ -13,7 +13,8 @@ flowchart TD
     W3 --> W4["WEB-M0-004 CI and image"]
     W4 --> W5["WEB-M0-005 Compose and Caddy"]
     W5 --> W6["WEB-M0-006 Deploy and rollback"]
-    W6 --> W7["WEB-M0-007 Acceptance"]
+    W6 --> W8["WEB-M0-008 Existing non-production VPS proof"]
+    W8 --> W7["WEB-M0-007 Acceptance"]
 ```
 
 `WEB-M0-003` also depends on API-M0-005 generation and verified registry publication from API-M0-006. `WEB-M0-005` integration validation depends on API-M0-007.
@@ -28,7 +29,8 @@ flowchart TD
 | WEB-M0-004 | CI, security gates, E2E, immutable web image | WEB-M0-003 |
 | WEB-M0-005 | Production web Compose, Caddy, edge network, routing tests | WEB-M0-004, API-M0-007 |
 | WEB-M0-006 | Protected web deployment and rollback implemented; protected VPS proof and human review pending | WEB-M0-005 |
-| WEB-M0-007 | Clean-room frontend and cross-repository acceptance | WEB-M0-006 |
+| WEB-M0-008 | Real deployment and protected rollback on the existing non-production VPS, preserving the running API | WEB-M0-006 implementation |
+| WEB-M0-007 | Clean-room frontend and cross-repository acceptance | WEB-M0-006, WEB-M0-008 |
 
 ## Cross-repository gates
 
