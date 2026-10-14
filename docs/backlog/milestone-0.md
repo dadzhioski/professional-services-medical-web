@@ -27,7 +27,7 @@ flowchart TD
 | WEB-M0-003 | Exact generated-client status integration | WEB-M0-002, API-M0-005, verified API-M0-006 registry publication |
 | WEB-M0-004 | CI, security gates, E2E, immutable web image | WEB-M0-003 |
 | WEB-M0-005 | Production web Compose, Caddy, edge network, routing tests | WEB-M0-004, API-M0-007 |
-| WEB-M0-006 | Protected web deployment and rollback | WEB-M0-005 |
+| WEB-M0-006 | Protected web deployment and rollback implemented; protected VPS proof and human review pending | WEB-M0-005 |
 | WEB-M0-007 | Clean-room frontend and cross-repository acceptance | WEB-M0-006 |
 
 ## Cross-repository gates

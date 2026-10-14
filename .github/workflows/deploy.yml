@@ -1,0 +1,67 @@
+name: Protected medical web release
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [deploy, rollback]
+        required: true
+      environment:
+        type: choice
+        options: [non-production, production]
+        required: true
+      release_sha:
+        description: Full 40-character published main commit (deploy only)
+        type: string
+      configuration:
+        description: Administrator-installed configuration identifier (deploy only)
+        type: string
+      api_image:
+        description: Exact independently deployed API image with full SHA tag (deploy only)
+        type: string
+      api_version:
+        description: Expected API status version (deploy only)
+        type: string
+      release_record:
+        description: Successful host release-record identifier (rollback only)
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: web-release-${{ inputs.environment }}
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.repository == 'dadzhioski/professional-services-medical-web' && github.ref == 'refs/heads/main'
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
+      - name: Validate and send restricted web release request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_OPERATION: ${{ inputs.operation }}
+          RELEASE_ENVIRONMENT: ${{ inputs.environment }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          RELEASE_CONFIG: ${{ inputs.configuration }}
+          RELEASE_API_IMAGE: ${{ inputs.api_image }}
+          RELEASE_API_VERSION: ${{ inputs.api_version }}
+          RELEASE_RECORD: ${{ inputs.release_record }}
+          WEB_DEPLOY_ENABLED: ${{ vars.WEB_DEPLOY_ENABLED }}
+          WEB_DEPLOY_HOST: ${{ vars.WEB_DEPLOY_HOST }}
+          WEB_DEPLOY_PORT: ${{ vars.WEB_DEPLOY_PORT }}
+          WEB_DEPLOY_USER: ${{ vars.WEB_DEPLOY_USER }}
+          WEB_DEPLOY_KNOWN_HOSTS: ${{ vars.WEB_DEPLOY_KNOWN_HOSTS }}
+          WEB_DEPLOY_ORIGIN: ${{ vars.WEB_DEPLOY_ORIGIN }}
+          WEB_DEPLOY_SSH_KEY: ${{ secrets.WEB_DEPLOY_SSH_KEY }}
+        run: node scripts/deploy-dispatch.mjs

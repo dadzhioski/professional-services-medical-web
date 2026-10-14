@@ -9,7 +9,11 @@ const gitleaks = "ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79
 const trivy = "aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa";
 const docker = args => execFileSync("docker", args, { stdio: "inherit" });
 mkdirSync("reports/security", { recursive: true });
-if (process.argv[2] === "secrets") {
+if (process.argv[2] === "workflows") {
+  // Pinned upstream validator; no npm dependency or executable downloaded unverified.
+  docker(["run", "--rm", "--network", "none", "-v", `${resolve(".")}:/repo:ro`, "-w", "/repo",
+    "rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667", "-color"]);
+} else if (process.argv[2] === "secrets") {
   const base = ["run", "--rm", "-v", `${resolve(".")}:/work`, "-w", "/work", "-e", "GIT_CONFIG_COUNT=1", "-e", "GIT_CONFIG_KEY_0=safe.directory", "-e", "GIT_CONFIG_VALUE_0=/work", gitleaks];
   docker([...base, "git", "--redact", "--no-banner", "--log-opts=--all", "--report-format", "json", "--report-path", "reports/security/history.json", "."]);
   // Scan tracked and untracked source, excluding only generated/ignored files.
