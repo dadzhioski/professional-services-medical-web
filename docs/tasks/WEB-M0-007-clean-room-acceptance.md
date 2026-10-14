@@ -2,7 +2,7 @@
 
 - **Status:** PLANNED
 - **Target repository:** `professional-services-medical-web`
-- **Depends on:** WEB-M0-006
+- **Depends on:** WEB-M0-006, WEB-M0-008
 - **Related ADRs:** All accepted WEB Milestone 0 ADRs
 - **Cross-repository dependency:** Tested API client package and compatible non-production API release
 - **Risk:** Medium

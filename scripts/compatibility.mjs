@@ -7,10 +7,13 @@ import assert from "node:assert/strict";
 import { validateImage } from "./production-config.mjs";
 import { checkClient } from "./check-api-client-version.mjs";
 
-export function verifyApiIdentity(api, image, imageId, network) {
+export function verifyApiIdentity(api, image, selected, network) {
   validateImage(image);
-  assert.equal(api.Config.Image, image);
-  assert.equal(api.Image, imageId);
+  // The API may run from the selected tag pinned to a digest that the selected image carries.
+  const pin = api.Config.Image.startsWith(image) ? api.Config.Image.slice(image.length) : null;
+  assert.ok(pin === "" || (/^@sha256:[a-f0-9]{64}$/.test(pin ?? "") &&
+    selected.RepoDigests?.includes(`${image.slice(0, image.lastIndexOf(":"))}${pin}`)), "API container must run the selected image");
+  assert.equal(api.Image, selected.Id);
   assert.equal(api.State.Running, true);
   if (api.State.Health) assert.equal(api.State.Health.Status, "healthy");
   assert.ok(!api.Config.Labels?.["io.professional-services.web-smoke"], "Synthetic fixtures cannot prove API compatibility");
@@ -62,13 +65,10 @@ try {
   const api = inspect(process.env.API_CONTAINER);
   const web = inspect(process.env.COMPATIBILITY_WEB_CONTAINER);
   const caddy = inspect(process.env.COMPATIBILITY_CADDY_CONTAINER);
-  assert.equal(api.Config.Image, image);
-  const selectedId = execFileSync("docker", ["image", "inspect", image, "--format", "{{.Id}}"], { encoding: "utf8", stdio: "pipe" }).trim();
-  assert.equal(api.Image, selectedId);
-  assert.equal(api.State.Running, true);
-  assert.ok(!api.Config.Labels?.["io.professional-services.web-smoke"], "Synthetic fixtures cannot prove API compatibility");
+  const selected = JSON.parse(execFileSync("docker", ["image", "inspect", image], { encoding: "utf8", stdio: "pipe" }))[0];
   const shared = Object.entries(api.NetworkSettings.Networks).find(([name, n]) => n.Aliases?.includes("api") && web.NetworkSettings.Networks[name]?.Aliases?.includes("web") && caddy.NetworkSettings.Networks[name]);
   assert.ok(shared);
+  verifyApiIdentity(api, image, selected, shared[0]);
   const port = new URL(origin).port;
   assert.ok(caddy.NetworkSettings.Ports["80/tcp"]?.some(p => p.HostIp === "127.0.0.1" && p.HostPort === port));
   const client = checkClient(JSON.parse(readFileSync("package.json")), JSON.parse(readFileSync("package-lock.json")));
