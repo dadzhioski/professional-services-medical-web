@@ -6,6 +6,8 @@
 
 ## Dependency graph
 
+This graph orders Milestone 0 closure work only; it does not block Milestone 1 frontend planning or implementation under the owner's 2026-10-16 authorization.
+
 ```mermaid
 flowchart TD
     W1["WEB-M0-001 Bootstrap"] --> W2["WEB-M0-002 Next.js SSR"]
@@ -59,4 +61,20 @@ flowchart TD
 - [ ] `/api/*` routing preserves the path and reaches only the API alias.
 - [ ] Web deploy and rollback require manual dispatch; production also requires protected approval.
 - [ ] No backend source, database credentials, real personal data, or floating version exists.
-- [ ] Human owner approves transition to Milestone 1.
+- [x] Human owner approves starting Milestone 1 (2026-10-16), with remaining Milestone 0 acceptance deferred; this does not certify Milestone 0 completion.
+
+## Deferred work and Milestone 1 transition (2026-10-16)
+
+The owner reported the first non-production deployment working and explicitly chose to proceed with frontend development. Formal acceptance remains incomplete. Preserve the following work for later acceptance/operational stages; do not add it as a dependency of unrelated Milestone 1 tasks or reopen it automatically during frontend work.
+
+| Outstanding work | Tracking | Revisit |
+|---|---|---|
+| Record hosted release evidence and explicit public health, SSR, API-routing checks | WEB-M0-004/005/006/008 | Later deployment acceptance |
+| Second distinct release, real web-only rollback, backend identity/restart and Caddy-volume preservation evidence | WEB-M0-006/008 | Later deployment/rollback acceptance |
+| Clean-checkout installation, full quality/security/browser/image checks and isolated outage proof | WEB-M0-007 | Formal clean-room acceptance |
+| Confirm PR gate behavior and address fork verification with the private client package | WEB-M0-004 | CI acceptance or when affected contribution workflow is needed |
+| Reconcile task evidence, agent guidance, SSH setup corrections and anonymous public GHCR pulls in the runbook | WEB-M0-007/008 | Documentation/operational acceptance |
+| Remaining human review and formal Milestone 0 sign-off | WEB-M0-007 | Later milestone closure; not permission to begin frontend work |
+| Temporary development dependency audit exception | `scripts/dependency-audit-exception.json` | Before 2026-10-26 at 00:00 UTC; no automatic extension |
+
+Deferral is a sequencing decision, not a passing result or a security-policy waiver. The dependency deadline still applies: investigate remediation separately, and obtain explicit approval for any extension. Existing failing CI/security checks must be resolved for the affected release; they do not prevent writing future feature tasks. Production approval and feature-specific API/authorization requirements remain mandatory. No production deployment is authorized by this transition.
