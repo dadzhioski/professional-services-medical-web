@@ -2,14 +2,14 @@ import { render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import axe from "axe-core";
 import { expect, test, vi } from "vitest";
-import Home from "./page";
+import Home from "@/components/home";
 import { t } from "@/lib/i18n/en";
 
 vi.mock("server-only", () => ({}));
-import RootLayout from "./layout";
+import RootLayout from "./(operational)/layout";
 
 test("home has one heading and a focusable main landmark", () => {
-  render(<Home />);
+  render(<Home locale="en" />);
   expect(screen.getByRole("heading", { level: 1, name: t("home.heading") })).toBeVisible();
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
@@ -17,7 +17,7 @@ test("home has one heading and a focusable main landmark", () => {
 });
 
 test("full document renders without JavaScript and passes structural accessibility checks", async () => {
-  const html = renderToStaticMarkup(<RootLayout><Home /></RootLayout>);
+  const html = renderToStaticMarkup(<RootLayout><Home locale="en" /></RootLayout>);
   const documentNode = new DOMParser().parseFromString(html, "text/html");
   documentNode.title = t("app.title");
   expect(documentNode.documentElement.lang).toBe("en");
