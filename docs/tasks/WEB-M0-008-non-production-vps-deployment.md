@@ -15,6 +15,14 @@ Deploy the web and its public Caddy edge to the existing non-production VPS, pro
 
 The owner confirms that the non-production VPS and backend API are already running. Host access, DNS, current ingress ownership, API image/version, network aliases, GitHub environment protections, and installed deployment tooling remain unverified. WEB-M0-006 has implemented the release mechanism but has not completed protected VPS proof. This task does not provision a replacement VPS or backend.
 
+## Owner-authorized policy amendment (2026-10-16)
+
+The owner requested deployment without an approver. Non-production deploy and
+rollback therefore require manual workflow dispatch but no separate reviewer.
+Production approvals remain mandatory. Update host authorization, regression tests
+and deployment guidance together; all other release/security gates remain in force.
+This amendment does not itself execute a remote deployment.
+
 ## Allowed scope
 
 - Read-only discovery of the existing non-production deployment and ingress.
@@ -22,14 +30,14 @@ The owner confirms that the non-production VPS and backend API are already runni
 - Configuration and verification of GitHub protected environments and release inputs following `deployment/README.md`.
 - Approved deployment of two distinct published web/Caddy releases and rollback through `Protected medical web release`.
 - Narrow fixes to web deployment defects, with required tests and review before use.
-- Updates to existing deployment documentation and task acceptance checkboxes using actual results; reconcile the stale deployment-status statement in `AGENTS.md` without weakening approval requirements.
+- Updates to existing deployment documentation and task acceptance checkboxes using actual results; reconcile the stale deployment-status statement in `AGENTS.md` under the owner-authorized environment-specific approval policy.
 
 ## Non-goals
 
 - No production deployment, backend deployment/restart, database operation, migration, API upgrade, or backend rollback.
 - No direct Compose deployment that bypasses the protected workflow.
 - No unapproved takeover of an existing proxy, ports, domain, network, or TLS configuration.
-- No new product features, dependencies, API-client upgrade, or relaxation of release/security gates.
+- No new product features, dependencies, API-client upgrade, or relaxation of release/security gates beyond the explicit non-production approval amendment.
 
 ## Requirements
 
@@ -39,16 +47,16 @@ The owner confirms that the non-production VPS and backend API are already runni
 4. If a proxy already occupies 80/443, document the concrete ingress transition for owner approval before any change. Do not stop the existing proxy automatically. If the API network contract is missing, request a linked API task; do not change the API container from this repository. An existing unrecorded web/Caddy project requires administrator reconciliation under the documented recovery procedure.
 5. Confirm reviewed deployment code is on `main`, publishing is enabled only after its required review, and two distinct successful main CI releases have both immutable images and valid `release.json` evidence. Do not select old images lacking release evidence or manufacture a release record.
 6. Follow the administrator-owned host installation in `deployment/README.md`: root-owned code/configuration/state, restricted `webdeploy` account, forced SSH command, exact sudo allowlist, read-only GitHub/GHCR credentials, and approved configuration bytes matching release-manifest hashes. Review concrete host changes before applying them; keep an independent administrator connection during SSH changes.
-7. Verify required reviewers, prevention of self-review, disabled administrator bypass, and main-only deployment rules as documented. Configure the documented `WEB_DEPLOY_*` secret/variables separately per environment and enable non-production deployment only after review. If the GitHub plan cannot enforce the required controls, report a blocker rather than weakening them.
-8. Dispatch release A through the protected workflow with `operation=deploy`, `environment=non-production`, the full `release_sha`, installed `configuration` identifier, exact `api_image`, and expected `api_version`; leave `release_record` empty. Require approval and successful compatibility preflight before replacement. Save the successful release-record identifier securely.
-9. Verify public HTTPS health, raw server-rendered status and API version, API routing, security headers, image identity, and container health. Deploy distinct release B through the same approval path, then dispatch `operation=rollback`, `environment=non-production`, and A's `release_record`, leaving deploy-only fields empty. Confirm A is restored and the backend identities and Caddy persistent volumes are unchanged.
+7. Verify main-only deployment rules for both environments. Leave non-production Required reviewers unchecked; retain required reviewers, prevention of self-review and disabled administrator bypass for production. Configure the documented `WEB_DEPLOY_*` secret/variables separately per environment and enable non-production deployment only after review. If the GitHub plan cannot enforce the required controls, report a blocker rather than weakening them.
+8. Dispatch release A through the protected workflow with `operation=deploy`, `environment=non-production`, the full `release_sha`, installed `configuration` identifier, exact `api_image`, and expected `api_version`; leave `release_record` empty. Require manual dispatch and successful compatibility preflight before replacement. Save the successful release-record identifier securely.
+9. Verify public HTTPS health, raw server-rendered status and API version, API routing, security headers, image identity, and container health. Deploy distinct release B through the same manual dispatch path, then dispatch `operation=rollback`, `environment=non-production`, and A's `release_record`, leaving deploy-only fields empty. Confirm A is restored and the backend identities and Caddy persistent volumes are unchanged.
 10. Keep the API image/version unchanged during this proof. Do not stop the real API to test unavailable behavior; use the existing isolated fixture tests. A failed first installation has no rollback target and requires administrator recovery; a pending failed release must follow the documented explicit recovery/rollback path, never state deletion or automatic retry.
 11. Record only sanitized workflow/run and release-record references and outcomes in existing task acceptance entries. Do not create a separate task report or store real domains, configuration, credentials, container logs, or response bodies. Mark WEB-M0-006's protected proof gates complete only after observed success and human review; report any unresolved gate explicitly.
 
 ## Acceptance criteria
 
 - [ ] Existing non-production host, API identity, network contract, DNS, and ingress ownership verified.
-- [ ] Required human review, environment approval controls, restricted SSH/sudo boundary, and host credential permissions verified.
+- [ ] Required human review, environment-specific authorization controls, restricted SSH/sudo boundary, and host credential permissions verified.
 - [ ] Harmless non-release SSH commands rejected; no Docker/backend authority granted to `webdeploy`.
 - [ ] Release A deployed through an approved protected workflow with real API compatibility preflight passing.
 - [ ] HTTPS `/healthz` returns 200 and `{"status":"ok"}`; `/system-status` contains the expected API service/version/status in raw HTML; `/api/v1/system/status` returns the expected API response through Caddy.
@@ -73,7 +81,7 @@ make integration-down
 
 Always run `make integration-down` after an interrupted or failed integration run. Run the repository definition-of-done checks for any implementation fixes; passing synthetic checks does not count as VPS proof.
 
-Non-production GitHub Actions: select `Protected medical web release`, branch `main`, and use the exact deploy/rollback inputs in requirements 8–9; approve each run through its protected environment.
+Non-production GitHub Actions: select `Protected medical web release`, branch `main`, and use the exact deploy/rollback inputs in requirements 8–9; run non-production without a separate reviewer; production approval remains required.
 
 On the administrator's machine, set `SITE_ORIGIN` locally to the approved HTTPS origin (no trailing slash), then check after A, B, and rollback:
 
@@ -88,7 +96,7 @@ Inspect results locally without copying real responses into task documentation. 
 
 ## Security and privacy
 
-Non-production only; existing backend availability must be preserved. Host installation, ingress changes, publishing permissions, and environment protection changes require concrete human review. Every deploy/rollback requires protected approval. No real patient data or production credentials are needed. Preserve network and Caddy volumes; never run production-shaped `down --volumes` or delete deployment state to bypass a failure.
+Non-production only; existing backend availability must be preserved. Host installation, ingress changes, publishing permissions, and environment protection changes require concrete human review. Non-production deploy/rollback requires manual dispatch without a separate approver; production requires protected approval. No real patient data or production credentials are needed. Preserve network and Caddy volumes; never run production-shaped `down --volumes` or delete deployment state to bypass a failure.
 
 ## Handoff
 

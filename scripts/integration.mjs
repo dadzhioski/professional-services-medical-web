@@ -372,6 +372,7 @@ export async function dispatchRelease() {
 }
 
 export function validateDeployAuthorization(request, run, reviews) {
+  assert.ok(["non-production", "production"].includes(request.environment));
   assert.equal(run.repository?.full_name, releaseRepository);
   assert.equal(run.head_repository?.full_name, releaseRepository);
   assert.equal(run.path, ".github/workflows/deploy.yml");
@@ -379,7 +380,10 @@ export function validateDeployAuthorization(request, run, reviews) {
   assert.equal(run.status, "in_progress"); assert.equal(String(run.id), request.workflowRun);
   const decisions = reviews.filter(r => r.environments?.some(e => e.name === request.environment));
   // Do not rely on undocumented ordering or reuse a rejected run's approval.
-  assert.ok(decisions.length > 0 && decisions.every(r => r.state === "approved"), "Protected environment approval is required");
+  assert.ok(decisions.every(r => r.state === "approved"), "Environment review rejected this run");
+  if (request.environment === "production") {
+    assert.ok(decisions.length > 0, "Protected production environment approval is required");
+  }
 }
 
 // Called only by the root-owned fixed SSH entry point; no caller-supplied paths.

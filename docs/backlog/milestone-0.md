@@ -57,6 +57,6 @@ flowchart TD
 - [ ] Web image is non-root and tagged by full commit SHA.
 - [ ] Caddy is the only public HTTP entry point.
 - [ ] `/api/*` routing preserves the path and reaches only the API alias.
-- [ ] Web deploy and rollback require protected manual approval.
+- [ ] Web deploy and rollback require manual dispatch; production also requires protected approval.
 - [ ] No backend source, database credentials, real personal data, or floating version exists.
 - [ ] Human owner approves transition to Milestone 1.

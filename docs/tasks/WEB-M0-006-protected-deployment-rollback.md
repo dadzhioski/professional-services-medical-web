@@ -40,7 +40,7 @@ Deploy and roll back only the web/Caddy Compose project through a protected, aud
 
 ## Acceptance criteria
 
-- [ ] Deployment cannot run on a normal merge or without approval.
+- [ ] Deployment cannot run on a normal merge; production requires approval. Non-production permits manual deploy/rollback without a separate approver under WEB-M0-008.
 - [x] Mutable or untested web image input is rejected.
 - [x] API-unavailable preflight blocks a dependent web release.
 - [x] Previous web release record is produced.
