@@ -193,7 +193,7 @@ Local edge baseline (Docker): `make image`, `make edge-image`, `make integration
 
 Non-production access (deployment setup in `deployment/README.md`):
 
-- Protected web deployment and rollback are WEB-M0-006 and are not implemented yet. Until they are, state "Non-production VPS: not available until WEB-M0-006" instead of inventing steps.
+- Deployment and rollback are implemented in WEB-M0-006; real VPS proof remains WEB-M0-008. Non-production uses manual dispatch without a separate approver (owner-authorized 2026-10-16); production requires protected human approval. Follow `deployment/README.md` and report unexecuted VPS checks.
 - Compose project: `professional-services-medical-web`. Containers: `professional-services-medical-web-web-1` and `professional-services-medical-web-caddy-1`.
 - Only Caddy publishes ports (80/443). Check through the non-production site address: `/healthz` (expect 200), `/system-status` (expect server-rendered status), and `/api/v1/system/status` (expect the API response through Caddy).
 - Production configuration lives outside Git on the VPS; never write its values into files or responses.

@@ -120,7 +120,7 @@ refuses overwriting an existing SHA tag; investigate and publish a new commit.
 The deployment job uses only `contents: read` and `actions: read`; registry pull
 credentials are read-only and host-owned. Publishing permissions and the
 `PUBLISHING_ENABLED` guard remain unchanged. Environment approval configuration,
-host installation, protected non-production proof and human security review are
+host installation, manual non-production proof and human security review are
 external acceptance gates, not claims made by a passing local test.
 
 ## Security gates and retained evidence

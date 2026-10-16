@@ -72,16 +72,35 @@ test("pulled images must match the verified digest, revision, client and runtime
   }
 });
 
-test("host requires an active main dispatch and approval for the requested environment", () => {
+test("host permits manual non-production releases without approval but retains production approval", () => {
   const value = { ...run(), id: 42, event: "workflow_dispatch", path: ".github/workflows/deploy.yml", status: "in_progress" };
-  const approved = [{ state: "approved", environments: [{ name: "non-production" }] }];
-  validateDeployAuthorization(request(), value, approved);
-  for (const reviews of [[], [{ state: "rejected", environments: [{ name: "non-production" }] }],
-    [{ state: "approved", environments: [{ name: "production" }] }]]) {
-    assert.throws(() => validateDeployAuthorization(request(), value, reviews));
+  for (const operation of ["deploy", "rollback"]) {
+    for (const environment of ["non-production", "production"]) {
+      const input = operation === "deploy" ? { ...request(), environment }
+        : { operation, environment, workflowRun: "42", record: "c".repeat(32) };
+      const approved = [{ state: "approved", environments: [{ name: environment }] }];
+      validateDeployAuthorization(input, value, approved);
+      if (environment === "non-production") validateDeployAuthorization(input, value, []);
+      else {
+        assert.throws(() => validateDeployAuthorization(input, value, []));
+        assert.throws(() => validateDeployAuthorization(input, value,
+          [{ state: "approved", environments: [{ name: "non-production" }] }]));
+      }
+      const rejected = { state: "rejected", environments: [{ name: environment }] };
+      for (const reviews of [[rejected], [...approved, rejected], [rejected, ...approved]]) {
+        assert.throws(() => validateDeployAuthorization(input, value, reviews));
+      }
+      for (const change of [{ status: "completed" }, { head_branch: "feature" }, { event: "push" },
+        { id: 43 }, { path: ".github/workflows/other.yml" },
+        { repository: { full_name: "fork/repo" } }, { head_repository: { full_name: "fork/repo" } }]) {
+        assert.throws(() => validateDeployAuthorization(input, { ...value, ...change }, approved));
+        if (environment === "non-production") {
+          assert.throws(() => validateDeployAuthorization(input, { ...value, ...change }, []));
+        }
+      }
+    }
   }
-  assert.throws(() => validateDeployAuthorization(request(), { ...value, status: "completed" }, approved));
-  assert.throws(() => validateDeployAuthorization(request(), { ...value, head_branch: "feature" }, approved));
+  assert.throws(() => validateDeployAuthorization({ ...request(), environment: "custom" }, value, []));
 });
 
 function fixture(t) {

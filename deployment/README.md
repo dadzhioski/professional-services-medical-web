@@ -87,14 +87,23 @@ deployment. Neither operation controls the API, PostgreSQL, or their Compose
 project. Initial installation has no rollback target; a second successful
 release is needed to prove restoration of a previous release.
 
-An administrator must first configure **both** GitHub environments with required
-reviewers, prevention of self-review, administrator bypass disabled, and a
-deployment branch rule allowing only `main` (not tags). Protect `main` with
-required review and CI. Confirm the repository's GitHub plan supports these
-controls; do not substitute an unprotected job. The host independently checks
+Both environments require a deployment branch rule allowing only `main` (not tags).
+For `non-production`, leave **Required reviewers** unchecked: the owner authorized
+manual deploy and rollback without a separate approver on 2026-10-16.
+For `production`, required reviewers, prevention of self-review and disabled
+administrator bypass remain mandatory. Protect `main` with required review and CI.
+Confirm the GitHub plan supports the required production controls. The host checks
 the active main workflow-dispatch run and its environment approval history via
 the [GitHub review-history API](https://docs.github.com/en/rest/actions/workflow-runs#get-the-review-history-for-a-workflow-run).
-Rejected runs cannot be reused; start a new approved dispatch.
+Production requires approval for that environment. Non-production accepts empty
+approval history, but rejects any recorded rejection for that environment. Rejected
+runs cannot be reused. This applies to deploy and rollback. The request must still
+match the root-owned host environment; all release and compatibility checks remain.
+
+To activate this policy, merge the reviewed scripts to `main` and have an
+administrator install the updated complete `scripts/` tree under
+`/opt/medical-web-deploy` on the non-production host. Changing the GitHub checkbox
+alone does not update the installed host validator. No new flag or secret is needed.
 
 Configure the following separately in each environment; never put real values
 in this repository or chat:
@@ -276,11 +285,11 @@ exist, complete the protected proof on the non-production VPS:
    counts through the backend administrator for read-only before/after comparison.
 2. Dispatch `Protected medical web release` on `main`, `deploy`,
    `non-production`, release A's SHA/configuration and the actual API image/version;
-   require approval before credentials become available. Save its record ID.
+   leave Required reviewers unchecked for non-production. Save its record ID.
 3. Check HTTPS `/healthz` for 200 and `{"status":"ok"}`, `/system-status` for
    server-rendered API status/version, and `/api/v1/system/status` for the expected
-   API response; repeat after approved deployment of distinct release B.
-4. Dispatch `rollback`, `non-production`, A's record ID; approve it and repeat
+   API response; repeat after manual deployment of distinct release B.
+4. Dispatch `rollback`, `non-production`, A's record ID; run it and repeat
    those checks. Confirm A's image/configuration identifiers, unchanged Caddy
    volumes and unchanged backend identities. No API stop/restart is authorized.
 

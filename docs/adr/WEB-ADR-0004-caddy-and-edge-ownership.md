@@ -33,5 +33,5 @@ Caddy reaches Next.js through alias `web:3000` and the API through alias `api:80
 - Compose publishes only Caddy ports;
 - Next.js has no production host port;
 - routing tests verify `/api/*` preservation;
-- deploy workflow requires protected human approval;
+- production deploy workflow requires protected human approval; non-production permits manual dispatch without a separate approver (owner-authorized 2026-10-16);
 - production secrets are referenced, never committed.
