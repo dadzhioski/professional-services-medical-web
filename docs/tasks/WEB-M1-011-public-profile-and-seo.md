@@ -3,7 +3,7 @@
 - **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-002; WEB-M1-004 public-profile capability; WEB-M1-001 route/origin decisions
-- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; decisions recorded by WEB-M1-001 where applicable
+- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
 - **Cross-repository dependency:** [API-M1-010](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-010-public-profiles-and-directory.md)
 - **Risk:** Medium
 
@@ -21,6 +21,10 @@ Serve an anonymous, indexable profile containing only currently published profes
 - No API source, OpenAPI generation, database work, API deployment or business-rule implementation.
 - No appointment requests, detailed medical data, analytics, directory expansion or unapproved dependencies.
 - No production/edge/CI changes, publishing, pushing, pull requests or Milestone 0 acceptance reconstruction.
+
+## WEB-M1-001 decisions and implementation coverage
+
+Use /[locale]/doctors/[slug] for mk/en/bg/sq, with mk default; translate interface/static metadata and retain provider content as supplied. Reuse validated server-only PUBLIC_ORIGIN from 003 if available; otherwise implement the same reviewed validator independently, since public SSR does not depend on auth completion. Test invalid origins, spoofed Host/forwarded headers, environment boundaries, localized canonical URLs and SSR language. Use reviewed no-store publication-aware API photo delivery and test revocation after prior reads; no photo optimizer, public object URL or private evidence in metadata.
 
 ## Requirements
 

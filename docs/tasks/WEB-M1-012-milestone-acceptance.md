@@ -3,7 +3,7 @@
 - **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-003 through WEB-M1-011 implemented; WEB-M1-001 decisions resolved
-- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; decisions recorded by WEB-M1-001 where applicable
+- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
 - **Cross-repository dependency:** [API-M1-012](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-012-milestone-acceptance.md)
 - **Risk:** High
 
@@ -21,6 +21,10 @@ Establish evidence for the implemented Milestone 1 journey without closing defer
 - No API source, OpenAPI generation, database work, API deployment or business-rule implementation.
 - No appointment requests, detailed medical data, analytics, directory expansion or unapproved dependencies.
 - No production/edge/CI changes, publishing, pushing, pull requests or Milestone 0 acceptance reconstruction.
+
+## WEB-M1-001 decisions and implementation coverage
+
+Exercise mk/en/bg/sq, default redirects, unsupported locales, language navigation and JavaScript-disabled public SSR. Verify API administrator policy reconciliation with the approved MVP-wide MFA deferral while retaining privilege/isolation checks. Include origin spoofing resistance, CSRF/cookie isolation and photo revocation after prior reads; distinguish live checks from fixtures.
 
 ## Requirements
 

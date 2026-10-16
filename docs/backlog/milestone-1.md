@@ -17,11 +17,11 @@
 
 ## Milestone 1 task backlog (2026-10-16)
 
-Task creation is complete; feature implementation has not started. Use [the task template](../tasks/TASK-TEMPLATE.md) and assign one task at a time. WEB-M1-001 resolves deferred product/security decisions before dependent implementation; it does not reopen authorization to begin Milestone 1.
+Task creation is complete; feature implementation has not started. Use [the task template](../tasks/TASK-TEMPLATE.md) and assign one task at a time. WEB-M1-001 records owner decisions (2026-10-16), with ADR review and API-owner policy reconciliation pending; it does not reopen authorization to begin Milestone 1.
 
 | Task | Outcome | Dependencies |
 |---|---|---|
-| [WEB-M1-001](../tasks/WEB-M1-001-experience-and-security-decisions.md) | Resolve Milestone 1 experience and security decisions | None |
+| [WEB-M1-001](../tasks/WEB-M1-001-experience-and-security-decisions.md) | Owner decisions recorded; ADR review/API reconciliation pending | None |
 | [WEB-M1-002](../tasks/WEB-M1-002-shared-ui-and-profile-presentation.md) | Build shared UI and a synthetic profile presentation | WEB-M1-001 experience decisions |
 | [WEB-M1-003](../tasks/WEB-M1-003-google-sign-in-and-session-boundary.md) | Integrate Google sign-in and secure server sessions | WEB-M1-001 auth decisions; WEB-M1-002 |
 | [WEB-M1-004](../tasks/WEB-M1-004-feature-client-adoption.md) | Adopt an approved published feature API client | None; feature-specific API publication and explicit upgrade approval |
@@ -39,13 +39,13 @@ Task creation is complete; feature implementation has not started. Use [the task
 - The repository pins `@dadzhioski/professional-services-api-client@0.2.0`. Read-only inspection of the installed package found system/health and IdentityApi login/current-account/CSRF/logout methods, but no profile, onboarding, catalog, media, credential, review or publication methods.
 - Installed declarations are capability observations, not fresh registry-publication or deployed-API proof. WEB-M1-003 verifies identity provenance/compatibility before use; WEB-M1-004 requires explicit approval and an actually published exact feature version.
 - API-M1-004 through API-M1-010 are planned in the inspected sibling tasks. API-M1-011 prepares the client release but does not publish it. Each dependent web task remains blocked until its actual methods/types and compatible backend behavior are available.
-- API-M1-003 records Google-only login and deferred MFA, while later administrator/evidence tasks still require MFA. WEB-M1-001 tracks reconciliation with the API owner before administrator implementation; do not silently remove the requirement or build a local bypass.
-- WEB-M1-001 also resolves first-market copy, visual identity, routes, onboarding flow, session-cookie approval, canonical origin and safe photo delivery. These decisions block only their dependent work.
+- The owner deferred MFA entirely for this MVP, including administrators (2026-10-16). API-M1-003/004/007/008/009 still require API-owner reconciliation and compatible authorization before administrator integration/evidence access; no local bypass. Stored privileges, controlled bootstrap, tenant isolation and audits remain mandatory.
+- [WEB-M1-001](../tasks/WEB-M1-001-experience-and-security-decisions.md#owner-decision-record-2026-10-16) records approved mk-default/en/bg/sq build-time locale configuration, localized routes, neutral medical style, resumable onboarding and professional contact policy. Session-cookie/server-only forwarding, PUBLIC_ORIGIN and no-store publication-aware photo design scope are owner-approved; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) remains Proposed pending review. Only dependent boundary implementation waits for review; synthetic presentation may proceed.
 - Cross-repository task links assume the sibling checkout layout `professional-services-platform-api/professional-services-platform-api`, matching the inspected workspace. These files are read-only dependencies; this task creation does not modify the API repository.
 
 ### Execution paths
 
-- Begin with WEB-M1-001, then WEB-M1-002 presentation work using synthetic tests/previews; no missing feature DTO is needed for that work.
+- WEB-M1-001 experience decisions are recorded; proceed with WEB-M1-002 multilingual presentation using synthetic tests/previews; no missing feature DTO is needed for that work.
 - WEB-M1-003 can integrate available identity behavior after its decisions and compatibility checks, without waiting for the entire feature client.
 - WEB-M1-004 can proceed independently as approved feature releases become available. An incremental release unblocks only the consumers whose capabilities are present.
 - Provider editing follows 005 → 006 → 007; media 008 can follow 005 independently of profile/catalog editing. Credentials 009 joins profile and media work; review/publication 010 follows catalog and credentials.
