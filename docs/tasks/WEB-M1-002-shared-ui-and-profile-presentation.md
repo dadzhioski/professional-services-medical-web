@@ -1,6 +1,6 @@
 # WEB-M1-002: Build shared UI and a synthetic profile presentation
 
-- **Status:** PLANNED — experience decisions recorded; independent synthetic presentation may proceed
+- **Status:** IMPLEMENTED — local quality and synthetic browser acceptance passed (2026-10-16); non-production release checks not executed
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-001 experience decisions
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
@@ -39,10 +39,12 @@ Experience decisions are recorded; independent synthetic presentation may procee
 
 ## Acceptance criteria
 
-- [ ] Synthetic profile content renders in initial HTML with JavaScript disabled.
-- [ ] Keyboard, axe and mobile/desktop checks cover long content, missing photo, empty optional sections and field errors.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] Synthetic profile content renders in initial HTML with JavaScript disabled.
+- [x] Keyboard, axe and mobile/desktop checks cover long content, missing photo, empty optional sections and field errors.
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
+
+Local evidence (2026-10-16): Node 24.19.0/npm 11.17.0; lint, typecheck, 64 unit tests, production build, unchanged API-client 0.2.0 policy, 49 policy tests, 56 desktop/mobile browser scenarios and diff whitespace checks passed. Synthetic profiles exist only in intercepted browser-test responses rendered from the production components and stylesheet; no preview or fake profile is shipped. Localized entry pages and default redirects are live application changes; unavailable-route text uses the default Macedonian dictionary with an explicit language attribute. Windows PowerShell required `npm.cmd`; after all browser scenarios passed, the two test-server processes were stopped explicitly to finish Playwright cleanup (exit 0). Non-production release/live API checks were not executed; edge integration is not applicable because edge/deployment files are unchanged. Deferred Milestone 0 obligations remain open.
 
 ## Verification
 
