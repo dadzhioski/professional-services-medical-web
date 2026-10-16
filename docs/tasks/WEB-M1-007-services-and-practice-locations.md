@@ -3,7 +3,7 @@
 - **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-006; WEB-M1-004 catalog/reference capability
-- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; decisions recorded by WEB-M1-001 where applicable
+- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
 - **Cross-repository dependency:** [API-M1-006](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-006-services-and-locations.md)
 - **Risk:** Medium
 
@@ -21,6 +21,10 @@ Let providers manage the services and locations shown on their profile.
 - No API source, OpenAPI generation, database work, API deployment or business-rule implementation.
 - No appointment requests, detailed medical data, analytics, directory expansion or unapproved dependencies.
 - No production/edge/CI changes, publishing, pushing, pull requests or Milestone 0 acceptance reconstruction.
+
+## WEB-M1-001 decisions and implementation coverage
+
+Use /[locale]/provider/services and /[locale]/provider/locations with four-locale interface messages. API reference and provider-authored content remain contract-supplied; do not invent translated reference DTOs.
 
 ## Requirements
 

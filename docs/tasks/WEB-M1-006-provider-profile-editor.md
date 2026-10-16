@@ -3,7 +3,7 @@
 - **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-005; WEB-M1-004 profile capability
-- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; decisions recorded by WEB-M1-001 where applicable
+- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
 - **Cross-repository dependency:** [API-M1-005](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-005-professional-profile-drafts.md)
 - **Risk:** Medium
 
@@ -21,6 +21,10 @@ Let a provider create and safely edit their private professional profile.
 - No API source, OpenAPI generation, database work, API deployment or business-rule implementation.
 - No appointment requests, detailed medical data, analytics, directory expansion or unapproved dependencies.
 - No production/edge/CI changes, publishing, pushing, pull requests or Milestone 0 acceptance reconstruction.
+
+## WEB-M1-001 decisions and implementation coverage
+
+Use /[locale]/provider/profile with four-locale interface dictionaries. Provider-authored biography/contact content remains as supplied; do not invent translated API fields or publish login identity as contact data. Photo controls are supplied by 008.
 
 ## Requirements
 

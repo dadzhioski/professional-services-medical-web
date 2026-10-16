@@ -1,9 +1,9 @@
 # WEB-M1-002: Build shared UI and a synthetic profile presentation
 
-- **Status:** PLANNED — applicable decisions/approvals from WEB-M1-001 required
+- **Status:** PLANNED — experience decisions recorded; independent synthetic presentation may proceed
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-001 experience decisions
-- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; decisions recorded by WEB-M1-001 where applicable
+- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
 - **Cross-repository dependency:** None
 - **Risk:** Low
 
@@ -21,6 +21,10 @@ Provide an accessible, responsive profile presentation and reusable form primiti
 - No API source, OpenAPI generation, database work, API deployment or business-rule implementation.
 - No appointment requests, detailed medical data, analytics, directory expansion or unapproved dependencies.
 - No production/edge/CI changes, publishing, pushing, pull requests or Milestone 0 acceptance reconstruction.
+
+## WEB-M1-001 decisions and implementation coverage
+
+Experience decisions are recorded; independent synthetic presentation may proceed without administrator reconciliation. Implement a build-time locale registry and complete typed dictionaries for mk (default), en, bg and sq, expandable through configuration/messages without route-code changes. Follow the localized route map, default redirects and unsupported-locale behavior, retaining operational/API routes. Test key completeness, language-link page preservation and SSR document language in all four locales. Use neutral blue/teal styling and system fonts; provider text stays as supplied and professional contact links require explicit public content. No feature DTO is needed for synthetic presentation.
 
 ## Requirements
 

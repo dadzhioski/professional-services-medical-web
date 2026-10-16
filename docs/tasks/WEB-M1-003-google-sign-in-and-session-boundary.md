@@ -1,9 +1,9 @@
 # WEB-M1-003: Integrate Google sign-in and secure server sessions
 
-- **Status:** PLANNED — applicable decisions/approvals from WEB-M1-001 required
+- **Status:** PLANNED — owner design scope recorded; ADR review and identity compatibility/return-allowlist verification required
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-001 auth decisions; WEB-M1-002
-- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; decisions recorded by WEB-M1-001 where applicable
+- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
 - **Cross-repository dependency:** [API-M1-003](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-003-auth0-sessions.md)
 - **Risk:** High
 
@@ -21,6 +21,10 @@ Let a provider sign in through the API-owned Google flow and use a private serve
 - No API source, OpenAPI generation, database work, API deployment or business-rule implementation.
 - No appointment requests, detailed medical data, analytics, directory expansion or unapproved dependencies.
 - No production/edge/CI changes, publishing, pushing, pull requests or Milestone 0 acceptance reconstruction.
+
+## WEB-M1-001 decisions and implementation coverage
+
+Follow the approved design scope and reviewed ADR boundary: same-origin Google navigation with exact localized return allowlists, per-request allowlisted session forwarding, and CSRF bootstrap/cookie changes only in handlers/actions capable of propagating approved Set-Cookie attributes and deletion. Read-only Server Components must not create sessions. Introduce validated server-only PUBLIC_ORIGIN for web mutation origin checks and protect both web and upstream mutations. Test missing/invalid origin, cookie propagation/rotation/deletion and cross-user CSRF isolation. ADR review and identity provenance/compatibility remain gates; administrator reconciliation does not block provider identity work.
 
 ## Requirements
 

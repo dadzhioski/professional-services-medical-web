@@ -143,12 +143,18 @@ Milestone 0 ends only after clean installation, SSR/API integration, Caddy routi
 
 Formal closure is separate from authorization to start Milestone 1: the owner deferred outstanding Milestone 0 acceptance on 2026-10-16. Do not use the preceding closure criteria as a blanket dependency for Milestone 1 frontend work; retain them as later acceptance obligations without weakening existing feature tests, CI/security checks, or production approvals.
 
-## 11. Deferred decisions
+## 11. Milestone 1 decisions and remaining deferrals
 
-- final visual identity and design tokens;
+Owner decisions (2026-10-16) are recorded in [WEB-M1-001](docs/tasks/WEB-M1-001-experience-and-security-decisions.md); [WEB-ADR-0006](docs/adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) remains Proposed pending review. Launch in Macedonia with mk default and en/bg/sq, a build-time locale registry and complete typed message files. Product routes use /[locale]/doctors/[slug], /[locale]/provider and /[locale]/admin; bare entries redirect to mk, unsupported locales return not-found, and operational/API routes remain unprefixed. Additional languages require configuration/messages, not route-code changes; provider content is not automatically translated.
+
+Use a neutral blue/teal medical style and system fonts, explicit professional contact data, and a resumable solo-provider checklist ending in review and explicit publication. The owner approved session-cookie/server-only forwarding, PUBLIC_ORIGIN and no-store publication-aware photo design scope. MFA is deferred entirely for this MVP, including administrators; API-owner reconciliation of conflicting tasks and compatible authorization remain prerequisites for administrator integration, with no local bypass. Source, environment/deployment configuration and API contracts are unchanged by these documentation decisions.
+
+Remaining deferrals:
+
+- final brand assets and detailed design tokens within the approved neutral medical direction;
 - production analytics provider and consent implementation;
-- authentication screens and provider onboarding flow;
-- localization beyond the first market;
+- completed security ADR review and API administrator-policy reconciliation;
+- additional languages beyond mk/en/bg/sq and separately translated provider-authored content;
 - extraction of shared components after a real trades frontend proves the need.
 
 Do not resolve deferred decisions incidentally inside unrelated tasks.

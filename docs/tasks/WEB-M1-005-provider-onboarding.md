@@ -3,7 +3,7 @@
 - **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-002, WEB-M1-003, WEB-M1-004 onboarding capability
-- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; decisions recorded by WEB-M1-001 where applicable
+- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
 - **Cross-repository dependency:** [API-M1-004](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-004-organizations-and-authorization.md)
 - **Risk:** High
 
@@ -21,6 +21,10 @@ Let a verified doctor create or resume one solo provider workspace.
 - No API source, OpenAPI generation, database work, API deployment or business-rule implementation.
 - No appointment requests, detailed medical data, analytics, directory expansion or unapproved dependencies.
 - No production/edge/CI changes, publishing, pushing, pull requests or Milestone 0 acceptance reconstruction.
+
+## WEB-M1-001 decisions and implementation coverage
+
+Use /[locale]/provider and /[locale]/provider/onboarding with the four-locale foundation from 002. Present the resumable checklist: workspace, profile/services/location/credentials, optional photo, review, then explicit publication when API eligibility permits. Saved progress comes from API state, not a web-owned workflow; administrator policy blocks dependent operations only.
 
 ## Requirements
 
