@@ -1,6 +1,6 @@
 # WEB-M0-008: Deploy and verify web on the existing non-production VPS
 
-- **Status:** PLANNED
+- **Status:** PARTIALLY EXECUTED — owner confirmed first non-production deployment working on 2026-10-16; remaining evidence, rollback proof and acceptance deferred by owner, not blockers for Milestone 1 frontend work
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M0-006 implementation; completes its outstanding protected VPS acceptance gates before WEB-M0-007
 - **Related ADRs:** WEB-ADR-0004, WEB-ADR-0005
@@ -12,6 +12,8 @@
 Deploy the web and its public Caddy edge to the existing non-production VPS, prove integration with the already-running API, and prove protected web-only rollback without restarting or changing the API or PostgreSQL.
 
 ## Starting context
+
+Update (2026-10-16): the owner reported the first deployment working after guided VPS setup. Detailed acceptance evidence and second-release rollback proof have not been completed in this task. See `../backlog/milestone-0.md` for the deferred-work register and `../backlog/milestone-1.md` for authorization to proceed; the original prerequisite notes below describe the starting state, not the current deployment status.
 
 The owner confirms that the non-production VPS and backend API are already running. Host access, DNS, current ingress ownership, API image/version, network aliases, GitHub environment protections, and installed deployment tooling remain unverified. WEB-M0-006 has implemented the release mechanism but has not completed protected VPS proof. This task does not provision a replacement VPS or backend.
 

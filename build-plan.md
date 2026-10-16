@@ -1,7 +1,7 @@
 # Professional Services Medical Web — Build Plan
 
 **Status:** Draft v0.3 — two-repository revision  
-**Last updated:** 2026-10-01  
+**Last updated:** 2026-10-16
 **Repository:** `professional-services-medical-web`
 
 ## 1. Product context
@@ -118,6 +118,8 @@ Create the repository, agent governance, Next.js SSR baseline, generated-client 
 
 SEO profile route, credentials, services, locations, media, provider editing, administrative approval, and accessibility validation.
 
+Owner authorization on 2026-10-16 permits Milestone 1 frontend planning and implementation now, without waiting for formal Milestone 0 closure. See `docs/backlog/milestone-1.md` for task-authoring rules and `docs/backlog/milestone-0.md` for deferred acceptance work. Feature scope above remains a planning direction, not evidence that corresponding API capabilities already exist.
+
 ### Milestone 2 — Appointment-request experience
 
 Minimal request form, consent, confirmation states, signed cancellation flow, provider decisions, and safe email-linked pages.
@@ -138,6 +140,8 @@ The authoritative task order is in `docs/backlog/milestone-0.md`. Every implemen
 6. report accessibility, SSR, privacy, and unexecuted checks.
 
 Milestone 0 ends only after clean installation, SSR/API integration, Caddy routing, image smoke tests, and protected non-production deployment/rollback succeed.
+
+Formal closure is separate from authorization to start Milestone 1: the owner deferred outstanding Milestone 0 acceptance on 2026-10-16. Do not use the preceding closure criteria as a blanket dependency for Milestone 1 frontend work; retain them as later acceptance obligations without weakening existing feature tests, CI/security checks, or production approvals.
 
 ## 11. Deferred decisions
 

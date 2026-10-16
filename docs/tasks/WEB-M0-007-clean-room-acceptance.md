@@ -1,6 +1,6 @@
 # WEB-M0-007: Perform clean-room frontend and integration acceptance
 
-- **Status:** PLANNED
+- **Status:** DEFERRED — owner authorized Milestone 1 frontend work on 2026-10-16; formal clean-room acceptance remains open and is not a prerequisite for that work
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M0-006, WEB-M0-008
 - **Related ADRs:** All accepted WEB Milestone 0 ADRs
@@ -42,7 +42,7 @@ Verify the web repository from a clean checkout and prove its documented integra
 - [ ] Non-production web deploy and web-only rollback pass.
 - [ ] No secret, real personal data, floating dependency, duplicate DTO, or mutable image exists.
 - [ ] Report recommends proceed or stop with evidence.
-- [ ] Human owner approves or rejects Milestone 1.
+- [x] Human owner authorizes starting Milestone 1 with deferred acceptance (2026-10-16); formal Milestone 0 sign-off remains outstanding.
 
 ## Verification
 

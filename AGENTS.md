@@ -20,6 +20,10 @@ If the task file is missing, ambiguous, or conflicts with this file, stop and as
 
 ## Repository boundary
 
+### Milestone 1 authorization (2026-10-16)
+
+The owner authorized Milestone 1 frontend planning and implementation before formal Milestone 0 closure. When creating or executing Milestone 1 tasks, read `docs/backlog/milestone-1.md` and the deferred-work register in `docs/backlog/milestone-0.md`. Do not make deferred Milestone 0 acceptance, rollback proof, hosted evidence, documentation reconciliation, or owner sign-off prerequisites for unrelated frontend tasks, and do not ask again for permission to start Milestone 1. Those items remain open, not passed or waived. Actual feature-specific API dependencies, existing quality/security gates, the dependency-exception expiry, and production approval requirements still apply; a failed check blocks the affected validation/release, not unrelated task planning.
+
 This repository owns:
 
 - Next.js App Router, React, and strict TypeScript;
