@@ -17,7 +17,7 @@
 
 ## Milestone 1 task backlog (2026-10-16)
 
-Task creation is complete; feature implementation has not started. Use [the task template](../tasks/TASK-TEMPLATE.md) and assign one task at a time. WEB-M1-001 records owner decisions (2026-10-16), with ADR review and API-owner policy reconciliation pending; it does not reopen authorization to begin Milestone 1.
+Task creation is complete; WEB-M1-002 and WEB-M1-003 are implemented locally, with WEB-M1-003 human boundary review and live acceptance pending. Use [the task template](../tasks/TASK-TEMPLATE.md) and assign one task at a time. WEB-M1-001 records owner decisions (2026-10-16), with remaining ADR review and API-owner policy reconciliation pending; it does not reopen authorization to begin Milestone 1.
 
 | Task | Outcome | Dependencies |
 |---|---|---|
@@ -40,7 +40,7 @@ Task creation is complete; feature implementation has not started. Use [the task
 - Installed declarations are capability observations, not fresh registry-publication or deployed-API proof. WEB-M1-003 verifies identity provenance/compatibility before use; WEB-M1-004 requires explicit approval and an actually published exact feature version.
 - API-M1-004 through API-M1-010 are planned in the inspected sibling tasks. API-M1-011 prepares the client release but does not publish it. Each dependent web task remains blocked until its actual methods/types and compatible backend behavior are available.
 - The owner deferred MFA entirely for this MVP, including administrators (2026-10-16). API-M1-003/004/007/008/009 still require API-owner reconciliation and compatible authorization before administrator integration/evidence access; no local bypass. Stored privileges, controlled bootstrap, tenant isolation and audits remain mandatory.
-- [WEB-M1-001](../tasks/WEB-M1-001-experience-and-security-decisions.md#owner-decision-record-2026-10-16) records approved mk-default/en/bg/sq build-time locale configuration, localized routes, neutral medical style, resumable onboarding and professional contact policy. Session-cookie/server-only forwarding, PUBLIC_ORIGIN and no-store publication-aware photo design scope are owner-approved; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) remains Proposed pending review. Only dependent boundary implementation waits for review; synthetic presentation may proceed.
+- [WEB-M1-001](../tasks/WEB-M1-001-experience-and-security-decisions.md#owner-decision-record-2026-10-16) records approved mk-default/en/bg/sq build-time locale configuration, localized routes, neutral medical style, resumable onboarding and professional contact policy. Session-cookie/server-only forwarding, PUBLIC_ORIGIN and no-store publication-aware photo design scope are owner-approved; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) has owner acceptance for identity/session and PUBLIC_ORIGIN in WEB-M1-003; media/administrator review remains pending. Implementation boundary tests and human review remain required; synthetic presentation may proceed.
 - Cross-repository task links assume the sibling checkout layout `professional-services-platform-api/professional-services-platform-api`, matching the inspected workspace. These files are read-only dependencies; this task creation does not modify the API repository.
 
 ### Execution paths

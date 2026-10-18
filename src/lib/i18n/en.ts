@@ -1,4 +1,13 @@
 export const messages = {
+  "account.heading": "Provider account",
+  "account.description": "Sign in to your private provider account.",
+  "account.login": "Continue with Google",
+  "account.logout": "Sign out",
+  "account.authenticated": "You are signed in. Your account is private.",
+  "account.signedOut": "Sign in with Google to access your provider account.",
+  "account.expired": "Your session has expired. Please sign in again.",
+  "account.forbidden": "This request is not permitted. Please try signing in again.",
+  "account.unavailable": "Your account is currently unavailable. Please try again later.",
   "systemStatus.heading": "System status",
   "systemStatus.service": "Service",
   "systemStatus.version": "Version",

@@ -25,7 +25,8 @@ make image-smoke-test
 make container-scan
 ```
 
-Set `API_INTERNAL_URL=http://127.0.0.1:9` for type generation and build.
+Set `API_INTERNAL_URL=http://127.0.0.1:9` and
+`PUBLIC_ORIGIN=http://127.0.0.1:4310` for type generation and build.
 Playwright overrides it with its isolated fixture origin. Ports 4310 and 4311
 must be free; tests never reuse an existing server. Desktop and mobile Chromium
 exercise SSR without JavaScript, outage/recovery, independent health, keyboard
@@ -44,7 +45,10 @@ uncommitted changes are development evidence only, not published release artifac
 The base uses digest-pinned Node 24.19.0 on Alpine 3.24, with libcrypto3 and
 libssl3 pinned to 3.5.9-r0 to address CVE-2026-14456. The runtime starts
 `node server.js`, listens on port 3000 as UID/GID 10001,
-and requires `API_INTERNAL_URL` at startup. Smoke tests use disposable containers
+and requires `API_INTERNAL_URL` and `PUBLIC_ORIGIN` at startup. Image smoke checks
+also verify rejection of missing/invalid public origins. The Docker build uses a
+synthetic HTTPS origin; runtime validation reads the deployment value independently.
+Smoke tests use disposable containers
 and a private test network, bind a random port only to loopback, and clean up.
 Production-shaped Caddy/Compose integration is implemented by WEB-M0-005;
 see [deployment verification](../deployment/README.md). CI builds the separate
@@ -104,6 +108,10 @@ shared release transaction engine through `make web-release-smoke` and
 approval checks, locking, failure state, and explicit rollback; YAML wiring is
 validated rather than mirrored in unit tests. Synthetic Docker tests prove
 replacement/recovery and preserve the independent fixture and Caddy volumes.
+The release HTTP probe accepts legacy root HTML or one 307 to a plain local
+locale entry (currently `/mk`); external redirects, queries and redirect chains
+remain rejected. Deployment probes receive a synthetic loopback PUBLIC_ORIGIN;
+the actual release receives the independently validated host origin.
 
 Each publishing matrix job records its published image digest, revision label,
 and (for web) client version. After both jobs succeed, `release-evidence`

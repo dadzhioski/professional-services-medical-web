@@ -51,3 +51,15 @@ test("smoke policy rejects inherited public bindings", () => {
   config.services.caddy.ports[0].host_ip = "0.0.0.0";
   assert.throws(() => validateTopology(config, true));
 });
+
+test("public origin must match the approved HTTPS site; legacy rollback remains valid", () => {
+  const config = topology();
+  validateTopology(config);
+  config.services.caddy.environment = { SITE_ADDRESS: "medical.example.test" };
+  for (const value of ["http://medical.example.test", "https://evil.test", "https://medical.example.test/path", "https://medical.example.test/"]) {
+    config.services.web.environment.PUBLIC_ORIGIN = value;
+    assert.throws(() => validateTopology(config));
+  }
+  config.services.web.environment.PUBLIC_ORIGIN = "https://medical.example.test";
+  validateTopology(config);
+});

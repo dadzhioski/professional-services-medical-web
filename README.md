@@ -21,6 +21,10 @@ npm ci
 Copy `.env.example` to ignored `.env.local` (or use an existing ignored
 `.env`) and set `API_INTERNAL_URL` to your API origin, for example
 `http://localhost:8080`. Do not include `/api/v1` or the status endpoint path.
+Set `PUBLIC_ORIGIN` to the browser-facing web origin, for example
+`http://localhost:3000`. Both origins are validated at build and server startup;
+`PUBLIC_ORIGIN` requires HTTPS except for explicit loopback HTTP. It is server-only
+and is never inferred from incoming Host or forwarded headers.
 Do not overwrite existing local configuration. Then run:
 
 ```sh
@@ -60,6 +64,26 @@ configuration and mocked transport; the running app has no mock fallback.
 not a readiness endpoint. It remains noindex/nofollow.
 
 ## API-client package and authentication
+
+### Provider sign-in
+
+Open `/mk/provider`, `/en/provider`, `/bg/provider`, or `/sq/provider` for the
+private server-rendered account shell. Login navigates to the same-origin
+API-owned Google flow; logout is a web Server Action that validates Origin,
+obtains a fresh session-bound CSRF token and propagates approved session cookies.
+No login identity becomes public profile contact data. Private pages are no-store
+and noindex; unavailable, forbidden and expired sessions have translated states.
+
+`npm run dev` alone does not route `/api/*` to the backend. Live Google checks
+require the existing shared Caddy origin, matching web `PUBLIC_ORIGIN` and API
+`APP_PUBLIC_ORIGIN`, and API-owner configuration of
+`APP_LOGIN_RETURN_PATHS=/,/mk/provider,/en/provider,/bg/provider,/sq/provider`.
+The API owner supplies the corresponding Google callback configuration and
+compatible session settings; this repository does not operate or configure the API.
+Use the isolated Playwright fixture for local synthetic login/logout checks;
+it does not prove real Google or deployed API compatibility.
+
+### Generated client
 
 Installed production dependency:
 **@dadzhioski/professional-services-api-client@0.2.0**.

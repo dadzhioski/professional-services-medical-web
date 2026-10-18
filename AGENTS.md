@@ -55,7 +55,7 @@ Toolchain: Node 24.19.0 and npm 11.17.0 (pinned in `.nvmrc` and `package.json`),
 - API-client version policy: `npm run check:api-client-version`
 - Policy and security-gate tests: `npm run test:policy`
 
-`typecheck` and `build` need valid configuration but no running API; `API_INTERNAL_URL=http://127.0.0.1:9` is enough. Unit tests use synthetic configuration and mocked transport.
+`typecheck` and `build` need valid configuration but no running API; `API_INTERNAL_URL=http://127.0.0.1:9` and `PUBLIC_ORIGIN=http://localhost:3000` are enough. Unit tests use synthetic configuration and mocked transport.
 
 **Browser tests** (ports 4310 and 4311 must be free)
 
@@ -90,7 +90,7 @@ Toolchain: Node 24.19.0 and npm 11.17.0 (pinned in `.nvmrc` and `package.json`),
 
 **Configuration**
 
-- Server configuration is validated at startup; currently only `API_INTERNAL_URL` (absolute HTTP(S) origin, no credentials, path, query, or fragment). `NODE_ENV` comes from Next.js/Vitest.
+- Server configuration is validated at startup; `PUBLIC_ORIGIN` (HTTPS, except explicit loopback HTTP) and `API_INTERNAL_URL` (absolute HTTP(S) origin, no credentials, path, query, or fragment). `NODE_ENV` comes from Next.js/Vitest.
 - `.env.local` / `.env` hold local settings only. Never commit them.
 - `.env.production.example` contains synthetic values only. Real production values live outside Git.
 

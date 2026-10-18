@@ -1,6 +1,15 @@
 import type { TranslationKey } from "./en";
 
 export const messages = {
+  "account.heading": "Професионална сметка",
+  "account.description": "Најавете се на вашата приватна професионална сметка.",
+  "account.login": "Продолжи со Google",
+  "account.logout": "Одјави се",
+  "account.authenticated": "Најавени сте. Вашата сметка е приватна.",
+  "account.signedOut": "Најавете се со Google за пристап до вашата професионална сметка.",
+  "account.expired": "Вашата сесија истече. Најавете се повторно.",
+  "account.forbidden": "Ова барање не е дозволено. Обидете се повторно да се најавите.",
+  "account.unavailable": "Вашата сметка моментално не е достапна. Обидете се повторно подоцна.",
   "systemStatus.heading": "Статус на системот",
   "systemStatus.service": "Услуга",
   "systemStatus.version": "Верзија",

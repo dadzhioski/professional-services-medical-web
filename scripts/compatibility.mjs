@@ -21,15 +21,21 @@ export function verifyApiIdentity(api, image, selected, network) {
 }
 
 export async function verifyReleaseHttp(origin, expectedVersion, deadline = Date.now() + 120_000) {
-  const request = async path => {
+  const request = async (path, allowLocaleRedirect = false) => {
     const remaining = deadline - Date.now();
     assert.ok(remaining > 0, "Release verification deadline exceeded");
-    const response = await fetch(`${origin}${path}`, { signal: AbortSignal.timeout(Math.min(12_000, remaining)), redirect: "error" });
-    assert.equal(response.status, 200);
+    const response = await fetch(`${origin}${path}`, { signal: AbortSignal.timeout(Math.min(12_000, remaining)), redirect: "manual" });
     assert.equal(response.headers.get("server"), null);
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");
     assert.equal(response.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
     assert.equal(response.headers.get("strict-transport-security"), origin.startsWith("https:") ? "max-age=31536000" : null);
+    if (allowLocaleRedirect && response.status === 307) {
+      const destination = response.headers.get("location");
+      assert.match(destination ?? "", /^\/[a-z]{2}(?:-[A-Za-z0-9]{2,8})*$/);
+      await response.body?.cancel();
+      return request(destination);
+    }
+    assert.equal(response.status, 200);
     const body = await response.text();
     assert.doesNotMatch(body, /http:\/\/api:8080|API_INTERNAL_URL|ResponseError|err_trace/);
     return { body, headers: response.headers };
@@ -44,7 +50,7 @@ export async function verifyReleaseHttp(origin, expectedVersion, deadline = Date
   assert.match(page, /<main\b/); assert.match(page, /<dl\b/);
   assert.ok(page.includes(expectedVersion));
   assert.ok(!page.includes("Service status is currently unavailable"));
-  for (const html of [page, (await request("/")).body]) {
+  for (const html of [page, (await request("/", true)).body]) {
     assert.match(html, /<title>[^<]+<\/title>/);
     assert.match(html, /<meta name="description" content="[^"]+"/);
     assert.match(html, /<meta name="robots" content="noindex,\s*nofollow"/);
