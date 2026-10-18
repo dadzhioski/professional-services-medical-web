@@ -35,7 +35,7 @@ Record the decisions needed to implement public profiles and provider onboarding
 
 ## Owner decision record (2026-10-16)
 
-Provenance: the owner selected the experience and security options during WEB-M1-001 planning, corrected the launch market to Macedonia and the languages to mk/en/bg/sq, explicitly deferred MFA entirely for this MVP, then instructed implementation of the resulting plan. These are owner decisions, not agent-inferred approvals. Approval of design scope does not mark the completed [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) Accepted; that record remains Proposed pending review.
+Provenance: the owner selected the experience and security options during WEB-M1-001 planning, corrected the launch market to Macedonia and the languages to mk/en/bg/sq, explicitly deferred MFA entirely for this MVP, then instructed implementation of the resulting plan. These are owner decisions, not agent-inferred approvals. Approval of design scope does not mark the completed [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) Accepted; the owner subsequently accepted its identity/session and PUBLIC_ORIGIN design during WEB-M1-003; media/administrator review remains pending.
 
 ### Experience and route map
 
@@ -73,7 +73,7 @@ Installed client `@dadzhioski/professional-services-api-client@0.2.0` exposes Id
 
 | Gate / ownership | Dependent work and release condition |
 |---|---|
-| Completed ADR review — owner | Security-boundary implementation follows review of WEB-ADR-0006 and its tests; recorded experience decisions already permit WEB-M1-002 synthetic presentation work |
+| Completed ADR review — owner | Identity/session and PUBLIC_ORIGIN design accepted by the owner in WEB-M1-003; implementation test/human review and other boundary reviews remain required; recorded experience decisions already permit WEB-M1-002 synthetic presentation work |
 | Administrator policy reconciliation — API owner | Amend linked API-M1-003/004/007/008/009 requirements to the owner's MVP-wide deferral and supply compatible authorization behavior; WEB-M1-010 and administrator evidence access remain blocked, with no local bypass |
 | Identity provenance/compatibility and localized return allowlist — WEB-M1-003 / API-M1-003 | Verify published client and compatible API behavior, including exact localized return destinations; no live Google acceptance claimed |
 | Published feature contracts — WEB-M1-004 and linked API tasks | Onboarding/editing/catalog/media/credential/review/public-profile integrations wait for their actual capabilities and approved exact client adoption; never invent DTOs |

@@ -198,10 +198,14 @@ test("API identity requires the selected running image and real api alias", () =
 
 test("HTTP verification checks raw SSR, metadata, headers and API version", async t => {
   let failure = "";
+  let rootRedirect;
   const html = '<title>Medical web</title><meta name="description" content="Foundation"><meta name="robots" content="noindex, nofollow"><main><dl>0.2.0</dl></main>';
   const server = createServer((req, res) => {
     res.setHeader("X-Content-Type-Options", "nosniff"); res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
     if (failure === "headers") res.setHeader("Server", "private");
+    if (rootRedirect && (req.url === "/" || failure === "redirect-chain" && req.url === "/mk")) {
+      res.writeHead(307, { Location: rootRedirect }).end(); return;
+    }
     if (req.url === "/healthz") { res.setHeader("Cache-Control", "no-store"); res.end('{"status":"ok"}'); }
     else if (req.url === "/api/v1/system/status") res.end(JSON.stringify({ service: "synthetic", version: failure === "api" ? "wrong" : "0.2.0", status: "UP" }));
     else res.end(failure === "ssr" ? html.replace("<dl>0.2.0</dl>", "Unavailable") : failure === "metadata" ? html.replace("noindex", "index") : html);
@@ -211,6 +215,15 @@ test("HTTP verification checks raw SSR, metadata, headers and API version", asyn
   const url = `http://127.0.0.1:${server.address().port}`;
   await verifyReleaseHttp(url, "0.2.0");
   for (failure of ["headers", "api", "ssr", "metadata"]) await assert.rejects(verifyReleaseHttp(url, "0.2.0"));
+  failure = "";
+  rootRedirect = "/mk";
+  await verifyReleaseHttp(url, "0.2.0");
+  failure = "redirect-chain";
+  await assert.rejects(verifyReleaseHttp(url, "0.2.0"));
+  failure = "";
+  for (rootRedirect of ["https://evil.test", "//evil.test", "/mk?private=value", "/mk/../admin", "/api/auth/login"]) {
+    await assert.rejects(verifyReleaseHttp(url, "0.2.0"));
+  }
   await assert.rejects(verifyReleaseHttp(url, "0.2.0", Date.now() - 1));
 });
 

@@ -130,6 +130,15 @@ export function validateTopology(config, smoke = false) {
   assert.deepEqual(Object.keys(caddy.networks), ["edge"]);
   assert.ok(web.networks.edge.aliases.includes("web"));
   assert.equal(web.environment.API_INTERNAL_URL, "http://api:8080");
+  // Older immutable releases predate this setting and remain rollback targets.
+  if (web.environment.PUBLIC_ORIGIN !== undefined) {
+    const origin = web.environment.PUBLIC_ORIGIN;
+    if (smoke) assert.match(origin, /^http:\/\/127\.0\.0\.1(?::[0-9]+)?$/);
+    else {
+      const site = validateSite(caddy.environment.SITE_ADDRESS).replace(/^https:\/\//, "");
+      assert.equal(origin, `https://${site}`);
+    }
+  }
   assert.equal(config.networks.edge.external, true);
   assert.deepEqual(Object.keys(config.networks), ["edge"]);
   const bindings = caddy.ports.map(p => `${p.host_ip ?? "*"}:${p.published}:${p.target}/${p.protocol}`).sort();

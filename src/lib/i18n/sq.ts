@@ -1,6 +1,15 @@
 import type { TranslationKey } from "./en";
 
 export const messages = {
+  "account.heading": "Llogaria profesionale",
+  "account.description": "Hyni në llogarinë tuaj private profesionale.",
+  "account.login": "Vazhdoni me Google",
+  "account.logout": "Dilni",
+  "account.authenticated": "Jeni të kyçur. Llogaria juaj është private.",
+  "account.signedOut": "Hyni me Google për të përdorur llogarinë tuaj profesionale.",
+  "account.expired": "Sesioni juaj ka skaduar. Ju lutemi hyni përsëri.",
+  "account.forbidden": "Kjo kërkesë nuk lejohet. Provoni të hyni përsëri.",
+  "account.unavailable": "Llogaria juaj nuk është e disponueshme për momentin. Provoni përsëri më vonë.",
   "systemStatus.heading": "Gjendja e sistemit",
   "systemStatus.service": "Shërbimi",
   "systemStatus.version": "Versioni",

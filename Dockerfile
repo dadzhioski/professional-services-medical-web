@@ -11,7 +11,7 @@ RUN --mount=type=secret,id=npmrc,target=/root/.npmrc,required=true --mount=type=
 FROM dependencies AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY . .
-RUN mkdir -p public && API_INTERNAL_URL=http://127.0.0.1:9 npm run build
+RUN mkdir -p public && API_INTERNAL_URL=http://127.0.0.1:9 PUBLIC_ORIGIN=https://medical.example.test npm run build
 
 FROM base AS runtime
 WORKDIR /app

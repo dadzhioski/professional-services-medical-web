@@ -26,6 +26,7 @@ function compose(state, args) {
   return docker(["compose", "--project-name", state.id, "--env-file", resolve(".env.production.example"),
     "-f", resolve("deployment/compose.yaml"), ...(state.smoke ? ["-f", resolve("deployment/compose.smoke.yaml")] : []), ...args], {
     WEB_IMAGE: state.image, CADDY_IMAGE: state.caddyImage, SITE_ADDRESS: state.site ?? "medical.example.test", EDGE_NETWORK: state.network,
+    PUBLIC_ORIGIN: state.smoke ? (state.origin ?? "http://127.0.0.1") : `https://${validateSite(state.site ?? "medical.example.test").replace(/^https:\/\//, "")}`,
   });
 }
 function readState() {
@@ -60,6 +61,15 @@ function origin(s) {
   assert.match(binding, /^127\.0\.0\.1:\d+$/);
   return `http://${binding}`;
 }
+function synchronizeSmokeOrigin(s) {
+  s.origin = origin(s);
+  writeFileSync(statePath, JSON.stringify(s, null, 2));
+  const expected = `PUBLIC_ORIGIN=${s.origin}`;
+  if (!inspect("container", service(s, "web")).Config.Env.includes(expected)) {
+    compose(s, ["up", "--detach", "--no-deps", "--force-recreate", "--wait", "--wait-timeout", "90", "web"]);
+  }
+  assert.ok(inspect("container", service(s, "web")).Config.Env.includes(expected));
+}
 async function get(s, path, options = {}) {
   const response = await fetch(`${s.origin ?? origin(s)}${path}`, { ...options, signal: AbortSignal.timeout(15_000), redirect: "manual" });
   const body = await response.text();
@@ -93,6 +103,7 @@ async function validate() {
     caddyImage: validateImage(process.env.CADDY_IMAGE ?? `professional-services-medical-edge:${revision}`),
     site: validateSite(process.env.SITE_ADDRESS ?? "medical.example.test"), network: "professional-services-edge" };
   const config = JSON.parse(compose(s, ["config", "--format", "json"]));
+  assert.ok(config.services.web.environment.PUBLIC_ORIGIN);
   validateTopology(config);
   validateTopology(JSON.parse(compose({ ...s, smoke: true }, ["config", "--format", "json"])), true);
   for (const site of ["http://:80", "medical.example.test"]) {
@@ -126,8 +137,7 @@ async function up() {
       "--mount", `type=bind,src=${resolve("tests/integration/api-fixture.mjs")},dst=/fixture.mjs,readonly`, "--entrypoint", "node", image, "/fixture.mjs"]);
     compose(s, ["up", "--detach", "--wait", "--wait-timeout", "90", "web", "caddy"]);
     await healthy(s);
-    s.origin = origin(s);
-    writeFileSync(statePath, JSON.stringify(s, null, 2));
+    synchronizeSmokeOrigin(s);
     console.log(`Synthetic integration ready: ${origin(s)}; web=${image}; client=${clientVersion}`);
   } catch (error) { await down(); throw error; }
 }
@@ -211,13 +221,11 @@ async function restart(s) {
   docker(["exec", caddy, "sh", "-c", "printf preserved > /data/smoke-marker; printf preserved > /config/smoke-marker"]);
   compose(s, ["restart", "web", "caddy"]);
   await healthy(s);
-  s.origin = origin(s);
-  writeFileSync(statePath, JSON.stringify(s, null, 2));
+  synchronizeSmokeOrigin(s);
   await routing(s);
   compose(s, ["up", "--detach", "--force-recreate", "--wait", "--wait-timeout", "90", "web", "caddy"]);
   const afterCaddy = service(s, "caddy");
-  s.origin = origin(s);
-  writeFileSync(statePath, JSON.stringify(s, null, 2));
+  synchronizeSmokeOrigin(s);
   assert.deepEqual(inspect("container", afterCaddy).Mounts.filter(v => v.Type === "volume").map(v => v.Name).sort(), volumes);
   assert.equal(docker(["exec", afterCaddy, "cat", "/data/smoke-marker", "/config/smoke-marker"]), "preservedpreserved");
   const after = inspect("container", s.fixture);
@@ -416,6 +424,7 @@ export async function deployHost(stream = process.stdin) {
   const apiIdentity = record => verifyApiIdentity(inspect("container", host.apiContainer), record.apiImage, inspect("image", record.apiImage), network);
   const composeRelease = (record, args) => docker(["compose", "--project-name", project, "--env-file", "/dev/null", "-f", join(configuration, "compose.yaml"), ...args], {
     WEB_IMAGE: record.manifest.web.image, CADDY_IMAGE: record.manifest.caddy.image, SITE_ADDRESS: new URL(host.origin).hostname, EDGE_NETWORK: network,
+    PUBLIC_ORIGIN: host.origin,
   });
   const operations = {
     evidence: sha => getReleaseEvidence(sha, token),
@@ -496,7 +505,7 @@ async function candidateProbe(record, configuration, network, root) {
   try {
     docker(["run", "--detach", "--name", web, "--label", `${label}=${id}`, "--network", network,
       "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--memory", "512m", "--cpus", "1",
-      "--log-driver", "none", "-e", "API_INTERNAL_URL=http://api:8080", record.manifest.web.image]);
+      "--log-driver", "none", "-e", "API_INTERNAL_URL=http://api:8080", "-e", "PUBLIC_ORIGIN=http://127.0.0.1", record.manifest.web.image]);
     docker(["run", "--detach", "--name", caddy, "--label", `${label}=${id}`, "--network", network,
       "--security-opt", "no-new-privileges", "--memory", "256m", "--cpus", "0.5", "--log-driver", "none",
       "--publish", "127.0.0.1::80", "--mount", `type=bind,src=${file},dst=/etc/caddy/Caddyfile,readonly`,
@@ -565,7 +574,7 @@ async function releaseSmoke(rollbackOnly) {
         s.image = record.manifest.web.image; s.caddyImage = record.manifest.caddy.image;
         writeFileSync(statePath, JSON.stringify(s, null, 2));
         compose(s, ["up", "--detach", "--no-build", "--pull", "never", "--wait", "--wait-timeout", "120", "web", "caddy"]);
-        s.origin = origin(s); writeFileSync(statePath, JSON.stringify(s, null, 2));
+        synchronizeSmokeOrigin(s);
       },
       async verify(record) {
         for (const name of ["web", "caddy"]) assert.equal(inspect("container", service(s, name)).Image, inspect("image", record.manifest[name].image).Id);

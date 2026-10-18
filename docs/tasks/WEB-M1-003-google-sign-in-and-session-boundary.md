@@ -1,9 +1,9 @@
 # WEB-M1-003: Integrate Google sign-in and secure server sessions
 
-- **Status:** PLANNED — owner design scope recorded; ADR review and identity compatibility/return-allowlist verification required
+- **Status:** IMPLEMENTED — local synthetic, security, image, edge, release and rollback checks passed (2026-10-16); human boundary review and live identity compatibility/return-allowlist/Google/VPS acceptance pending
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-001 auth decisions; WEB-M1-002
-- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
+- **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (identity/session and PUBLIC_ORIGIN accepted by the owner; implementation review pending)
 - **Cross-repository dependency:** [API-M1-003](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-003-auth0-sessions.md)
 - **Risk:** High
 
@@ -20,7 +20,24 @@ Let a provider sign in through the API-owned Google flow and use a private serve
 
 - No API source, OpenAPI generation, database work, API deployment or business-rule implementation.
 - No appointment requests, detailed medical data, analytics, directory expansion or unapproved dependencies.
-- No production/edge/CI changes, publishing, pushing, pull requests or Milestone 0 acceptance reconstruction.
+- No Caddy routing, workflow permission, publishing, pushing, pull request, deployment execution or Milestone 0 acceptance reconstruction changes.
+
+## Owner-approved implementation amendment (2026-10-16)
+
+The owner accepted WEB-ADR-0006's identity/session and PUBLIC_ORIGIN design and
+explicitly requested implementation of the plan including narrowly required
+PUBLIC_ORIGIN wiring in CI, Docker, deployment configuration and existing
+verification scripts. This supersedes the original blanket exclusion of those
+files; it does not authorize deployment or API operations. Human review of the
+implemented boundary and tests remains required. Media/administrator gates are
+unaffected.
+
+Published `0.2.0` registry integrity matches the lockfile, and all 24 published
+artifact files were compared byte-for-byte with the installed package. Generated
+identity methods/raw headers and the sibling API's documented cookie/CSRF/return
+contracts were inspected. This is not deployed-API compatibility evidence.
+API-owner release readiness must confirm the exact four localized provider return
+paths, matching public origin and session settings; no API configuration was changed.
 
 ## WEB-M1-001 decisions and implementation coverage
 
@@ -40,11 +57,33 @@ Follow the approved design scope and reviewed ADR boundary: same-origin Google n
 
 ## Acceptance criteria
 
-- [ ] Synthetic login navigation, account SSR, logout, session expiry, missing/invalid CSRF and unavailable API scenarios pass.
-- [ ] Cookies, CSRF, tokens, raw failures and API origin are absent from public output, shared caches and logs; cross-user isolation and unsafe redirect rejection are tested.
+- [x] Synthetic login navigation, account SSR, logout, session expiry, missing/invalid CSRF and unavailable API scenarios pass.
+- [x] Cookies, CSRF, tokens, raw failures and API origin are absent from public output, shared caches and logs; cross-user isolation and unsafe redirect rejection are tested.
 - [ ] Live non-production Google sign-in/return/logout is recorded separately when configured; fixture success is not live-provider acceptance.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
+
+Local evidence (2026-10-16): pinned Node/npm; lint, typecheck, 136 unit tests,
+production build, unchanged client 0.2.0 policy, 50 policy tests, 70 desktop/mobile
+browser scenarios and a final 14-scenario identity rerun passed. Image builds,
+runtime configuration rejection/image smoke, production configuration validation,
+edge routing/outage/restart checks and 8 edge browser scenarios passed. Secret
+scan, workflow validation, dependency gate (unchanged exception through
+2026-10-26T00:00:00Z) and web/edge image scans passed. Windows Playwright test
+servers required explicit cleanup after their scenarios finished. No local env
+file, live API configuration, production resource, dependency or Caddy route was
+changed. Live Google/VPS acceptance, deployed identity compatibility and API-owner
+confirmation of the localized return allowlist remain unexecuted; human review of
+the implemented environment/session boundary remains required.
+
+The existing release HTTP probe still required HTTP 200 at `/`, conflicting with
+WEB-M1-002's implemented locale redirect. Verification now accepts one 307 to a
+plain local locale path, with negative tests for external destinations, queries
+and redirect chains; Caddy routing is unchanged. Synthetic release preflight and
+failed-verification recovery passed after this correction. Explicit A-to-B-to-A
+rollback also passed, preserving the independent fixture and Caddy volumes; all
+owned integration resources were removed. Final web and edge scans report zero
+high/critical findings and zero secrets. No real deployment or rollback was run.
 
 ## Verification
 
@@ -52,6 +91,7 @@ Use the repository's pinned toolchain and existing installed dependencies; run `
 
 ```powershell
 $env:API_INTERNAL_URL = 'http://127.0.0.1:9'
+$env:PUBLIC_ORIGIN = 'http://127.0.0.1:4310'
 npm run lint
 npm run typecheck
 npm test -- --run
@@ -62,7 +102,7 @@ npm run e2e
 git diff --check
 ```
 
-**Local:** Use the isolated browser fixture for the acceptance scenarios above; no running API or real personal data is needed. For live manual checks, start `npm run dev` in a fresh terminal with existing local API configuration, then open the task's route recorded in WEB-M1-001 and repeat its success/failure scenarios.
+**Local:** Use the isolated browser fixture for the acceptance scenarios above; no running API or real personal data is needed. Set `PUBLIC_ORIGIN=http://localhost:3000` in the process environment before `npm run dev` and open `/mk/provider` (or `/en/provider`, `/bg/provider`, `/sq/provider`) for the translated signed-out shell. Live Google checks require the shared Caddy origin and independently configured compatible API; `npm run dev` alone does not route `/api/*`. Follow README's provider sign-in prerequisites and use the actual shared origin for PUBLIC_ORIGIN.
 
 **Non-production VPS:** When separately authorized and a compatible API is healthy, follow `deployment/README.md`: dispatch `Protected medical web release` (`deploy.yml`) from `main`, operation `deploy`, environment `non-production`, using the published full commit-SHA release and the workflow's required configuration/API inputs. Open this task's approved routes on the site origin and repeat the acceptance scenarios with synthetic accounts/content; check `/healthz` and `/system-status` for regressions. Record the exact release and any unexecuted live checks. No production deployment or API operation is authorized by this task.
 

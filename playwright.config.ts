@@ -14,6 +14,6 @@ export default defineConfig({
   webServer: [
     { command: "node tests/e2e/api-fixture.mjs", url: "http://127.0.0.1:4311/healthz", reuseExistingServer: false },
     { command: "node scripts/start.mjs", url: "http://127.0.0.1:4310/healthz", reuseExistingServer: false,
-      env: { API_INTERNAL_URL: "http://127.0.0.1:4311", NEXT_TELEMETRY_DISABLED: "1", HOSTNAME: "127.0.0.1", PORT: "4310" } },
+      env: { API_INTERNAL_URL: "http://127.0.0.1:4311", PUBLIC_ORIGIN: "http://127.0.0.1:4310", NEXT_TELEMETRY_DISABLED: "1", HOSTNAME: "127.0.0.1", PORT: "4310" } },
   ],
 });

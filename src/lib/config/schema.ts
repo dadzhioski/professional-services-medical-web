@@ -1,12 +1,14 @@
 export type ServerEnvironment = Readonly<{
   nodeEnv: "development" | "test" | "production";
   apiInternalUrl: string;
+  publicOrigin: string;
 }>;
 
 // Pure validation only: never read process.env or export secrets here.
 export function parseServerEnvironment(input: {
   NODE_ENV?: string;
   API_INTERNAL_URL?: string;
+  PUBLIC_ORIGIN?: string;
 }): ServerEnvironment {
   const nodeEnv = input.NODE_ENV;
   if (nodeEnv !== "development" && nodeEnv !== "test" && nodeEnv !== "production") {
@@ -30,5 +32,16 @@ export function parseServerEnvironment(input: {
   } catch {
     throw new Error("Invalid environment: API_INTERNAL_URL must be an HTTP(S) origin without credentials, path, query, or fragment.");
   }
-  return Object.freeze({ nodeEnv, apiInternalUrl: origin });
+  let publicOrigin: string;
+  try {
+    const value = input.PUBLIC_ORIGIN;
+    if (!value || !/^https?:\/\/[^/]+\/?$/.test(value) || /[\\\s?#]/.test(value)) throw new Error();
+    const url = new URL(value);
+    const local = url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    if ((!local && url.protocol !== "https:") || url.username || url.password || url.pathname !== "/") throw new Error();
+    publicOrigin = url.origin;
+  } catch {
+    throw new Error("Invalid environment: PUBLIC_ORIGIN must be an HTTPS origin (HTTP only on loopback) without credentials, path, query, or fragment.");
+  }
+  return Object.freeze({ nodeEnv, apiInternalUrl: origin, publicOrigin });
 }

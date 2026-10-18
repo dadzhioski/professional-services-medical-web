@@ -1,6 +1,6 @@
 # WEB-ADR-0006: Milestone 1 experience and security boundaries
 
-- **Status:** Proposed
+- **Status:** Accepted for identity/session and PUBLIC_ORIGIN (owner, 2026-10-16); media and administrator boundary review remains pending
 - **Date:** 2026-10-16
 - **Related tasks:** WEB-M1-001, WEB-M1-002, WEB-M1-003, WEB-M1-008, WEB-M1-010, WEB-M1-011, WEB-M1-012
 
@@ -9,6 +9,12 @@
 The owner approved a multilingual medical MVP launching in Macedonia and the design scope recorded in [WEB-M1-001](../tasks/WEB-M1-001-experience-and-security-decisions.md). Installed client 0.2.0 has identity capabilities but lacks feature contracts. API-M1-003 defers MFA while later API tasks still require it for administrators. This ADR records the proposed architecture implementing owner intent; approval of its scope is not review/acceptance of this completed ADR.
 
 ## Decision
+
+The owner explicitly accepted the identity/session and PUBLIC_ORIGIN design
+during WEB-M1-003 planning and authorized implementation, including its narrowly
+required CI/image/deployment configuration wiring. Implementation tests and human
+boundary review remain required; this acceptance does not authorize deployment,
+API operations or resolve the separate administrator/media gates.
 
 ### Experience and localization
 

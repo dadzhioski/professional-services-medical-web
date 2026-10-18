@@ -1,6 +1,15 @@
 import type { TranslationKey } from "./en";
 
 export const messages = {
+  "account.heading": "Професионален акаунт",
+  "account.description": "Влезте в своя личен професионален акаунт.",
+  "account.login": "Продължете с Google",
+  "account.logout": "Изход",
+  "account.authenticated": "Влезли сте в акаунта си. Той е личен.",
+  "account.signedOut": "Влезте с Google за достъп до своя професионален акаунт.",
+  "account.expired": "Сесията ви изтече. Влезте отново.",
+  "account.forbidden": "Тази заявка не е разрешена. Опитайте да влезете отново.",
+  "account.unavailable": "Акаунтът ви временно не е достъпен. Опитайте отново по-късно.",
   "systemStatus.heading": "Състояние на системата",
   "systemStatus.service": "Услуга",
   "systemStatus.version": "Версия",

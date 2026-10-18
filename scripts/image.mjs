@@ -99,8 +99,21 @@ if (process.argv[2] === "build") {
     assert.equal(capture("docker", ["image", "inspect", image, "--format", '{{index .Config.Labels "org.opencontainers.image.revision"}}']), image.split(":").at(-1));
     assert.equal(capture("docker", ["image", "inspect", image, "--format", '{{index .Config.Labels "io.professional-services.api-client.version"}}']), version);
     run("docker", ["network", "create", network]); createdNetwork = true;
+    for (const [suffix, setting] of [["missing-origin", ""], ["invalid-origin", "http://invalid.example.test"]]) {
+      const name = `${id}-${suffix}`;
+      launch(name, ["--network", "none", "-e", "API_INTERNAL_URL=http://127.0.0.1:9", "-e", `PUBLIC_ORIGIN=${setting}`, image]);
+      // Next keeps its listener alive after a failed instrumentation hook, but
+      // must never become healthy or serve application content.
+      let status;
+      for (let attempt = 0; attempt < 30 && !status; attempt++) {
+        try {
+          status = capture("docker", ["exec", name, "node", "-e", "fetch('http://127.0.0.1:3000/healthz',{signal:AbortSignal.timeout(2000)}).then(r=>console.log(r.status)).catch(()=>process.exit(1))"]);
+        } catch { await new Promise(r => setTimeout(r, 500)); }
+      }
+      assert.equal(status, "500", "Invalid runtime origin must prevent readiness");
+    }
     launch(`${id}-fixture`, ["--network", network, "--network-alias", "fixture", "--mount", `type=bind,src=${resolve("tests/e2e/api-fixture.mjs")},dst=/fixture.mjs,readonly`, "-e", "FIXTURE_HOST=0.0.0.0", "--entrypoint", "node", image, "/fixture.mjs"]);
-    launch(id, ["--network", network, "-p", "127.0.0.1::3000", "-e", "API_INTERNAL_URL=http://fixture:4311", image]);
+    launch(id, ["--network", network, "-p", "127.0.0.1::3000", "-e", "API_INTERNAL_URL=http://fixture:4311", "-e", "PUBLIC_ORIGIN=http://127.0.0.1", image]);
     const port = capture("docker", ["port", id, "3000/tcp"]).split(":").at(-1);
     const origin = `http://127.0.0.1:${port}`;
     let healthy = false;

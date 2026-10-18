@@ -12,6 +12,7 @@ Keep actual configuration outside Git. `.env.production.example` contains synthe
 | --- | --- |
 | `WEB_IMAGE` | Full-SHA web image; local smoke defaults to the current HEAD image |
 | `SITE_ADDRESS` | One approved DNS hostname, optionally prefixed by `https://`; validation defaults to `medical.example.test` |
+| `PUBLIC_ORIGIN` | Exact HTTPS web origin matching `SITE_ADDRESS`; the protected host runner supplies its existing validated `host.origin` |
 | `EDGE_NETWORK` | Host bootstrap defaults to `professional-services-edge`; integration always uses its own random network |
 | API client | Exact `@dadzhioski/professional-services-api-client@0.2.0`; smoke checks the image label against package/lock files |
 | `CADDY_IMAGE` | Full-SHA `professional-services-medical-edge` image; local checks default to current HEAD |
@@ -19,6 +20,21 @@ Keep actual configuration outside Git. `.env.production.example` contains synthe
 The edge image rebuilds Caddy 2.11.7 with Go 1.26.9 and `golang.org/x/net@v0.60.0` to fix four high scanner findings in the upstream binary. Compiler and runtime base digests are pinned in `Dockerfile.caddy`; no new Caddy plugins are added. Build it with `make edge-image`. Release context is available in the [upstream releases](https://github.com/caddyserver/caddy/releases/tag/v2.11.7). Local images built with uncommitted changes are development evidence, not publishable releases.
 
 ## Runtime boundary
+
+WEB-M1-003 adds required server-only `PUBLIC_ORIGIN`. Install the reviewed host
+scripts and new immutable Compose configuration together before deploying this
+release; no new workflow input or host.json field is needed. The host runner
+passes its validated `origin` to Compose, which passes it into the web container.
+The runtime value is independent of the synthetic Docker build value. Validation
+accepts older immutable configurations without this variable for rollback; when
+present it must match the approved site. Do not edit historical configurations.
+
+Before live provider acceptance, the API owner must confirm compatible identity
+behavior, the same public origin, Google callback configuration and exact return
+paths `/mk/provider`, `/en/provider`, `/bg/provider`, `/sq/provider` (plus the API's
+required `/`). Test login, return and logout with synthetic accounts through the
+site origin in all locales, then expiry and safe unavailable states. Local browser
+fixtures are not live Google acceptance. This change does not authorize deployment.
 
 Only Caddy publishes 80/tcp, 443/tcp and 443/udp. Web exposes 3000 only inside the external edge network under alias `web`. Its API origin is fixed server-side to `http://api:8080`; it is never a `NEXT_PUBLIC_*` value. The API and PostgreSQL are not services in this project.
 
