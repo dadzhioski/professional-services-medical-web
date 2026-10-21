@@ -14,7 +14,7 @@ Keep actual configuration outside Git. `.env.production.example` contains synthe
 | `SITE_ADDRESS` | One approved DNS hostname, optionally prefixed by `https://`; validation defaults to `medical.example.test` |
 | `PUBLIC_ORIGIN` | Exact HTTPS web origin matching `SITE_ADDRESS`; the deploy workflow supplies `WEB_DEPLOY_ORIGIN` |
 | `EDGE_NETWORK` | Host bootstrap defaults to `professional-services-edge`; integration always uses its own random network |
-| API client | Exact `@dadzhioski/professional-services-api-client@0.2.0`; smoke checks the image label against package/lock files |
+| API client | Exact `@dadzhioski/professional-services-api-client@0.3.0`; smoke checks the image label against package/lock files |
 | `CADDY_IMAGE` | Full-SHA `professional-services-medical-edge` image; local checks default to current HEAD |
 
 The edge image rebuilds Caddy 2.11.7 with Go 1.26.9 and `golang.org/x/net@v0.60.0` to fix four high scanner findings in the upstream binary. Compiler and runtime base digests are pinned in `Dockerfile.caddy`; no new Caddy plugins are added. Build it with `make edge-image`. Release context is available in the [upstream releases](https://github.com/caddyserver/caddy/releases/tag/v2.11.7). Local images built with uncommitted changes are development evidence, not publishable releases.

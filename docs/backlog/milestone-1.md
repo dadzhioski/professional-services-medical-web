@@ -36,7 +36,7 @@ Task creation is complete; WEB-M1-002 and WEB-M1-003 are implemented locally, wi
 
 ### Observed capability and approval gates
 
-- The repository pins `@dadzhioski/professional-services-api-client@0.2.0`. Read-only inspection of the installed package found system/health and IdentityApi login/current-account/CSRF/logout methods, but no profile, onboarding, catalog, media, credential, review or publication methods.
+- The repository pins `@dadzhioski/professional-services-api-client@0.3.0` (WEB-M1-004). It adds OrganizationApi, ProfileApi, MedicalApi, ServicesApi, LocationsApi and ReferenceApi (API-M1-004 through API-M1-006) to the system/health and IdentityApi methods; media, credential, review, publication and public profile/directory methods are still absent. See the WEB-M1-004 capability matrix.
 - Installed declarations are capability observations, not fresh registry-publication or deployed-API proof. WEB-M1-003 verifies identity provenance/compatibility before use; WEB-M1-004 requires explicit approval and an actually published exact feature version.
 - API-M1-004 through API-M1-010 are planned in the inspected sibling tasks. API-M1-011 prepares the client release but does not publish it. Each dependent web task remains blocked until its actual methods/types and compatible backend behavior are available.
 - The owner deferred MFA entirely for this MVP, including administrators (2026-10-16). API-M1-003/004/007/008/009 still require API-owner reconciliation and compatible authorization before administrator integration/evidence access; no local bypass. Stored privileges, controlled bootstrap, tenant isolation and audits remain mandatory.
