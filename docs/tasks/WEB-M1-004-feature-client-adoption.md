@@ -1,6 +1,6 @@
 # WEB-M1-004: Adopt an approved published feature API client
 
-- **Status:** BLOCKED — approved published feature client required
+- **Status:** IN PROGRESS — client 0.3.0 adopted locally; non-production compatibility checks pending; API-M1-007 through API-M1-010 capabilities absent
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** None; feature-specific API publication and explicit upgrade approval
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; decisions recorded by WEB-M1-001 where applicable
@@ -33,12 +33,32 @@ Make the exact published feature contract available before dependent web integra
 7. Keep pages/layouts server-rendered, use typed translation keys and generated API types, and restrict API calls to server-only wrappers. Use the existing Vitest/Testing Library/Playwright conventions; test affected SSR, accessibility, safe failure and environment boundaries.
 8. Confirm required capabilities in the approved published client before implementation. Stop on missing methods or unresolved contract/security conflicts and request an amendment to the linked API task; do not invent fields, endpoints or successful mock fallbacks.
 
+## Release provenance and capability matrix (2026-10-21)
+
+- Previous pin: `0.2.0` (`sha512-C44VLCqdR1PQDAK6TnpaXPeBUwEd76yoOPDjZdCuQAeUZbK7ez3CmkgZtbUKdQUWbDGmPDFG23aKjcwjuqfAWA==`).
+- Adopted (owner-approved): `0.3.0`, registry integrity `sha512-P44HApAF/LicamACKTh85rFsEyeliRMASc3BnskEjYKtcDvkfhfn+3wY8JNDNkR5GOn1z7PEpEO7eCkG4hqFMA==`, matching the lock file. Prepared by API commit `96e1548` ("API-M1-006: prepare client release 0.3.0"; additive over 0.2.0 per oasdiff) and published through the API `release-client.yml` workflow; registry metadata carries no `gitHead`, so the publishing commit is taken from the API release record.
+- Published 0.3.0 versus 0.2.0: `SystemApi`, `IdentityApi`, `ActuatorApi`, `runtime`, `SystemStatus`, `CurrentAccount`, `CsrfResponse` and `ProblemDetail` differ only in the OpenAPI version header, so the existing status and identity adapters need no change.
+- New models: ContextResponse, OnboardingResponse, ProfileResponse, EditProfileRequest, MedicalProfileResponse, EditMedicalRequest, ServiceResponse, Create/UpdateServiceRequest, Price, PracticeLocationResponse, Create/UpdateLocationRequest, PlaceLabels, CountryResponse, CityResponse, SpecialtyResponse, SpecialtyLabels.
+
+| API task | Generated methods (published 0.3.0) | Web consumer |
+|---|---|---|
+| API-M1-003 | `IdentityApi`: beginGoogleLogin, completeGoogleLogin, getCsrfToken, getCurrentAccount, logout (unchanged) | Existing identity adapter |
+| API-M1-004 | `OrganizationApi`: getCurrentContext, onboard | WEB-M1-005 |
+| API-M1-005 | `ProfileApi`: createOrGetProfile, getProfile, editProfile; `MedicalApi`: createOrGetMedicalProfile, getMedicalProfile, editMedicalProfile | WEB-M1-005, WEB-M1-006 |
+| API-M1-006 | `ServicesApi` and `LocationsApi` create/get/list/update/delete; `ReferenceApi`: listCountries, listCities, listSpecialties | WEB-M1-007 |
+| API-M1-007 | Absent — linked API blocker | WEB-M1-008 |
+| API-M1-008 | Absent — linked API blocker | WEB-M1-009 |
+| API-M1-009 | Absent — linked API blocker | WEB-M1-010 |
+| API-M1-010 | Absent — linked API blocker | WEB-M1-011 |
+
 ## Acceptance criteria
 
-- [ ] One approved exact version is installed reproducibly and passes the version policy; required exported types/methods are recorded.
-- [ ] Status and identity regressions pass; absent capabilities remain explicit linked API blockers.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] One approved exact version is installed reproducibly and passes the version policy; required exported types/methods are recorded.
+- [x] Status and identity regressions pass; absent capabilities remain explicit linked API blockers.
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
+
+Local evidence (2026-10-21): Node 24.19.0/npm 11.17.0; `npm ci` clean reinstall, lint, typecheck, unit tests, production build, API-client policy (0.3.0), 50 policy tests, 70 desktop/mobile browser scenarios and `git diff --check` passed. Live API compatibility, Google sign-in against a running API and non-production release checks were not executed. Edge integration is not applicable (no edge/deployment configuration changed). Deferred Milestone 0 obligations remain open.
 
 ## Verification
 
