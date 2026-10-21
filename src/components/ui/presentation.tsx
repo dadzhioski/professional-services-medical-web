@@ -8,8 +8,8 @@ export function Section({ id, title, children }: { id: string; title: string; ch
     <h2 id={id} className="text-xl font-semibold text-teal-950">{title}</h2>{children}
   </section>;
 }
-export function Notice({ children }: { children: ReactNode }) {
-  return <p className="rounded-lg border border-teal-700 bg-teal-50 p-4 text-teal-950">{children}</p>;
+export function Notice({ children, role }: { children: ReactNode; role?: "alert" | "status" }) {
+  return <p role={role} className="rounded-lg border border-teal-700 bg-teal-50 p-4 text-teal-950">{children}</p>;
 }
 export function Button({ type = "button", className = "", ...props }: ComponentPropsWithoutRef<"button">) {
   return <button type={type} className={`min-h-11 rounded-lg bg-teal-800 px-5 py-3 font-semibold text-white hover:bg-teal-900 disabled:cursor-not-allowed disabled:opacity-60 ${className}`} {...props} />;
