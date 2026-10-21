@@ -1,6 +1,6 @@
 # Web Milestone 1 — Frontend planning authorization
 
-- **Status:** AUTHORIZED FOR PLANNING AND IMPLEMENTATION (owner decision, 2026-10-16); WEB-M1-001 through WEB-M1-012 created, with feature-specific decisions and API gates below.
+- **Status:** AUTHORIZED FOR PLANNING AND IMPLEMENTATION (owner decision, 2026-10-16); WEB-M1-001 through WEB-M1-012 created (WEB-M1-013 site navigation added 2026-10-21), with feature-specific decisions and API gates below.
 - **Direction:** Public doctor profiles and provider onboarding, as described in `build-plan.md`.
 - **Starting point:** Implemented Next.js/SSR foundation, exact generated API client, CI/images and owner-confirmed working first non-production deployment.
 - **Milestone 0:** Formal acceptance remains open; deferred work is tracked in `milestone-0.md` and does not block unrelated frontend work.
@@ -33,6 +33,7 @@ Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005 and WEB-M1-006 are
 | [WEB-M1-010](../tasks/WEB-M1-010-administrative-review-and-publication.md) | Add administrator review and provider publication controls | WEB-M1-007, WEB-M1-009; WEB-M1-004 review/publication capabilities; resolved WEB-M1-001 administrator policy |
 | [WEB-M1-011](../tasks/WEB-M1-011-public-profile-and-seo.md) | Integrate public server-rendered doctor profiles and SEO | WEB-M1-002; WEB-M1-004 public-profile capability; WEB-M1-001 route/origin decisions |
 | [WEB-M1-012](../tasks/WEB-M1-012-milestone-acceptance.md) | Verify the Milestone 1 provider-to-public journey | WEB-M1-003 through WEB-M1-011 implemented; WEB-M1-001 decisions resolved |
+| [WEB-M1-013](../tasks/WEB-M1-013-site-navigation-and-entry.md) | Add a localized entry page and global site navigation with sign-in entry (added 2026-10-21) | WEB-M1-002, WEB-M1-003, WEB-M1-005; owner branding/entry-content decisions for final copy |
 
 ### Observed capability and approval gates
 
