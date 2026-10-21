@@ -97,39 +97,25 @@ after every gate succeeds. It downloads the same image verified by that run,
 refuses to overwrite an existing SHA tag, pushes only that tag, and checks the
 pulled image ID. There is no deployment environment, SSH credential, OIDC grant,
 production permission, or database operation in CI. The separate manually
-triggered `deploy.yml` uses protected environments and restricted SSH; its
-setup and permissions are documented in [deployment setup](../deployment/README.md#protected-release-setup-web-m0-006).
+triggered `deploy-web.yml` deploys a published SHA over SSH; its setup is
+documented in [deploying to the VPS](../deployment/README.md#deploying-to-the-vps).
 
-## Protected release evidence
+## Release evidence
 
-CI now validates workflows with digest-pinned actionlint and exercises the
-shared release transaction engine through `make web-release-smoke` and
-`make web-rollback-smoke`. Policy tests cover release input/evidence validation,
-approval checks, locking, failure state, and explicit rollback; YAML wiring is
-validated rather than mirrored in unit tests. Synthetic Docker tests prove
-replacement/recovery and preserve the independent fixture and Caddy volumes.
-The release HTTP probe accepts legacy root HTML or one 307 to a plain local
-locale entry (currently `/mk`); external redirects, queries and redirect chains
-remain rejected. Deployment probes receive a synthetic loopback PUBLIC_ORIGIN;
-the actual release receives the independently validated host origin.
+CI validates workflows with digest-pinned actionlint.
 
 Each publishing matrix job records its published image digest, revision label,
 and (for web) client version. After both jobs succeed, `release-evidence`
 assembles `release.json` with the repository, full SHA, run ID/attempt, exact
 client version, both image identities, and Compose/Caddyfile SHA-256 hashes.
-The `release-<SHA>-<attempt>` artifact is retained for 90 days. Deployment checks
-the successful main-push CI run and artifact digest through GitHub, then the
-host independently repeats evidence validation and checks pulled image digests.
-Missing, expired, fork/PR, failed, mismatched or untested evidence fails closed.
-Existing published SHA tags without release evidence are not retroactively
-approved; publish a new tested main commit. A failed partial publication still
-refuses overwriting an existing SHA tag; investigate and publish a new commit.
+The `release-<SHA>-<attempt>` artifact is retained for 90 days as a record of
+the published digests; deployment does not consume it. A failed partial
+publication still refuses overwriting an existing SHA tag; investigate and
+publish a new commit.
 
-The deployment job uses only `contents: read` and `actions: read`; registry pull
-credentials are read-only and host-owned. Publishing permissions and the
-`PUBLISHING_ENABLED` guard remain unchanged. Environment approval configuration,
-host installation, manual non-production proof and human security review are
-external acceptance gates, not claims made by a passing local test.
+The deploy job uses only `contents: read`; registry pull credentials are
+host-owned. Publishing permissions and the `PUBLISHING_ENABLED` guard remain
+unchanged.
 
 ## Security gates and retained evidence
 

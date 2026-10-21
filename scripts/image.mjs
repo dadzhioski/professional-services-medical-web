@@ -1,61 +1,15 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
-import { resolve, join } from "node:path";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { checkClient } from "./check-api-client-version.mjs";
-import { validateImage, releaseRepository, releaseImages, validateReleaseManifest, validateReleaseEvidence } from "./production-config.mjs";
+import { validateImage, releaseRepository, releaseImages, validateReleaseManifest } from "./production-config.mjs";
 const run = (cmd, args, options = {}) => execFileSync(cmd, args, { stdio: "inherit", ...options });
 const capture = (cmd, args) => run(cmd, args, { encoding: "utf8", stdio: "pipe" }).trim();
 const fetchBounded = url => fetch(url, { signal: AbortSignal.timeout(10_000) });
 export const hashBytes = bytes => createHash("sha256").update(bytes).digest("hex");
-
-// Only fixed GitHub API paths are accepted; never follow authenticated redirects.
-export async function githubJson(path, token) {
-  assert.ok(path.startsWith(`/repos/${releaseRepository}/actions/`) && !path.includes(".."));
-  const response = await fetch(`https://api.github.com${path}`, { redirect: "error", signal: AbortSignal.timeout(12_000),
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" } });
-  assert.equal(response.status, 200, "GitHub release evidence unavailable");
-  return response.json();
-}
-
-export async function getReleaseEvidence(sha, token) {
-  assert.match(sha, /^[a-f0-9]{40}$/);
-  assert.ok(token);
-  const base = `/repos/${releaseRepository}/actions`;
-  const runs = await githubJson(`${base}/workflows/ci.yml/runs?head_sha=${sha}&event=push&status=success&per_page=100`, token);
-  const run = runs.workflow_runs.find(r => r.head_sha === sha && r.head_branch === "main" && r.conclusion === "success");
-  assert.ok(run, "No successful trusted main CI run");
-  const detail = await githubJson(`${base}/runs/${run.id}`, token);
-  const artifacts = await githubJson(`${base}/runs/${run.id}/artifacts?per_page=100`, token);
-  const artifact = artifacts.artifacts.find(a => a.name === `release-${sha}-${detail.run_attempt}`);
-  assert.ok(artifact && !artifact.expired && artifact.size_in_bytes < 65536, "Release evidence missing or expired");
-  const redirect = await fetch(`https://api.github.com${base}/artifacts/${artifact.id}/zip`, { redirect: "manual",
-    signal: AbortSignal.timeout(12_000), headers: { Authorization: `Bearer ${token}` } });
-  assert.equal(redirect.status, 302);
-  const location = new URL(redirect.headers.get("location"));
-  assert.equal(location.protocol, "https:");
-  assert.equal(location.username, ""); assert.equal(location.password, "");
-  assert.ok(location.hostname.endsWith(".blob.core.windows.net") || location.hostname.endsWith(".actions.githubusercontent.com"));
-  // Signed artifact URL is fetched without the GitHub credential.
-  const response = await fetch(location, { redirect: "error", signal: AbortSignal.timeout(12_000) });
-  assert.equal(response.status, 200);
-  const bytes = Buffer.from(await response.arrayBuffer());
-  assert.ok(bytes.length < 65536);
-  assert.equal(`sha256:${hashBytes(bytes)}`, artifact.digest);
-  const directory = mkdtempSync(join(tmpdir(), "web-evidence-"));
-  try {
-    const archive = join(directory, "release.zip");
-    writeFileSync(archive, bytes, { mode: 0o600 });
-    const options = { encoding: "utf8", stdio: "pipe", timeout: 12_000, maxBuffer: 65536 };
-    assert.equal(execFileSync("unzip", ["-Z1", archive], options).trim(), "release.json");
-    const manifest = JSON.parse(execFileSync("unzip", ["-p", archive, "release.json"], options));
-    validateReleaseEvidence(manifest, detail, artifact);
-    return manifest;
-  } finally { rmSync(directory, { recursive: true, force: true }); }
-}
 
 export function imageReleasePart(service, sha) {
   assert.ok(Object.hasOwn(releaseImages, service));
