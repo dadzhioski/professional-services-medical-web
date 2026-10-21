@@ -78,6 +78,8 @@ const server = createServer((req, res) => {
       }
       if (req.method === "PATCH") {
         if (identityMode === "suspended") { fail(403); return; }
+        // Like the API's @RequestBody handling, only JSON bodies are accepted.
+        if (req.headers["content-type"]?.split(";")[0].trim() !== "application/json") { fail(415); return; }
         let body = "";
         req.on("data", chunk => { body += chunk; });
         req.on("end", () => {

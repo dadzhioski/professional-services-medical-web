@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { createProfile, readProfile, saveProfile } from "./profile";
+import { sessionConfiguration } from "./session-transport";
 
 const fetchMock = vi.fn<typeof fetch>();
 const origin = "http://localhost:3000";
@@ -45,6 +46,23 @@ describe("read profile", () => {
     fetchMock.mockResolvedValueOnce(Response.json(profile, { headers: { "Set-Cookie": "platform-session-local=rotated; Path=/; HttpOnly; SameSite=Lax" } }));
     expect(await readProfile("synthetic-session")).toEqual({ state: "unavailable" });
   });
+});
+
+describe("transport headers", () => {
+  const send = async (headers: Record<string, string>, body?: string) => {
+    fetchMock.mockResolvedValueOnce(Response.json({}));
+    await sessionConfiguration("synthetic-session").fetchApi!("http://localhost:8080/api/v1/profile", { method: "PATCH", headers, body });
+    return Object.fromEntries(new Headers(fetchMock.mock.calls[0][1]?.headers));
+  };
+  test("only a JSON body type and CSRF pass through; other caller headers are dropped", async () => {
+    expect(await send({ "Content-Type": "application/json", "X-CSRF-TOKEN": "token", Authorization: "Bearer private",
+      Cookie: "other=private", "X-Forwarded-Host": "evil.test" }, "{}"))
+      .toEqual({ "content-type": "application/json", cookie: "platform-session-local=synthetic-session", "x-csrf-token": "token" });
+  });
+  test.each([[{ "Content-Type": "text/html" }, "{}"], [{ "Content-Type": "application/json" }, undefined]] as const)(
+    "never forwards other or body-less content types %#", async (headers, body) => {
+      expect(await send(headers, body)).toEqual({ cookie: "platform-session-local=synthetic-session" });
+    });
 });
 
 describe("create profile", () => {
@@ -97,7 +115,8 @@ describe("save profile", () => {
     expect(url).toBe("http://localhost:8080/api/v1/profile");
     expect(init).toMatchObject({ method: "PATCH", cache: "no-store", credentials: "omit", redirect: "error" });
     expect(JSON.parse(String(init?.body))).toEqual(draft);
-    expect(Object.fromEntries(new Headers(init?.headers))).toEqual({
+    // The API rejects a JSON body sent without its media type (415).
+    expect(Object.fromEntries(new Headers(init?.headers))).toEqual({ "content-type": "application/json",
       cookie: "platform-session-local=synthetic-session", "x-csrf-token": "fresh-token" });
   });
   test.each([[400, { state: "invalid" }], [401, { state: "expired" }], [403, { state: "forbidden" }], [500, { state: "unavailable" }]] as const)(
