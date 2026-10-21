@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { SiteHeader } from "@/components/site-header";
 import { LanguageLinks } from "@/components/site-shell";
 import { Heading, Notice } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
@@ -40,14 +41,14 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const path = `/${locale}/provider/profile`;
   const loginHref = await googleLoginHref(locale);
   if (account.state !== "authenticated") {
-    return <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+    return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
       <LanguageLinks locale={locale} path={path} />
       <Surface className="space-y-6">
         <Heading>{t("profileEditor.heading")}</Heading>
         <Notice>{t(`account.${safeNotice ?? account.state}`)}</Notice>
         <a className={linkClass} href={loginHref}>{t("account.login")}</a>
       </Surface>
-    </main>;
+    </main></>;
   }
   // The profile API requires a workspace, so it is only called once the API confirms one exists.
   const workspace = await currentContext(session);
@@ -57,7 +58,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   // A failure notice never overrides an existing draft.
   const problem = failed ?? (profile?.state === "missing" ? safeNotice : undefined);
   const messages = Object.fromEntries(editorMessageKeys.map(key => [key, t(key)])) as EditorMessages;
-  return <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+  return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     <LanguageLinks locale={locale} path={path} />
     <ProviderNavigation locale={locale} current="profile" />
     <Surface className="space-y-6">
@@ -96,5 +97,5 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           introduction={profile.profile.biography} />
       </section>
     </Surface>}
-  </main>;
+  </main></>;
 }

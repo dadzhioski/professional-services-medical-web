@@ -166,7 +166,7 @@ test("submissions require the site Origin and ignore foreign identifiers", async
     const page = await context.newPage();
     await openDraft(page);
     const slug = await slugOf(page);
-    const fields = await page.locator("form input, form textarea").evaluateAll(inputs => Object.fromEntries(
+    const fields = await page.locator("main form input, main form textarea").evaluateAll(inputs => Object.fromEntries(
       inputs.map(input => [(input as HTMLInputElement).name, (input as HTMLInputElement).value])));
     const crossSite = await context.request.post(`${origin}/en/provider/profile`, { multipart: { ...fields, displayName: "Cross-site" } });
     const crossSiteHtml = await crossSite.text();
