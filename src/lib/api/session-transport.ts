@@ -23,10 +23,12 @@ export function sessionConfiguration(session: string | undefined, apply?: ApplyS
   return new Configuration({
     basePath: apiInternalUrl,
     fetchApi: async (url, init) => {
-      // A new header set per request retains the generated CSRF header only.
+      // A new header set per request retains only the CSRF header and the generated JSON body type.
       const headers = new Headers();
-      const csrf = new Headers(init?.headers).get("X-CSRF-TOKEN");
+      const generated = new Headers(init?.headers);
+      const csrf = generated.get("X-CSRF-TOKEN");
       if (csrf) headers.set("X-CSRF-TOKEN", csrf);
+      if (init?.body !== undefined && generated.get("Content-Type") === "application/json") headers.set("Content-Type", "application/json");
       if (current) headers.set("Cookie", `${name}=${current}`);
       const response = await fetch(url, { ...init, headers, cache: "no-store", credentials: "omit",
         redirect: "error", signal: AbortSignal.timeout(5_000) });
