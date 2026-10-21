@@ -1,5 +1,5 @@
 # Rebuild the exact upstream release with the patched compiler/network module.
-FROM golang:1.26.9-alpine@sha256:3082400e369fa24d5fc60bca20edab3f6d604e0c5a690ec66b295eff4dd87ade AS builder
+FROM golang:1.26.10-alpine@sha256:9ce231b28998b32e116927c61aa5c406183061d4f3f2d61b292c88e7f6bdf7ca AS builder
 ENV GOTOOLCHAIN=local CGO_ENABLED=0
 WORKDIR /build
 RUN go mod init medical-web-edge && \
@@ -12,5 +12,5 @@ ARG REVISION
 LABEL org.opencontainers.image.revision=$REVISION \
       org.opencontainers.image.source="https://github.com/dadzhioski/professional-services-medical-web" \
       io.professional-services.caddy.version="2.11.7" \
-      io.professional-services.caddy.go="1.26.9" \
+      io.professional-services.caddy.go="1.26.10" \
       io.professional-services.caddy.x-net="0.60.0"

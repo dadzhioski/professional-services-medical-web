@@ -58,7 +58,7 @@ tests isolated routing/outages/restarts/accessibility, and scans its OS/Go inven
 Both verified images are saved together and published by a package matrix under
 the existing publishing guard. Neither job deploys the images.
 
-The edge image rebuilds Caddy 2.11.7 with Go 1.26.9 and `golang.org/x/net@v0.60.0`
+The edge image rebuilds Caddy 2.11.7 with Go 1.26.10 and `golang.org/x/net@v0.60.0`
 because the upstream binary contains four high findings (CVE-2026-78667,
 CVE-2026-78669 and CVE-2026-97031). Compiler and runtime base images are pinned
 by digest in `deployment/Dockerfile.caddy`; no security exception is added.
