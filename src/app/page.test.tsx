@@ -16,6 +16,14 @@ test("home has one heading and a focusable main landmark", () => {
   expect(screen.getByRole("main")).toHaveAttribute("tabindex", "-1");
 });
 
+test("home offers the doctor entry point without development copy", () => {
+  render(<Home locale="en" />);
+  expect(screen.getByRole("link", { name: t("home.doctorsAction") })).toHaveAttribute("href", "/en/provider");
+  expect(screen.getByRole("heading", { level: 2, name: t("home.doctorsHeading") })).toBeVisible();
+  expect(document.body.textContent).not.toMatch(/development|foundation/i);
+  expect(t("footer.notice")).not.toMatch(/development/i);
+});
+
 test("full document renders without JavaScript and passes structural accessibility checks", async () => {
   const html = renderToStaticMarkup(<RootLayout><Home locale="en" /></RootLayout>);
   const documentNode = new DOMParser().parseFromString(html, "text/html");

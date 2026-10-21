@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { SiteHeader } from "@/components/site-header";
 import { LanguageLinks } from "@/components/site-shell";
 import { Button, Heading, Notice } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
@@ -36,7 +37,7 @@ export default async function ProviderPage({ params, searchParams }: Props) {
   const failed = workspace && workspace.state !== "ready" && workspace.state !== "notOnboarded" ? workspace.state : undefined;
   const message = notice === "forbidden" || notice === "unavailable" || notice === "expired" ? notice : failed ?? result.state;
   const loginHref = await googleLoginHref(locale);
-  return <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+  return <><SiteHeader locale={locale} current="workspace" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     <LanguageLinks locale={locale} path={`/${locale}/provider`} />
     {result.state === "authenticated" && <ProviderNavigation locale={locale} current="workspace" />}
     <Surface className="space-y-6">
@@ -51,5 +52,5 @@ export default async function ProviderPage({ params, searchParams }: Props) {
         <form action={logout.bind(null, locale)}><Button type="submit">{t("account.logout")}</Button></form> :
         <a className={linkClass} href={loginHref}>{t("account.login")}</a>}
     </Surface>
-  </main>;
+  </main></>;
 }

@@ -8,12 +8,20 @@ export function LanguageLinks({ locale, path }: { locale: Locale; path: string }
   </nav>;
 }
 
+export function SkipLink({ locale }: { locale: Locale }) {
+  return <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus:rounded focus:bg-white focus:p-4">{translator(locale)("navigation.skipToContent")}</a>;
+}
+
+export function SiteFooter({ locale }: { locale: Locale }) {
+  return <footer className="mx-auto max-w-5xl px-6 py-8 text-sm text-slate-700"><p>{translator(locale)("footer.notice")}</p></footer>;
+}
+
+// Operational routes keep the plain title header; localized pages render SiteHeader themselves.
 export function SiteShell({ locale, children }: { locale: Locale; children: ReactNode }) {
-  const t = translator(locale);
   return <>
-    <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus:rounded focus:bg-white focus:p-4">{t("navigation.skipToContent")}</a>
-    <header className="mx-auto max-w-5xl px-6 py-8"><p className="font-semibold text-teal-900">{t("app.title")}</p></header>
+    <SkipLink locale={locale} />
+    <header className="mx-auto max-w-5xl px-6 py-8"><p className="font-semibold text-teal-900">{translator(locale)("app.title")}</p></header>
     {children}
-    <footer className="mx-auto max-w-5xl px-6 py-8 text-sm text-slate-700"><p>{t("footer.notice")}</p></footer>
+    <SiteFooter locale={locale} />
   </>;
 }

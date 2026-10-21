@@ -39,7 +39,7 @@ for (const locale of localeCodes) {
       expect(html).not.toMatch(/synthetic-session|synthetic-csrf|synthetic-private-account|127\.0\.0\.1:4311/);
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-      await page.getByRole("button", { name: t("account.logout") }).click();
+      await page.getByRole("main").getByRole("button", { name: t("account.logout") }).click();
       await expect(page.getByText(t("account.signedOut"))).toBeVisible();
       expect((await context.cookies()).filter(cookie => cookie.name === "platform-session-local")).toEqual([]);
     } finally { await context.close(); }
@@ -57,10 +57,10 @@ test("expiry, forbidden, outage and CSRF rejection stay safe", async ({ page, re
     expect(await response!.text()).not.toContain("synthetic-private-error");
   }
   await request.post(`${fixture}/control/identity/bad-csrf`);
-  await page.getByRole("button", { name: t("account.logout") }).click();
+  await page.getByRole("main").getByRole("button", { name: t("account.logout") }).click();
   await expect(page.getByText(t("account.forbidden"))).toBeVisible();
   await request.post(`${fixture}/control/identity/up`);
-  await page.getByRole("button", { name: t("account.logout") }).click();
+  await page.getByRole("main").getByRole("button", { name: t("account.logout") }).click();
   await expect(page.getByText(t("account.signedOut"))).toBeVisible();
 });
 
@@ -93,7 +93,7 @@ test("web logout rejects missing Origin without invalidating the session", async
     const t = translator("en");
     await page.goto(`${origin}/en/provider`);
     await page.getByRole("link", { name: t("account.login") }).click();
-    const fields = await page.locator("form input").evaluateAll(inputs => Object.fromEntries(
+    const fields = await page.locator("main form input").evaluateAll(inputs => Object.fromEntries(
       inputs.map(input => [(input as HTMLInputElement).name, (input as HTMLInputElement).value])));
     const response = await context.request.post(`${origin}/en/provider`, { multipart: fields, maxRedirects: 0 });
     expect(response.status()).toBe(303);

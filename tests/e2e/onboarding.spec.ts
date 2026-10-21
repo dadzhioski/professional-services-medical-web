@@ -147,7 +147,7 @@ test("submissions ignore foreign identifiers and require the site Origin", async
     const t = translator("en");
     await signIn(page);
     await page.goto(`${origin}/en/provider/onboarding`);
-    const fields = await page.locator("form input").evaluateAll(inputs => Object.fromEntries(
+    const fields = await page.locator("main form input").evaluateAll(inputs => Object.fromEntries(
       inputs.map(input => [(input as HTMLInputElement).name, (input as HTMLInputElement).value])));
     const crossSite = await context.request.post(`${origin}/en/provider/onboarding`, { multipart: fields, maxRedirects: 0 });
     expect(crossSite.headers().location).toBe("/en/provider/onboarding?notice=forbidden");
