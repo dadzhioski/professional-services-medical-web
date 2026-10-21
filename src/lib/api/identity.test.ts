@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
+import { IdentityApi } from "@dadzhioski/professional-services-api-client";
 import { currentAccount, googleLoginHref, logoutSession } from "./identity";
 import { incomingSession, isDeletedSession, sessionChanges, sessionCookieName } from "./session-cookie";
 
@@ -22,6 +23,11 @@ describe("identity boundary", () => {
     for (const locale of ["//evil.test", "en?returnTo=//evil.test", "en/../../", "xx"]) {
       await expect(googleLoginHref(locale as "en")).rejects.toThrow("Invalid locale");
     }
+  });
+  test.each(["/api/auth\\login", "/api/auth/login#x", "/api/auth/ login"])("rejects unsafe generated login path %s", async path => {
+    const opts = vi.spyOn(IdentityApi.prototype, "beginGoogleLoginRequestOpts")
+      .mockResolvedValueOnce({ path, method: "GET", headers: {}, query: {} });
+    try { await expect(googleLoginHref("en")).rejects.toThrow("Invalid login navigation"); } finally { opts.mockRestore(); }
   });
   test("signed-out SSR never bootstraps a session", async () => {
     expect(await currentAccount()).toEqual({ state: "signedOut" });
