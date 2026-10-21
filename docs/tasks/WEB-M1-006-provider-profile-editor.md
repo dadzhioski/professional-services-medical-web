@@ -1,6 +1,6 @@
 # WEB-M1-006: Add professional profile draft editing
 
-- **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
+- **Status:** IMPLEMENTED LOCALLY (2026-10-21) against pinned client 0.3.0 (`ProfileApi.getProfile`/`createOrGetProfile`/`editProfile`); human boundary review, live API and non-production checks pending; API contract amendment requested (see below)
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-005; WEB-M1-004 profile capability
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
@@ -37,11 +37,26 @@ Use /[locale]/provider/profile with four-locale interface dictionaries. Provider
 7. Keep pages/layouts server-rendered, use typed translation keys and generated API types, and restrict API calls to server-only wrappers. Use the existing Vitest/Testing Library/Playwright conventions; test affected SSR, accessibility, safe failure and environment boundaries.
 8. Confirm required capabilities in the approved published client before implementation. Stop on missing methods or unresolved contract/security conflicts and request an amendment to the linked API task; do not invent fields, endpoints or successful mock fallbacks.
 
+## Scope decision and contract notes (2026-10-21)
+
+Owner decision: this task edits the vertical-neutral profile only (display name, biography, read-only slug). MedicalApi fields from API-M1-005 move to their related tasks: licence number and registration body to WEB-M1-009, specialty to WEB-M1-007.
+
+Observed 0.3.0 behaviour: `editProfile` replaces both text fields and carries `version` in the body; a stale version returns 409; validation failures return a generic 400 Problem Detail without field codes; the published OpenAPI limits are 255 (display name) and 2000 (biography) characters. The web always sends both fields. It checks the same limits locally for usability and maps any API 400 to one generic form message. A 409 shows the latest saved version for explicit review, with a separate choice to save over it or discard. Profile endpoints are called only after current context confirms a workspace, because they return 500 without one. The CSRF header gap recorded in WEB-M1-005 also applies here.
+
+Requested amendment to [API-M1-005](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-005-professional-profile-drafts.md):
+
+- document field-level validation codes;
+- declare `publicationState` as an enum;
+- return a documented status instead of 500 for accounts without a workspace;
+- add explicitly public professional contact fields if they are intended. Until then, the editor states that contact details cannot be added yet and never shows login identity.
+
+The API repository is not modified by this task.
+
 ## Acceptance criteria
 
-- [ ] Create/read/save, invalid fields, stale edit, unavailable API and lost authorization are tested.
-- [ ] Drafts never leak through anonymous HTML, metadata, previews or shared caches; keyboard error recovery works.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
+- [x] Create/read/save, invalid fields, stale edit, unavailable API and lost authorization are tested (synthetic unit and browser fixture; live API not exercised).
+- [x] Drafts never leak through anonymous HTML, metadata, previews or shared caches; keyboard error recovery works (synthetic browser fixture).
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; live API, human boundary review and non-production checks remain pending.
 - [ ] No deferred Milestone 0 obligation is marked passed or waived.
 
 ## Verification

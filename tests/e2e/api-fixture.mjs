@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 let available = true;
 const sessions = new Map();
 const organizations = new Map();
+const profiles = new Map();
 let sequence = 0;
 let identityMode = "up";
 let reuseAccount = false;
@@ -10,11 +11,16 @@ const server = createServer((req, res) => {
   const url = new URL(req.url, "http://fixture.test");
   if (req.method === "POST" && url.pathname.startsWith("/control/identity/")) {
     identityMode = url.pathname.split("/").at(-1);
-    if (identityMode === "reset") { sessions.clear(); organizations.clear(); reuseAccount = false; identityMode = "up"; }
+    if (identityMode === "reset") { sessions.clear(); organizations.clear(); profiles.clear(); reuseAccount = false; identityMode = "up"; }
     if (identityMode === "same-account") { reuseAccount = true; identityMode = "up"; }
     res.writeHead(204).end(); return;
   }
-  if (url.pathname.startsWith("/api/auth/") || ["/api/v1/account", "/api/v1/me", "/api/v1/onboarding"].includes(url.pathname)) {
+  if (req.method === "POST" && url.pathname === "/control/profile/bump") {
+    // Simulates a save from another tab or device.
+    for (const profile of profiles.values()) Object.assign(profile, { displayName: "Edited elsewhere", version: profile.version + 1 });
+    res.writeHead(204).end(); return;
+  }
+  if (url.pathname.startsWith("/api/auth/") || ["/api/v1/account", "/api/v1/me", "/api/v1/onboarding", "/api/v1/profile"].includes(url.pathname)) {
     res.setHeader("Cache-Control", "no-store");
     const session = /(?:^|; )platform-session-local=([^;]+)/.exec(req.headers.cookie ?? "")?.[1];
     const state = sessions.get(session);
@@ -38,7 +44,7 @@ const server = createServer((req, res) => {
     if (url.pathname === "/api/auth/csrf") {
       json({ token: identityMode === "bad-csrf" ? "wrong-token" : state.csrf, headerName: "X-CSRF-TOKEN" }); return;
     }
-    if (req.method === "POST" && req.headers["x-csrf-token"] !== state.csrf) { fail(403); return; }
+    if (["POST", "PATCH"].includes(req.method) && req.headers["x-csrf-token"] !== state.csrf) { fail(403); return; }
     if (url.pathname === "/api/auth/logout" && req.method === "POST") {
       sessions.delete(session); setCookie(""); res.writeHead(204).end(); return;
     }
@@ -57,6 +63,37 @@ const server = createServer((req, res) => {
       // Simulates a committed request whose response is lost in transit.
       if (identityMode === "onboard-lost") { fail(504); return; }
       json(organizations.get(state.account)); return;
+    }
+    if (url.pathname === "/api/v1/profile") {
+      if (identityMode === "profile-down") { fail(503); return; }
+      // Like the API, profile access without a workspace is a server error.
+      const organization = organizations.get(state.account);
+      if (!organization) { fail(500); return; }
+      const key = organization.organizationId;
+      if (req.method === "GET") { if (profiles.has(key)) json(profiles.get(key)); else fail(404); return; }
+      if (req.method === "POST") {
+        if (!profiles.has(key)) profiles.set(key, { profileId: `synthetic-private-profile-${key}`, organizationId: key,
+          slug: `dr-${(++sequence).toString(16).padStart(8, "0")}`, displayName: null, biography: null, publicationState: "DRAFT", version: 0 });
+        json(profiles.get(key)); return;
+      }
+      if (req.method === "PATCH") {
+        if (identityMode === "suspended") { fail(403); return; }
+        let body = "";
+        req.on("data", chunk => { body += chunk; });
+        req.on("end", () => {
+          let input;
+          try { input = JSON.parse(body); } catch { fail(400); return; }
+          const text = (value, max) => value === undefined || value === null || (typeof value === "string" && value.length <= max);
+          if (identityMode === "profile-reject" || !Number.isInteger(input.version) || !text(input.displayName, 255) || !text(input.biography, 2000)) { fail(400); return; }
+          const profile = profiles.get(key);
+          if (!profile) { fail(404); return; }
+          if (input.version !== profile.version) { fail(409); return; }
+          // Both fields are replaced, as in the API.
+          Object.assign(profile, { displayName: input.displayName ?? null, biography: input.biography ?? null, version: profile.version + 1 });
+          json(profile);
+        });
+        return;
+      }
     }
     fail(404); return;
   }

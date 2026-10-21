@@ -17,7 +17,7 @@
 
 ## Milestone 1 task backlog (2026-10-16)
 
-Task creation is complete; WEB-M1-002, WEB-M1-003 and WEB-M1-005 are implemented locally, with WEB-M1-003/005 human boundary review and live acceptance pending. Use [the task template](../tasks/TASK-TEMPLATE.md) and assign one task at a time. WEB-M1-001 records owner decisions (2026-10-16), with remaining ADR review and API-owner policy reconciliation pending; it does not reopen authorization to begin Milestone 1.
+Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005 and WEB-M1-006 are implemented locally, with WEB-M1-003/005/006 human boundary review and live acceptance pending. Use [the task template](../tasks/TASK-TEMPLATE.md) and assign one task at a time. WEB-M1-001 records owner decisions (2026-10-16), with remaining ADR review and API-owner policy reconciliation pending; it does not reopen authorization to begin Milestone 1.
 
 | Task | Outcome | Dependencies |
 |---|---|---|
@@ -38,6 +38,7 @@ Task creation is complete; WEB-M1-002, WEB-M1-003 and WEB-M1-005 are implemented
 
 - The repository pins `@dadzhioski/professional-services-api-client@0.3.0` (WEB-M1-004). It adds OrganizationApi, ProfileApi, MedicalApi, ServicesApi, LocationsApi and ReferenceApi (API-M1-004 through API-M1-006) to the system/health and IdentityApi methods; media, credential, review, publication and public profile/directory methods are still absent. See the WEB-M1-004 capability matrix.
 - Contract gap (2026-10-21, WEB-M1-005): the API enforces session CSRF on cookie-authenticated mutations, but the 0.3.0 OpenAPI omits the `X-CSRF-TOKEN` header and 403 on those operations. The web sends the token through a shared server-only transport via generated `initOverrides` (owner-approved); an API-M1-004/011 contract amendment is requested.
+- Contract notes (2026-10-21, WEB-M1-006): profile 400 responses carry no field-level validation codes, the profile contract has no professional contact fields, `publicationState` is an unconstrained string, and profile reads before onboarding return 500 rather than a documented status. The web maps 400 to one generic message and checks the workspace first; an API-M1-005 contract amendment is requested.
 - Installed declarations are capability observations, not fresh registry-publication or deployed-API proof. WEB-M1-003 verifies identity provenance/compatibility before use; WEB-M1-004 requires explicit approval and an actually published exact feature version.
 - API-M1-004 through API-M1-010 are planned in the inspected sibling tasks. API-M1-011 prepares the client release but does not publish it. Each dependent web task remains blocked until its actual methods/types and compatible backend behavior are available.
 - The owner deferred MFA entirely for this MVP, including administrators (2026-10-16). API-M1-003/004/007/008/009 still require API-owner reconciliation and compatible authorization before administrator integration/evidence access; no local bypass. Stored privileges, controlled bootstrap, tenant isolation and audits remain mandatory.
