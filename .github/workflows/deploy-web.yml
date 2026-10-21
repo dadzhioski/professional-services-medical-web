@@ -1,0 +1,101 @@
+name: Deploy web
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Protected target environment
+        type: choice
+        options: [non-production, production]
+        default: non-production
+        required: true
+      sha:
+        description: Published web/edge image full commit SHA (redeploy an older SHA to roll back)
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: web-host-${{ inputs.environment }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.repository == 'dadzhioski/professional-services-medical-web' && github.ref == 'refs/heads/main'
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Transfer Compose assets and update web and Caddy
+        env:
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+          RELEASE_SHA: ${{ inputs.sha }}
+          DEPLOY_ENABLED: ${{ vars.WEB_DEPLOY_ENABLED }}
+          DEPLOY_HOST: ${{ vars.WEB_DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ vars.WEB_DEPLOY_PORT }}
+          DEPLOY_USER: ${{ vars.WEB_DEPLOY_USER }}
+          DEPLOY_ORIGIN: ${{ vars.WEB_DEPLOY_ORIGIN }}
+          SSH_KNOWN_HOSTS: ${{ vars.WEB_DEPLOY_KNOWN_HOSTS }}
+          SSH_PRIVATE_KEY: ${{ secrets.WEB_DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          [[ "$DEPLOY_ENABLED" = true ]] || { echo '::error::Set the WEB_DEPLOY_ENABLED variable to true to allow deployments.'; exit 1; }
+          [[ "$TARGET_ENVIRONMENT" = non-production || "$TARGET_ENVIRONMENT" = production ]]
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ && ! "$RELEASE_SHA" =~ ^0+$ ]] || { echo '::error::sha must be a full 40-character lowercase commit SHA.'; exit 1; }
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$DEPLOY_PORT" =~ ^[0-9]{1,5}$ ]]
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$DEPLOY_ORIGIN" =~ ^https://([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$ ]] || { echo '::error::WEB_DEPLOY_ORIGIN must be https://<hostname> without a path or trailing slash.'; exit 1; }
+          [[ -n "$SSH_PRIVATE_KEY" ]] || { echo '::error::WEB_DEPLOY_SSH_KEY is unavailable in this environment.'; exit 1; }
+          [[ -n "$SSH_KNOWN_HOSTS" ]] || { echo '::error::WEB_DEPLOY_KNOWN_HOSTS is unavailable in this environment.'; exit 1; }
+          key="$RUNNER_TEMP/deploy-key"
+          hosts="$RUNNER_TEMP/deploy-hosts"
+          trap 'rm -f "$key" "$hosts"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$hosts"
+          chmod 600 "$key" "$hosts"
+          unset SSH_PRIVATE_KEY SSH_KNOWN_HOSTS
+          options=(-i "$key" -o IdentitiesOnly=yes -o "UserKnownHostsFile=$hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=15)
+          remote="$DEPLOY_USER@$DEPLOY_HOST"
+          directory="/opt/professional-services/web-releases/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$remote" "mkdir -p -m 700 /opt/professional-services/web-releases && mkdir -m 700 '$directory'"
+          scp "${options[@]}" -P "$DEPLOY_PORT" deployment/compose.yaml deployment/Caddyfile "$remote:$directory/"
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$remote" bash -s -- "$directory" "$RELEASE_SHA" "$DEPLOY_ORIGIN" <<'REMOTE'
+          set -euo pipefail
+          umask 077
+          directory=$1
+          sha=$2
+          origin=$3
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          state=/opt/professional-services/web-state
+          mkdir -p "$state"
+          exec 9>"$state/operation.lock"
+          flock -n 9 || { echo 'Another web deployment holds the host lock.' >&2; exit 1; }
+          export WEB_IMAGE="ghcr.io/dadzhioski/professional-services-medical-web:$sha"
+          export CADDY_IMAGE="ghcr.io/dadzhioski/professional-services-medical-edge:$sha"
+          export PUBLIC_ORIGIN="$origin"
+          export SITE_ADDRESS="${origin#https://}"
+          export EDGE_NETWORK=professional-services-edge
+          compose=(docker compose -p professional-services-medical-web -f "$directory/compose.yaml")
+          trap '"${compose[@]}" ps --all >&2 || true; "${compose[@]}" logs --no-color --tail 100 web caddy >&2 || true; echo "Web deployment of $sha failed; nothing was rolled back automatically." >&2' ERR
+          "${compose[@]}" config --quiet
+          "${compose[@]}" up -d --pull always --wait --wait-timeout 120 web caddy
+          if [[ -s "$state/current" && $(cat "$state/current") != "$sha" ]]; then
+            cp "$state/current" "$state/previous"
+          fi
+          printf '%s\n' "$sha" > "$state/current.tmp"
+          mv "$state/current.tmp" "$state/current"
+          printf '%s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sha" "$directory" >> "$state/history"
+          # The running Caddy container mounts this release's Caddyfile; keep it and drop stale releases.
+          find /opt/professional-services/web-releases -mindepth 1 -maxdepth 1 -type d ! -path "$directory" -mmin +60 -exec rm -rf {} +
+          echo "Healthy web release: $sha"
+          echo "Previous release (redeploy it to roll back): $(cat "$state/previous" 2>/dev/null || echo none)"
+          REMOTE
+          curl --fail --silent --show-error --output /dev/null --retry 10 --retry-all-errors --retry-delay 3 --max-time 10 "$DEPLOY_ORIGIN/healthz"
+          {
+            echo "Deployed web release \`$RELEASE_SHA\` to $TARGET_ENVIRONMENT ($DEPLOY_ORIGIN)."
+            echo
+            echo 'To roll back, run this workflow again with the previous SHA printed in the deploy log.'
+          } >> "$GITHUB_STEP_SUMMARY"

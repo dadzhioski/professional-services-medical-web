@@ -20,43 +20,6 @@ export function verifyApiIdentity(api, image, selected, network) {
   assert.ok(api.NetworkSettings.Networks[network]?.Aliases?.includes("api"));
 }
 
-export async function verifyReleaseHttp(origin, expectedVersion, deadline = Date.now() + 120_000) {
-  const request = async (path, allowLocaleRedirect = false) => {
-    const remaining = deadline - Date.now();
-    assert.ok(remaining > 0, "Release verification deadline exceeded");
-    const response = await fetch(`${origin}${path}`, { signal: AbortSignal.timeout(Math.min(12_000, remaining)), redirect: "manual" });
-    assert.equal(response.headers.get("server"), null);
-    assert.equal(response.headers.get("x-content-type-options"), "nosniff");
-    assert.equal(response.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
-    assert.equal(response.headers.get("strict-transport-security"), origin.startsWith("https:") ? "max-age=31536000" : null);
-    if (allowLocaleRedirect && response.status === 307) {
-      const destination = response.headers.get("location");
-      assert.match(destination ?? "", /^\/[a-z]{2}(?:-[A-Za-z0-9]{2,8})*$/);
-      await response.body?.cancel();
-      return request(destination);
-    }
-    assert.equal(response.status, 200);
-    const body = await response.text();
-    assert.doesNotMatch(body, /http:\/\/api:8080|API_INTERNAL_URL|ResponseError|err_trace/);
-    return { body, headers: response.headers };
-  };
-  const health = await request("/healthz");
-  assert.deepEqual(JSON.parse(health.body), { status: "ok" });
-  assert.equal(health.headers.get("cache-control"), "no-store");
-  const api = JSON.parse((await request("/api/v1/system/status")).body);
-  assert.equal(api.version, expectedVersion); assert.equal(api.status, "UP");
-  assert.equal(typeof api.service, "string"); assert.ok(api.service.length);
-  const page = (await request("/system-status")).body;
-  assert.match(page, /<main\b/); assert.match(page, /<dl\b/);
-  assert.ok(page.includes(expectedVersion));
-  assert.ok(!page.includes("Service status is currently unavailable"));
-  for (const html of [page, (await request("/", true)).body]) {
-    assert.match(html, /<title>[^<]+<\/title>/);
-    assert.match(html, /<meta name="description" content="[^"]+"/);
-    assert.match(html, /<meta name="robots" content="noindex,\s*nofollow"/);
-  }
-}
-
 async function main() {
 try {
   const image = validateImage(process.env.API_IMAGE);

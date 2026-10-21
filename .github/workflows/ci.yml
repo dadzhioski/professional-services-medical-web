@@ -90,10 +90,6 @@ jobs:
         run: make integration-down
       - run: make container-scan
       - run: make edge-container-scan
-      - name: Verify isolated release and rollback transactions
-        run: |
-          make web-release-smoke
-          make web-rollback-smoke
       - name: Save verified image for trusted publishing
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: docker save "professional-services-medical-web:$GITHUB_SHA" "professional-services-medical-edge:$GITHUB_SHA" --output reports/verified-image.tar

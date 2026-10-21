@@ -1,6 +1,6 @@
 # Web and public-edge deployment
 
-WEB-M0-005 implements the web-owned edge described by WEB-ADR-0004 and WEB-ADR-0005. WEB-M0-006 adds the protected release workflow and restricted host entry point described below; protected VPS proof and human review remain acceptance gates. This project defines only web and Caddy; the API repository independently provides `api:8080`.
+WEB-M0-005 implements the web-owned edge described by WEB-ADR-0004 and WEB-ADR-0005. Releases are deployed with the manual `Deploy web` workflow described below. This project defines only web and Caddy; the API repository independently provides `api:8080`.
 
 ## Prerequisites and inputs
 
@@ -12,7 +12,7 @@ Keep actual configuration outside Git. `.env.production.example` contains synthe
 | --- | --- |
 | `WEB_IMAGE` | Full-SHA web image; local smoke defaults to the current HEAD image |
 | `SITE_ADDRESS` | One approved DNS hostname, optionally prefixed by `https://`; validation defaults to `medical.example.test` |
-| `PUBLIC_ORIGIN` | Exact HTTPS web origin matching `SITE_ADDRESS`; the protected host runner supplies its existing validated `host.origin` |
+| `PUBLIC_ORIGIN` | Exact HTTPS web origin matching `SITE_ADDRESS`; the deploy workflow supplies `WEB_DEPLOY_ORIGIN` |
 | `EDGE_NETWORK` | Host bootstrap defaults to `professional-services-edge`; integration always uses its own random network |
 | API client | Exact `@dadzhioski/professional-services-api-client@0.2.0`; smoke checks the image label against package/lock files |
 | `CADDY_IMAGE` | Full-SHA `professional-services-medical-edge` image; local checks default to current HEAD |
@@ -21,13 +21,10 @@ The edge image rebuilds Caddy 2.11.7 with Go 1.26.9 and `golang.org/x/net@v0.60.
 
 ## Runtime boundary
 
-WEB-M1-003 adds required server-only `PUBLIC_ORIGIN`. Install the reviewed host
-scripts and new immutable Compose configuration together before deploying this
-release; no new workflow input or host.json field is needed. The host runner
-passes its validated `origin` to Compose, which passes it into the web container.
-The runtime value is independent of the synthetic Docker build value. Validation
-accepts older immutable configurations without this variable for rollback; when
-present it must match the approved site. Do not edit historical configurations.
+WEB-M1-003 adds required server-only `PUBLIC_ORIGIN`. The deploy workflow
+passes `WEB_DEPLOY_ORIGIN` to Compose, which passes it into the web container.
+The runtime value is independent of the synthetic Docker build value. When
+present it must match the approved site.
 
 Before live provider acceptance, the API owner must confirm compatible identity
 behavior, the same public origin, Google callback configuration and exact return
@@ -90,225 +87,60 @@ Set `API_IMAGE` to the chosen full-SHA API image, `EXPECTED_API_VERSION` to the 
 
 The checker is read-only: it verifies image identity, shared aliases, actual Caddy port binding, client metadata, API status/version, SSR and health. It rejects the synthetic fixture label and requires all inputs explicitly. Missing prerequisites mean this check is unexecuted, not passed. Local inspection during implementation found no running independent API.
 
-## Human review before production
+## Deploying to the VPS
 
-Review the concrete public bindings, domain/TLS/HSTS behavior, forwarding trust, size-bounded log policy, omission of raw proxy errors, secret boundary, and security headers in this change. Production execution requires separate owner authorization and protected human approval. Domainless tests do not prove real certificate issuance, DNS, production capacity or production rollback.
+The manual `Deploy web` workflow (`.github/workflows/deploy-web.yml`) deploys a
+published release. It mirrors the API repository's deploy: SSH to the host,
+copy this commit's `deployment/compose.yaml` and `deployment/Caddyfile` into a
+fresh release directory, and run Compose for `web` and `caddy` only. It never
+touches the API, PostgreSQL or their Compose project, and runs no backend checks.
 
-## Protected release setup (WEB-M0-006)
+Inputs: `environment` (`non-production` or `production`) and `sha`, the full
+40-character lowercase commit whose `professional-services-medical-web` and
+`professional-services-medical-edge` images CI published to GHCR. Dispatch it
+from `main`; the job is bound to the selected GitHub environment, so its
+protection rules (required reviewers for production) apply.
 
-The `Protected medical web release` workflow (`deploy.yml`) is manual only and
-executes only from this repository's `main`. Select `deploy` or `rollback` and
-the fixed `non-production` or `production` environment. No merge triggers a
-deployment. Neither operation controls the API, PostgreSQL, or their Compose
-project. Initial installation has no rollback target; a second successful
-release is needed to prove restoration of a previous release.
+On the host the workflow, holding `flock` on
+`/opt/professional-services/web-state/operation.lock`:
 
-Both environments require a deployment branch rule allowing only `main` (not tags).
-For `non-production`, leave **Required reviewers** unchecked: the owner authorized
-manual deploy and rollback without a separate approver on 2026-10-16.
-For `production`, required reviewers, prevention of self-review and disabled
-administrator bypass remain mandatory. Protect `main` with required review and CI.
-Confirm the GitHub plan supports the required production controls. The host checks
-the active main workflow-dispatch run and its environment approval history via
-the [GitHub review-history API](https://docs.github.com/en/rest/actions/workflow-runs#get-the-review-history-for-a-workflow-run).
-Production requires approval for that environment. Non-production accepts empty
-approval history, but rejects any recorded rejection for that environment. Rejected
-runs cannot be reused. This applies to deploy and rollback. The request must still
-match the root-owned host environment; all release and compatibility checks remain.
+1. creates `/opt/professional-services/web-releases/<run id>-<attempt>` and
+   copies the two files there (Compose mounts `./Caddyfile` from that directory);
+2. runs `docker compose -p professional-services-medical-web -f <dir>/compose.yaml
+   up -d --pull always --wait --wait-timeout 120 web caddy` with `WEB_IMAGE`,
+   `CADDY_IMAGE`, `SITE_ADDRESS` (hostname of `WEB_DEPLOY_ORIGIN`),
+   `PUBLIC_ORIGIN` (`WEB_DEPLOY_ORIGIN`) and `EDGE_NETWORK=professional-services-edge`;
+3. records the SHA in `web-state/current` (the replaced SHA moves to
+   `web-state/previous`; every deploy is appended to `web-state/history`) and
+   removes release directories older than an hour other than the active one.
 
-To activate this policy, merge the reviewed scripts to `main` and have an
-administrator install the updated complete `scripts/` tree under
-`/opt/medical-web-deploy` on the non-production host. Changing the GitHub checkbox
-alone does not update the installed host validator. No new flag or secret is needed.
+The runner then checks `<origin>/healthz` over HTTPS. On failure the job log
+shows `docker compose ps --all` and the last 100 log lines of `web` and `caddy`.
+Nothing is rolled back automatically.
 
-Configure the following separately in each environment; never put real values
-in this repository or chat:
+**Rollback:** run `Deploy web` again with the previous SHA (printed at the end of
+each deploy log and stored in `web-state/previous`). The fixed project name keeps
+the named `caddy-data`/`caddy-config` volumes, so certificates survive deploys
+and rollbacks. Never run `down --volumes` on this project.
+
+GitHub environment settings (per environment; never commit real values):
 
 | Name | Kind | Purpose |
 | --- | --- | --- |
-| `WEB_DEPLOY_SSH_KEY` | Secret | Dedicated restricted deployment key |
-| `WEB_DEPLOY_ENABLED` | Variable | Set `true` only after permissions and approval gates are reviewed |
-| `WEB_DEPLOY_HOST` | Variable | Approved VPS hostname or IPv4 address |
-| `WEB_DEPLOY_PORT` | Variable | Explicit SSH port |
-| `WEB_DEPLOY_USER` | Variable | Dedicated `webdeploy` account |
-| `WEB_DEPLOY_KNOWN_HOSTS` | Variable | Host-key entry verified through an independent trusted channel; include `[host]:port` for a non-default port |
-| `WEB_DEPLOY_ORIGIN` | Variable | Exact HTTPS origin without a trailing slash; must match host configuration |
+| `WEB_DEPLOY_ENABLED` | Variable | Must be `true` |
+| `WEB_DEPLOY_HOST` | Variable | VPS hostname or IPv4 address |
+| `WEB_DEPLOY_PORT` | Variable | SSH port |
+| `WEB_DEPLOY_USER` | Variable | Host account that may run `docker compose` (for example the API's `github-deploy` account) |
+| `WEB_DEPLOY_KNOWN_HOSTS` | Variable | Pinned host-key line(s); use `[host]:port` for a non-default port |
+| `WEB_DEPLOY_ORIGIN` | Variable | Exact HTTPS origin, no trailing slash |
+| `WEB_DEPLOY_SSH_KEY` | Secret | Private key authorized for `WEB_DEPLOY_USER` |
 
-The release job uses `contents: read` and `actions: read`, without package-write,
-deployment-write, OIDC, or backend permissions. It does not install npm packages.
-SSH uses strict host-key checking, no agent, no PTY, and a temporary mode-0600 key
-file removed in `finally`; raw SSH errors and remote response bodies are withheld.
-Do not replace host-key pinning with runtime `ssh-keyscan` trust.
+Host prerequisites: Docker with Compose 2.24.4+, `flock`, the external
+`professional-services-edge` network, `/opt/professional-services` writable by
+the deploy account, and GHCR pull access for both web packages in that account's
+Docker configuration if the packages are private. The deploy account can operate
+Docker and therefore is root-equivalent on the host; protect its key accordingly.
 
-### Administrator-owned host installation
+## Human review before production
 
-Perform this setup manually from a reviewed checkout, not through workflow
-credentials. The host needs Linux Docker/Compose, Node **24.19.0** at
-`/usr/bin/node`, OpenSSH, sudo, and unzip. This task does not install or operate
-the API; its owner must independently supply a running compatible full-SHA
-image, its status version, and the container identity. The existing external
-`professional-services-edge` network must already exist.
-
-1. Create a dedicated `webdeploy` account with password login disabled, no
-   Docker-group membership, no general sudo, and no write access to deployment
-   code, configuration, state, backend paths, or its authorized key file.
-2. Install the reviewed `scripts/` tree plus `package.json` and
-   `package-lock.json` under `/opt/medical-web-deploy`, root-owned and not group
-   or world writable; no npm installation is necessary. All parent directories
-   must also be root-owned and not group/world writable. Updating these files
-   always requires administrator review/installation.
-3. Create root-owned `/etc/medical-web-deploy` and
-   `/var/lib/medical-web-deploy` with mode 0700. Install `host.json` below and
-   credentials as mode 0600. Reject symlinks and writable parent directories.
-4. Put a repository-scoped, read-only GitHub credential with **Actions: read**
-   under `/etc/medical-web-deploy/github-token`; no write permission. Configure
-   read-only GHCR pull access to only the two web-owned packages under
-   `/etc/medical-web-deploy/docker/config.json`. Use stdin for registry login,
-   never command-line token values. These credentials are host-only, absent
-   from the workflow, application containers and release journal.
-5. Install approved `compose.yaml` and `Caddyfile` under
-   `/etc/medical-web-deploy/configurations/<identifier>/`, root-owned and not
-   group/world writable. Use exact Git blob bytes from the published release
-   (for example a Git archive), avoiding checkout newline conversion. Compare
-   their SHA-256 hashes with the release manifest. Keep previous configurations
-   unchanged for rollback; do not accept uploads from the deployment account.
-6. Add the restricted public key to a root-owned authorized-keys file:
-
-   ```text
-   restrict,command="/usr/bin/node /opt/medical-web-deploy/scripts/deploy-ssh.mjs" ssh-ed25519 PUBLIC_KEY
-   ```
-
-   Enforce a matching sshd `ForceCommand` for `webdeploy`, `DisableForwarding yes`, `PermitTTY no`,
-   `AllowTcpForwarding no`, `AllowAgentForwarding no`, `X11Forwarding no`,
-   `PermitTunnel no`, and `PermitUserEnvironment no`; do not accept `NODE_*`
-   environment variables. Validate sshd configuration before administrator
-   reload, keeping a separate administration connection open. The account needs
-   an executable login shell for OpenSSH to invoke the forced command, but no
-   interactive shell access; see the [OpenSSH ForceCommand contract](https://man.openbsd.org/sshd_config.5#ForceCommand).
-7. Grant only this exact sudo command, validating the file with `visudo -cf`
-   before installation (escaped `=` and `:` are sudoers syntax):
-
-   ```sudoers
-   Defaults:webdeploy env_reset
-   webdeploy ALL=(root) NOPASSWD: /usr/bin/env -i PATH\=/usr/bin\:/bin /usr/bin/node /opt/medical-web-deploy/scripts/deploy-host.mjs
-   ```
-
-   No wildcard arguments, shells, Docker CLI, generic Node invocation or
-   writable scripts may be granted. The forced command accepts only the literal
-   SSH command `web-release`; its JSON input is bounded to 4096 bytes and five
-   seconds. The privileged process runs with a clean environment.
-
-Synthetic `host.json` shape (replace values only on the non-production host):
-
-```json
-{
-  "environment": "non-production",
-  "origin": "https://medical.example.test",
-  "apiContainer": "independently-managed-api",
-  "apiRepository": "ghcr.io/example/independently-managed-api"
-}
-```
-
-### Release evidence, preflight and recovery
-
-Deploy inputs are `release_sha` (40 lowercase hex characters), `configuration`
-(an installed identifier), `api_image` (the independently deployed full-SHA API
-image), and `api_version` (its expected status version). Image repository names
-for web/Caddy are fixed in code. CI publishes `release-<SHA>-<attempt>` containing
-`release.json` only after both verified images have been published; retain it
-for 90 days. A successful trusted-main CI run, matching artifact digest and
-unexpired evidence are required by both runner and host. Older images without
-this evidence cannot be selected for a new deployment. No arbitrary tag or
-registry input is accepted for web/Caddy.
-
-The host checks installed configuration hashes, API image/container identity,
-the API alias and status version, then pulls and checks the selected web/edge
-digests, revision labels and exact client version. Temporary candidate web and
-Caddy containers use unique names without the `web` alias, a random loopback
-port, no application credentials, and temporary Caddy storage. The probe derives
-its Caddyfile from the approved configuration by replacing only the web upstream
-with the unique candidate name; production routing is unchanged. This verifies
-candidate SSR and `/api/*` before any active web/Caddy replacement, including the
-first installation when no public edge is running. Cleanup removes only labeled
-probe containers and their generated Caddyfile, never the external network.
-
-The fixed project `professional-services-medical-web` is updated with
-`compose up` for `web caddy` only, without builds or another pull. Each Docker
-operation is limited to five minutes, readiness checks to two minutes, and HTTP
-requests to twelve seconds. Verification covers container image identity and
-health, `/healthz`, raw `/system-status` SSR, home/status metadata, existing
-HTTP security headers including HTTPS HSTS, and `/api/v1/system/status`.
-The runner checks the public HTTPS origin again. No zero-downtime guarantee.
-
-Successful release records are root-only JSON in
-`/var/lib/medical-web-deploy/records`; `state.json` retains current, previous,
-and pending identifiers. The previous record and proposed release are written
-before replacement; atomic writes and an exclusive host lock protect state.
-Journals contain only validated release identifiers and failure stages, not
-container logs, HTTP bodies, credentials or user data. Workflow summaries show
-the successful release-record identifier and SHA.
-
-For rollback select `rollback` and supply `release_record` from an earlier
-successful run; leave deploy inputs empty. The host restores that record's
-web/Caddy images and approved configuration after compatibility preflight,
-preserving Caddy volumes and backend resources. A previously verified root-owned
-record remains durable rollback evidence after its CI artifact expires; expiry
-blocks new deployments, not restoration of recorded successful releases. Keep
-the referenced images available in GHCR and retain installed configurations.
-Rollback requires the record's exact API image/version to remain healthy; it
-does not infer compatibility after an independent API upgrade and never
-reinstalls an old API. Coordinate API releases accordingly; a different API
-identity needs new compatibility evidence through an approved deployment.
-
-Failed verification never silently rolls back or replaces the last successful
-record. A pending failed release blocks another deploy until an explicit
-rollback succeeds. Process termination may leave the lock and labeled probes:
-an administrator must confirm no deployment process is active, inspect the
-sanitized journal, remove only that attempt's identified probe resources, and
-remove the empty lock directory before an approved rollback. Do not clear state
-to bypass failure. If the first installation failed and no successful record
-exists, administrator recovery is required before retry; rollback is rejected.
-An existing web/Caddy project without a release record, or image drift from its
-recorded successful release, also blocks deployment and requires administrator
-reconciliation; it is never silently adopted as a rollback baseline.
-
-### Verification and outstanding protected proof
-
-```sh
-make validate-workflows
-make test-deploy-scripts
-make image
-make edge-image
-make web-release-smoke
-make web-rollback-smoke
-make integration-down
-```
-
-Windows may use the exact Node commands in `Makefile`. Both release smoke
-targets own isolated synthetic resources and clean up in `finally`; always run
-`integration-down` if manually interrupted. Synthetic image identities exercise
-the shared transaction engine, candidate checks, replacement and restoration;
-they are never published and do not prove GitHub approval, SSH/sudo permissions,
-real API compatibility, certificate issuance or VPS deployment.
-
-After the workflow is merged and two releases with successful CI publication
-exist, complete the protected proof on the non-production VPS:
-
-1. Administrator: install the boundary above; verify the restricted account has
-   no Docker/backend authority. Harmless SSH commands such as `true`, `id`, or
-   `docker version` must be rejected before sudo; do not test destructive
-   backend commands. Obtain API/PostgreSQL container IDs, start times and restart
-   counts through the backend administrator for read-only before/after comparison.
-2. Dispatch `Protected medical web release` on `main`, `deploy`,
-   `non-production`, release A's SHA/configuration and the actual API image/version;
-   leave Required reviewers unchecked for non-production. Save its record ID.
-3. Check HTTPS `/healthz` for 200 and `{"status":"ok"}`, `/system-status` for
-   server-rendered API status/version, and `/api/v1/system/status` for the expected
-   API response; repeat after manual deployment of distinct release B.
-4. Dispatch `rollback`, `non-production`, A's record ID; run it and repeat
-   those checks. Confirm A's image/configuration identifiers, unchanged Caddy
-   volumes and unchanged backend identities. No API stop/restart is authorized.
-
-Until those steps are executed, WEB-M0-006 remains incomplete; no local or
-synthetic result substitutes for protected VPS evidence. Production execution
-requires its own explicit authorization and environment approval.
+Review the concrete public bindings, domain/TLS/HSTS behavior, forwarding trust, size-bounded log policy, omission of raw proxy errors, secret boundary, and security headers in this change. Production deployment requires owner authorization and the production environment's required reviewers. Domainless tests do not prove real certificate issuance, DNS or production capacity.
