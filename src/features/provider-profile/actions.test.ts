@@ -5,8 +5,10 @@ vi.mock("next/headers", () => ({ cookies: async () => mocks, headers: async () =
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/api/profile", () => ({ createProfile: vi.fn(), saveProfile: vi.fn() }));
+vi.mock("@/lib/api/medical", () => ({ saveSpecialty: vi.fn() }));
+import { saveSpecialty } from "@/lib/api/medical";
 import { createProfile, saveProfile } from "@/lib/api/profile";
-import { createProfileDraft, saveProfileDraft } from "./actions";
+import { createProfileDraft, saveProfileDraft, saveProfileSpecialty } from "./actions";
 
 const profile = { profileId: "synthetic-private-profile", organizationId: "synthetic-private-org", slug: "dr-0000abcd",
   displayName: "Saved name", biography: "Saved biography", publicationState: "DRAFT", version: 4 };
@@ -89,4 +91,38 @@ test("a failed overwrite keeps the stale version so the choice must be made agai
   vi.mocked(saveProfile).mockResolvedValue({ state: "unavailable" });
   expect(await saveProfileDraft("en", undefined, form({ ...submitted, version: "3", overwriteVersion: "7" })))
     .toMatchObject({ status: "unavailable", version: 3 });
+});
+
+test("specialty save sends only the reference ID and version; licence details never come from the form", async () => {
+  vi.mocked(saveSpecialty).mockResolvedValue({ state: "saved", record: { specialtyId: "spec-2", licenseNumber: "SYN-1", version: 5 } });
+  const state = await saveProfileSpecialty("en", undefined, form({ specialtyId: "spec-2", version: "4", licenseNumber: "forged" }));
+  expect(vi.mocked(saveSpecialty).mock.calls[0].slice(3)).toEqual(["spec-2", 4]);
+  expect(state).toEqual({ status: "saved", values: { specialtyId: "spec-2" }, version: 5, errors: {} });
+  expect(JSON.stringify(state)).not.toContain("SYN-1");
+  expect(mocks.revalidatePath).toHaveBeenCalledWith("/en/provider/profile");
+});
+test("an empty choice clears an existing specialty", async () => {
+  vi.mocked(saveSpecialty).mockResolvedValue({ state: "saved", record: { version: 1 } });
+  await saveProfileSpecialty("en", undefined, form({ specialtyId: "", version: "2" }));
+  expect(vi.mocked(saveSpecialty).mock.calls[0].slice(3)).toEqual([undefined, 2]);
+});
+test.each([["invalid", "rejected"], ["unavailable", "unavailable"], ["expired", "expired"]] as const)(
+  "specialty failure %s keeps the choice", async (state, status) => {
+    vi.mocked(saveSpecialty).mockResolvedValue({ state });
+    expect(await saveProfileSpecialty("en", undefined, form({ specialtyId: "spec-2", version: "4" })))
+      .toEqual({ status, values: { specialtyId: "spec-2" }, version: 4, errors: {} });
+  });
+test("a specialty conflict offers the latest choice for review", async () => {
+  vi.mocked(saveSpecialty).mockResolvedValue({ state: "conflict", latest: { specialtyId: "spec-9", licenseNumber: "SYN-1", version: 8 } });
+  expect(await saveProfileSpecialty("en", undefined, form({ specialtyId: "spec-2", version: "4" })))
+    .toMatchObject({ status: "conflict", latest: { specialtyId: "spec-9", version: 8 } });
+});
+test("malformed specialty IDs are refused locally", async () => {
+  expect(await saveProfileSpecialty("en", undefined, form({ specialtyId: "<script>", version: "4" }))).toMatchObject({ status: "invalid" });
+  expect(saveSpecialty).not.toHaveBeenCalled();
+});
+test("keeping no specialty without a medical extension does not create one", async () => {
+  expect(await saveProfileSpecialty("en", undefined, form({ specialtyId: "" })))
+    .toEqual({ status: "saved", values: { specialtyId: "" }, version: undefined, errors: {} });
+  expect(saveSpecialty).not.toHaveBeenCalled();
 });

@@ -17,7 +17,7 @@
 
 ## Milestone 1 task backlog (2026-10-16)
 
-Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005 and WEB-M1-006 are implemented locally, with WEB-M1-003/005/006 human boundary review and live acceptance pending. Use [the task template](../tasks/TASK-TEMPLATE.md) and assign one task at a time. WEB-M1-001 records owner decisions (2026-10-16), with remaining ADR review and API-owner policy reconciliation pending; it does not reopen authorization to begin Milestone 1.
+Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005, WEB-M1-006 and WEB-M1-007 are implemented locally, with WEB-M1-003/005/006/007 human boundary review and live acceptance pending. Use [the task template](../tasks/TASK-TEMPLATE.md) and assign one task at a time. WEB-M1-001 records owner decisions (2026-10-16), with remaining ADR review and API-owner policy reconciliation pending; it does not reopen authorization to begin Milestone 1.
 
 | Task | Outcome | Dependencies |
 |---|---|---|
@@ -27,7 +27,7 @@ Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005 and WEB-M1-006 are
 | [WEB-M1-004](../tasks/WEB-M1-004-feature-client-adoption.md) | Adopt an approved published feature API client | None; feature-specific API publication and explicit upgrade approval |
 | [WEB-M1-005](../tasks/WEB-M1-005-provider-onboarding.md) | Add solo-provider onboarding and workspace | WEB-M1-002, WEB-M1-003, WEB-M1-004 onboarding capability |
 | [WEB-M1-006](../tasks/WEB-M1-006-provider-profile-editor.md) | Add professional profile draft editing | WEB-M1-005; WEB-M1-004 profile capability |
-| [WEB-M1-007](../tasks/WEB-M1-007-services-and-practice-locations.md) | Add services, specialties and practice-location editors | WEB-M1-006; WEB-M1-004 catalog/reference capability |
+| [WEB-M1-007](../tasks/WEB-M1-007-services-and-practice-locations.md) | Add services, specialties and practice-location editors (implemented locally 2026-10-22; specialty on the profile page) | WEB-M1-006; WEB-M1-004 catalog/reference capability |
 | [WEB-M1-008](../tasks/WEB-M1-008-profile-photo-and-private-evidence.md) | Add profile-photo and private professional-evidence UI | WEB-M1-005; WEB-M1-004 media capability; WEB-M1-001 media boundary decision |
 | [WEB-M1-009](../tasks/WEB-M1-009-provider-credentials.md) | Add structured credential editing and submission | WEB-M1-006, WEB-M1-008; WEB-M1-004 credential capability |
 | [WEB-M1-010](../tasks/WEB-M1-010-administrative-review-and-publication.md) | Add administrator review and provider publication controls | WEB-M1-007, WEB-M1-009; WEB-M1-004 review/publication capabilities; resolved WEB-M1-001 administrator policy |
