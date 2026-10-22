@@ -4,13 +4,17 @@ vi.mock("server-only", () => ({}));
 // SiteHeader is async and covered by its own tests; the stub proves each page renders it.
 vi.mock("@/components/site-header", () => ({ SiteHeader: ({ current }: { current?: string }) => <header data-current={current ?? "none"} /> }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => [{ name: "platform-session-local", value: "synthetic" }] }) }));
-vi.mock("@/features/provider-profile/actions", () => ({ createProfileDraft: vi.fn(), saveProfileDraft: vi.fn() }));
+vi.mock("@/features/provider-profile/actions", () => ({ createProfileDraft: vi.fn(), saveProfileDraft: vi.fn(), saveProfileSpecialty: vi.fn() }));
 vi.mock("@/lib/api/identity", () => ({ currentAccount: vi.fn(), googleLoginHref: async (locale: string) => `/api/auth/login?returnTo=%2F${locale}%2Fprovider` }));
 vi.mock("@/lib/api/organization", () => ({ currentContext: vi.fn() }));
 vi.mock("@/lib/api/profile", () => ({ readProfile: vi.fn() }));
+vi.mock("@/lib/api/medical", () => ({ readMedical: vi.fn() }));
+vi.mock("@/lib/api/reference", () => ({ listSpecialties: vi.fn() }));
 import { currentAccount, type IdentityState } from "@/lib/api/identity";
 import { currentContext } from "@/lib/api/organization";
 import { readProfile } from "@/lib/api/profile";
+import { readMedical } from "@/lib/api/medical";
+import { listSpecialties } from "@/lib/api/reference";
 import { localeCodes, translator } from "@/lib/i18n";
 import Page, { generateMetadata } from "./page";
 
@@ -22,8 +26,14 @@ const profile = { profileId: "synthetic-private-profile", organizationId: "synth
 const render = async (locale = "en", notice?: string) =>
   renderToStaticMarkup(await Page({ params: Promise.resolve({ locale }), searchParams: Promise.resolve({ notice }) }));
 const privateValues = /synthetic-private|synthetic-session|localhost:8080|@/;
+const specialties = [{ id: "spec-1", code: "cardiology", labels: { mk: "Кардиологија", en: "Cardiology", bg: "Кардиология" } },
+  { id: "spec-2", code: "dermatology", labels: { en: "Dermatology" } }];
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(readMedical).mockResolvedValue({ state: "missing" });
+  vi.mocked(listSpecialties).mockResolvedValue({ state: "ready", records: specialties });
+});
 for (const locale of localeCodes) {
   test(`${locale} renders the private editor, read-only slug and noindex metadata server-side`, async () => {
     const t = translator(locale);
@@ -104,3 +114,48 @@ test("renders the site header before main", async () => {
   vi.mocked(currentAccount).mockResolvedValue({ state: "signedOut" });
   expect((await render()).startsWith('<header data-current="none"></header><main id="main-content"')).toBe(true);
 });
+for (const locale of localeCodes) {
+  test(`${locale} renders the specialty choice by stable ID with contract labels`, async () => {
+    const t = translator(locale);
+    vi.mocked(currentAccount).mockResolvedValue(authenticated);
+    vi.mocked(currentContext).mockResolvedValue(ready);
+    vi.mocked(readProfile).mockResolvedValue({ state: "ready", profile });
+    vi.mocked(readMedical).mockResolvedValue({ state: "ready", medical: { specialtyId: "spec-1", licenseNumber: "SYN-PRIVATE-LICENCE", version: 2 } });
+    const html = await render(locale);
+    expect(html).toContain(t("specialtyEditor.heading"));
+    expect(html).toMatch(/<option value="spec-1" selected="">/);
+    expect(html).toContain(`>${({ mk: "Кардиологија", en: "Cardiology", bg: "Кардиология", sq: "cardiology" })[locale]}</option>`);
+    if (locale === "sq") expect(html).not.toContain("Cardiology");
+    expect(html).not.toContain("SYN-PRIVATE-LICENCE");
+    expect(html).toContain('name="version" value="2"');
+  });
+}
+test("a retired specialty stays selected and is not silently replaced", async () => {
+  vi.mocked(currentAccount).mockResolvedValue(authenticated);
+  vi.mocked(currentContext).mockResolvedValue(ready);
+  vi.mocked(readProfile).mockResolvedValue({ state: "ready", profile });
+  vi.mocked(readMedical).mockResolvedValue({ state: "ready", medical: { specialtyId: "spec-retired", version: 2 } });
+  const html = await render();
+  expect(html).toContain(`<option value="spec-retired" selected="">${translator("en")("specialtyEditor.retired")}</option>`);
+});
+test("a missing medical extension offers the choice without a version", async () => {
+  vi.mocked(currentAccount).mockResolvedValue(authenticated);
+  vi.mocked(currentContext).mockResolvedValue(ready);
+  vi.mocked(readProfile).mockResolvedValue({ state: "ready", profile });
+  const html = await render();
+  const section = html.slice(html.indexOf('aria-labelledby="specialty-heading"'));
+  const form = section.slice(0, section.indexOf("</form>"));
+  expect(form).toContain('name="specialtyId"');
+  expect(form).not.toContain('name="version"');
+});
+test.each([[{ state: "unavailable" as const }, { state: "ready" as const, records: [] }], [{ state: "missing" as const }, { state: "unavailable" as const }]])(
+  "specialty failures hide the editor with a safe notice %#", async (medical, list) => {
+    vi.mocked(currentAccount).mockResolvedValue(authenticated);
+    vi.mocked(currentContext).mockResolvedValue(ready);
+    vi.mocked(readProfile).mockResolvedValue({ state: "ready", profile });
+    vi.mocked(readMedical).mockResolvedValue(medical);
+    vi.mocked(listSpecialties).mockResolvedValue(list);
+    const html = await render();
+    expect(html).not.toContain('name="specialtyId"');
+    expect(html).toContain(translator("en")("account.unavailable"));
+  });
