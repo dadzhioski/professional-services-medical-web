@@ -3,6 +3,7 @@
 - **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-006, WEB-M1-008; WEB-M1-004 credential capability
+- **Scope amendment (owner, 2026-10-23):** also owns the private-evidence UI moved from [WEB-M1-008](WEB-M1-008-profile-photo-and-private-evidence.md), including its evidence requirements and acceptance criteria
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
 - **Cross-repository dependency:** [API-M1-008](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-008-credential-review.md)
 - **Risk:** High

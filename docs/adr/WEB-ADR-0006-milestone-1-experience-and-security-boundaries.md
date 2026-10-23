@@ -1,6 +1,6 @@
 # WEB-ADR-0006: Milestone 1 experience and security boundaries
 
-- **Status:** Accepted for identity/session and PUBLIC_ORIGIN (owner, 2026-10-16); media and administrator boundary review remains pending
+- **Status:** Accepted for identity/session and PUBLIC_ORIGIN (owner, 2026-10-16) and for the media boundary (owner, 2026-10-23, WEB-M1-008 planning); administrator boundary review remains pending
 - **Date:** 2026-10-16
 - **Related tasks:** WEB-M1-001, WEB-M1-002, WEB-M1-003, WEB-M1-008, WEB-M1-010, WEB-M1-011, WEB-M1-012
 
@@ -37,6 +37,8 @@ Owner decision on 2026-10-16: defer MFA entirely for this MVP, including adminis
 The [linked API-M1-003/004/007/008/009 tasks](../backlog/milestone-1.md#linked-api-work) must be reconciled by the API owner and compatible behavior supplied before administrator integration or administrator evidence access. The web must not bypass MFA checks still enforced upstream. This decision does not modify the sibling repository or claim its owner has completed reconciliation.
 
 ### Public origin and media
+
+The owner accepted the media boundary below on 2026-10-23 during WEB-M1-008 planning. Implementation tests and human boundary review remain required; administrator evidence access stays blocked on the administrator policy.
 
 Introduce server-only `PUBLIC_ORIGIN` in dependent implementation for canonical URLs and web origin checks, never deriving authority from arbitrary Host/forwarded headers. Validate an absolute origin without credentials, path beyond `/`, query or fragment; require HTTPS outside the explicit local HTTP exception. Keep it separate from `API_INTERNAL_URL`, consistent with the site's approved API public origin, and absent from client environment objects (public canonical URLs themselves are intentionally rendered). No environment or deployment configuration is added by this ADR.
 

@@ -1,6 +1,7 @@
 # WEB-M1-008: Add profile-photo and private professional-evidence UI
 
-- **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
+- **Status:** BLOCKED — awaiting adoption of published client 0.4.0 (API-M1-007 media) via WEB-M1-004; installed client 0.3.0 has no media methods
+- **Scope amendment (owner, 2026-10-23):** photo only. Private-evidence UI and the `/[locale]/provider/credentials` route move to [WEB-M1-009](WEB-M1-009-provider-credentials.md); evidence requirements and criteria below apply there. The WEB-ADR-0006 media boundary is owner-accepted.
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-005; WEB-M1-004 media capability; WEB-M1-001 media boundary decision
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
