@@ -21,7 +21,7 @@
     "security:dependencies": "node scripts/audit-dependencies.mjs"
   },
   "dependencies": {
-    "@dadzhioski/professional-services-api-client": "0.3.0",
+    "@dadzhioski/professional-services-api-client": "0.4.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

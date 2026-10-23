@@ -3,7 +3,8 @@
 WEB-M0-004 implements WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0004 and
 WEB-ADR-0005. The client was
 `@dadzhioski/professional-services-api-client@0.2.0`; WEB-M1-004 upgraded it to
-`@dadzhioski/professional-services-api-client@0.3.0`.
+`@dadzhioski/professional-services-api-client@0.3.0`; WEB-M1-008 upgraded it to
+`@dadzhioski/professional-services-api-client@0.4.0`.
 
 ## Local verification
 
