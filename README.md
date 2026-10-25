@@ -86,7 +86,7 @@ it does not prove real Google or deployed API compatibility.
 ### Generated client
 
 Installed production dependency:
-**@dadzhioski/professional-services-api-client@0.3.0**.
+**@dadzhioski/professional-services-api-client@0.7.0**.
 Authenticated GitHub Packages metadata and installation were verified.
 The npm-generated lock file records its immutable integrity.
 
@@ -119,7 +119,7 @@ Verify access with:
 
 ```sh
 npm whoami --registry=https://npm.pkg.github.com
-npm view @dadzhioski/professional-services-api-client@0.3.0 version dist.integrity --registry=https://npm.pkg.github.com
+npm view @dadzhioski/professional-services-api-client@0.7.0 version dist.integrity --registry=https://npm.pkg.github.com
 ```
 
 A successful identity check does not prove package permission; E404 may mean
@@ -175,10 +175,10 @@ desktop and mobile Chromium; see [CI and images](docs/ci-and-images.md).
 
 No personal data, forms, cookies, external fonts, or analytics are introduced.
 
-Exact foundation versions: Next.js **16.4.0**, React/React DOM **19.3.0**,
+Exact foundation versions: Next.js **16.4.3**, React/React DOM **19.3.0**,
 TypeScript **5.9.3**, Tailwind/PostCSS plugin **4.3.3**, Vitest **5.0.3**,
 Testing Library React **16.3.3**, jest-dom **7.0.1**, jsdom **30.1.2**,
-axe-core **4.14.0**, ESLint **9.39.5**, eslint-config-next **16.4.0**,
+axe-core **4.14.0**, ESLint **9.39.5**, eslint-config-next **16.4.3**,
 server-only **0.0.1**. Package and lock files are authoritative.
 
 ### Existing dependency limitation

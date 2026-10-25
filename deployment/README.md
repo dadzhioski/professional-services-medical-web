@@ -14,7 +14,7 @@ Keep actual configuration outside Git. `.env.production.example` contains synthe
 | `SITE_ADDRESS` | One approved DNS hostname, optionally prefixed by `https://`; validation defaults to `medical.example.test` |
 | `PUBLIC_ORIGIN` | Exact HTTPS web origin matching `SITE_ADDRESS`; the deploy workflow supplies `WEB_DEPLOY_ORIGIN` |
 | `EDGE_NETWORK` | Host bootstrap defaults to `professional-services-edge`; integration always uses its own random network |
-| API client | Exact `@dadzhioski/professional-services-api-client@0.3.0`; smoke checks the image label against package/lock files |
+| API client | Exact `@dadzhioski/professional-services-api-client@0.7.0`; smoke checks the image label against package/lock files |
 | `CADDY_IMAGE` | Full-SHA `professional-services-medical-edge` image; local checks default to current HEAD |
 
 The edge image rebuilds Caddy 2.11.7 with Go 1.26.10 and `golang.org/x/net@v0.60.0` to fix high scanner findings in the upstream binary (Go 1.26.10 fixes CVE-2026-111943 in `crypto/x509`). Compiler and runtime base digests are pinned in `Dockerfile.caddy`; no new Caddy plugins are added. Build it with `make edge-image`. Release context is available in the [upstream releases](https://github.com/caddyserver/caddy/releases/tag/v2.11.7). Local images built with uncommitted changes are development evidence, not publishable releases.
@@ -46,6 +46,10 @@ Web's image health check calls its own `/healthz`, independently of the API. Cad
 - `/api/*` reaches `api:8080` with the complete path and query preserved. Bare `/api` follows the web route and currently returns 404.
 - Other paths reach `web:3000`; `/system-status` remains dynamically server-rendered and renders its translated fallback after a bounded API failure.
 - API proxy dial timeout is 2 seconds and header/read/write timeouts are 6 seconds. Web proxy dial timeout is 2 seconds and header/read/write timeouts are 10 seconds. The web API wrapper retains its five-second abort.
+- Image uploads (WEB-M1-008) have their own route: `POST` to `/{locale}/provider/profile` or `/{locale}/provider/credentials` waits up to 50 seconds for the response (header and read timeouts; Caddy's read deadline also covers the wait for headers), allows 30 seconds for writing the request to the web, and accepts bodies up to 12 MB.
+  - The web bounds each upload action at 40 seconds in total (upload call 25 seconds, other calls 5 seconds each). Users therefore get the web's translated outcome rather than an empty edge 504.
+  - Every other web request body is capped at 1 MB, which matches the Next.js Server Action default; Caddy answers oversized bodies with an empty 413.
+  - `make validate-production-config` checks that the route lists exactly the localized pages that render image uploads, and that the web budget ends at least 5 seconds before the edge timeout.
 - Proxy-generated failures have an empty response body and safe HTTP error status. Ordinary API responses, including business errors, retain their contract; the edge does not sanitize arbitrary API business payloads.
 - Caddy trusts no external forwarded-header sender. Tests inject spoofed forwarded values and verify replacement. Adding another trusted proxy requires review.
 - Responses remove `Server`, set `nosniff` and `strict-origin-when-cross-origin`, and set one-year HSTS on HTTPS only, without preload or includeSubDomains. No new CSP is introduced.
@@ -65,6 +69,7 @@ make validate-production-config
 make integration-up
 make integration-routing-test
 make integration-api-unavailable-test
+make integration-upload-test
 make integration-restart-test
 make integration-browser-test
 make integration-down

@@ -85,7 +85,7 @@ test("default redirects, unavailable features, unsupported locales and no shippe
     expect(response.status()).toBe(307);
     expect(response.headers().location).toBe("/mk" + (path === "/" ? "" : path));
   }
-  for (const path of ["/fr", "/fr/doctors/example", "/en/doctors/synthetic-example", "/mk/provider/credentials", "/presentation-fixture"]) {
+  for (const path of ["/fr", "/fr/doctors/example", "/en/doctors/synthetic-example", "/mk/provider/publication", "/presentation-fixture"]) {
     const response = await request.get(path);
     expect(response.status()).toBe(404);
     expect(await response.text()).not.toContain("Synthetic qualification");

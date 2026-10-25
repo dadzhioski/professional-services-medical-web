@@ -4,7 +4,7 @@ import { currentContext, onboardWorkspace } from "./organization";
 
 const fetchMock = vi.fn<typeof fetch>();
 const origin = "http://localhost:3000";
-const context = { organizationId: "synthetic-private-org", approvalState: "PENDING", suspended: false };
+const context = { organizationId: "synthetic-private-org", approvalState: "PENDING", approvalRevision: 1, suspended: false };
 const onboarding = { organizationId: "synthetic-private-org", approvalState: "PENDING" };
 const csrf = (token = "synthetic-csrf") => Response.json({ token, headerName: "X-CSRF-TOKEN" });
 const problem = (status: number) => new Response(JSON.stringify({ detail: "synthetic-private-error" }),

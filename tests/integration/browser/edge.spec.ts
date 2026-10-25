@@ -33,3 +33,22 @@ for (const up of [true, false]) {
     expect(violations).toEqual([]);
   });
 }
+test("Caddy carries a photo upload without JavaScript and serves the owner image", async ({ browser, baseURL }) => {
+  fixture(true);
+  // A synthetic session accepted by the integration fixture.
+  const context = await browser.newContext({ javaScriptEnabled: false, baseURL });
+  await context.addCookies([{ name: "platform-session-local", value: "synthetic-session-browser", url: baseURL! }]);
+  try {
+    const page = await context.newPage();
+    await page.goto("/en/provider/profile");
+    await page.getByLabel(t("media.file")).setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64") });
+    await page.locator("#photo").getByRole("button", { name: new RegExp(`^(${t("photo.upload")}|${t("photo.replace")})$`) }).click();
+    await expect(page.getByText(t("photo.saved"))).toBeVisible();
+    const src = await page.getByRole("img", { name: t("photo.current") }).getAttribute("src");
+    expect(src).toMatch(/^\/api\/v1\/media\/[0-9a-f-]{36}\/content$/);
+    const image = await context.request.get(src!);
+    expect(image.status()).toBe(200);
+    expect(image.headers()["cache-control"]).toBe("no-store");
+  } finally { await context.close(); }
+});

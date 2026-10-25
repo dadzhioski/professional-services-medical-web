@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { createProfile, readProfile, saveProfile } from "./profile";
+import { createProfile, readProfile, removePhoto, replacePhoto, saveProfile } from "./profile";
 import { sessionConfiguration } from "./session-transport";
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -162,5 +162,120 @@ describe("save profile", () => {
       expect(await saveProfile(origin, "synthetic-session", vi.fn(), draft)).toEqual({ state: "unavailable" });
       expect(log).not.toHaveBeenCalled();
     } finally { log.mockRestore(); }
+  });
+});
+
+describe("profile photo", () => {
+  const photoId = "0b3f9c2e-6a1d-4c58-9e7f-2d4a8b1c5e60";
+  const image = new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], { type: "image/png" });
+  const media = () => Response.json({ mediaId: photoId, state: "READY", purpose: "PROFILE_PHOTO", attached: false }, { status: 201 });
+  const calls = () => fetchMock.mock.calls.map(([url, init]) => `${init?.method} ${String(url).replace("http://localhost:8080", "")}`);
+
+  test("rejects a foreign origin before any upload", async () => {
+    expect(await replacePhoto("https://evil.test", "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "forbidden" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  test("uploads as multipart with the photo purpose, then attaches with the version", async () => {
+    fetchMock.mockResolvedValueOnce(csrf("fresh-token")).mockResolvedValueOnce(media())
+      .mockResolvedValueOnce(Response.json({ ...profile, photoMediaId: photoId, version: 4 }));
+    expect(await replacePhoto(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "saved" });
+    expect(calls()).toEqual(["GET /api/auth/csrf", "POST /api/v1/media?purpose=PROFILE_PHOTO", "PUT /api/v1/profile/photo"]);
+    const upload = fetchMock.mock.calls[1][1];
+    expect(upload?.body).toBeInstanceOf(FormData);
+    expect((upload?.body as FormData).get("file")).toBeInstanceOf(Blob);
+    // fetch sets the multipart boundary itself; only the session and CSRF headers are forwarded.
+    expect(Object.fromEntries(new Headers(upload?.headers))).toEqual({
+      cookie: "platform-session-local=synthetic-session", "x-csrf-token": "fresh-token" });
+    expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({ mediaId: photoId, version: 3 });
+  });
+  test.each([[413, "tooLarge"], [415, "unsupported"], [422, "invalid"], [400, "invalid"], [429, "busy"]] as const)(
+    "upload rejection %s is reported without attaching", async (status, state) => {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(status));
+      expect(await replacePhoto(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+  test.each([[401, "expired"], [403, "forbidden"], [503, "unavailable"]] as const)("upload %s maps safely", async (status, state) => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(status));
+    expect(await replacePhoto(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state });
+  });
+  test("an interrupted upload is never reported as saved", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockRejectedValueOnce(new TypeError("synthetic-private-reset"));
+    expect(await replacePhoto(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+  test("a malformed upload response never reaches attach", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json({ mediaId: "../../profile" }, { status: 201 }));
+    expect(await replacePhoto(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+  test.each([[409, "conflict"], [422, "invalid"], [400, "invalid"], [404, "unavailable"], [503, "unavailable"], [401, "expired"]] as const)(
+    "failed attach %s discards the new upload", async (status, state) => {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(media()).mockResolvedValueOnce(problem(status))
+        .mockResolvedValueOnce(new Response(null, { status: 204 }));
+      expect(await replacePhoto(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state });
+      expect(calls().at(-1)).toBe(`DELETE /api/v1/media/${photoId}`);
+    });
+  test("a failed discard does not hide the attach outcome", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(media()).mockResolvedValueOnce(problem(409))
+      .mockRejectedValueOnce(new Error("synthetic-private-error"));
+    expect(await replacePhoto(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "conflict" });
+  });
+  test("an attach response without the new photo is not success", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(media()).mockResolvedValueOnce(Response.json(profile));
+    expect(await replacePhoto(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "unavailable" });
+  });
+  test("removal detaches with the version as a query parameter", async () => {
+    fetchMock.mockResolvedValueOnce(csrf("fresh-token")).mockResolvedValueOnce(Response.json({ ...profile, version: 4 }));
+    expect(await removePhoto(origin, "synthetic-session", vi.fn(), 3)).toEqual({ state: "removed" });
+    expect(calls()).toEqual(["GET /api/auth/csrf", "DELETE /api/v1/profile/photo?version=3"]);
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("x-csrf-token")).toBe("fresh-token");
+  });
+  test.each([[409, "conflict"], [400, "invalid"], [403, "forbidden"], [500, "unavailable"]] as const)(
+    "removal %s maps safely", async (status, state) => {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(status));
+      expect(await removePhoto(origin, "synthetic-session", vi.fn(), 3)).toEqual({ state });
+    });
+  test("removal rejects a foreign origin and still-attached results", async () => {
+    expect(await removePhoto("https://evil.test", "synthetic-session", vi.fn(), 3)).toEqual({ state: "forbidden" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json({ ...profile, photoMediaId: photoId }));
+    expect(await removePhoto(origin, "synthetic-session", vi.fn(), 3)).toEqual({ state: "unavailable" });
+  });
+});
+
+describe("upload time budget", () => {
+  const image = new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], { type: "image/png" });
+  test("calls are bounded at 5 s, the upload at 25 s and the whole action at 40 s", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    try {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(413));
+      expect(await replacePhoto(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "tooLarge" });
+      expect(timeout.mock.calls.map(([ms]) => ms)).toEqual([40_000, 5_000, 25_000]);
+      // Every call also listens to the shared budget.
+      for (const [, init] of fetchMock.mock.calls) expect(init?.signal).toBeInstanceOf(AbortSignal);
+    } finally { timeout.mockRestore(); }
+  });
+  test("an exhausted budget aborts the remaining calls and is never success", async () => {
+    const budget = new AbortController();
+    budget.abort(new DOMException("synthetic budget", "TimeoutError"));
+    fetchMock.mockImplementation(async (_url, init) => {
+      if (init?.signal?.aborted) throw init.signal.reason;
+      return Response.json({});
+    });
+    const configuration = sessionConfiguration("synthetic-session", vi.fn(), budget.signal);
+    await expect(configuration.fetchApi!("http://localhost:8080/api/v1/media", { method: "POST" })).rejects.toThrow("synthetic budget");
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValueOnce(csrf()).mockImplementationOnce(async () => {
+      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    }).mockResolvedValueOnce(new Response(null, { status: 204 }));
+    expect(await replacePhoto(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "unavailable" });
+  });
+  test("ordinary mutations keep the 5 s per-call bound without a budget", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    try {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json({ ...profile, version: 4 }));
+      await removePhoto(origin, "synthetic-session", vi.fn(), 3);
+      expect(timeout.mock.calls.map(([ms]) => ms)).toEqual([5_000, 5_000]);
+    } finally { timeout.mockRestore(); }
   });
 });

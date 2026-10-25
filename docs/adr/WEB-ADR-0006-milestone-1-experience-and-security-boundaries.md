@@ -1,6 +1,6 @@
 # WEB-ADR-0006: Milestone 1 experience and security boundaries
 
-- **Status:** Accepted for identity/session and PUBLIC_ORIGIN (owner, 2026-10-16); media and administrator boundary review remains pending
+- **Status:** Accepted for identity/session and PUBLIC_ORIGIN (owner, 2026-10-16) and for media (owner, 2026-10-25, WEB-M1-008); administrator boundary review, including administrator evidence access, remains pending
 - **Date:** 2026-10-16
 - **Related tasks:** WEB-M1-001, WEB-M1-002, WEB-M1-003, WEB-M1-008, WEB-M1-010, WEB-M1-011, WEB-M1-012
 
@@ -14,7 +14,13 @@ The owner explicitly accepted the identity/session and PUBLIC_ORIGIN design
 during WEB-M1-003 planning and authorized implementation, including its narrowly
 required CI/image/deployment configuration wiring. Implementation tests and human
 boundary review remain required; this acceptance does not authorize deployment,
-API operations or resolve the separate administrator/media gates.
+API operations or resolve the separate administrator gate.
+
+On 2026-10-25 the owner accepted the media boundary below for WEB-M1-008:
+owner photo and evidence previews load the API's same-origin owner content route
+as image resources, with no web proxy, no image optimization or derivatives, no
+object URLs and no-store delivery. Administrator evidence access stays behind the
+administrator gate.
 
 ### Experience and localization
 

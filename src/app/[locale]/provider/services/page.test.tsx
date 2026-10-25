@@ -19,7 +19,7 @@ import Page, { generateMetadata } from "./page";
 
 const authenticated = { state: "authenticated", account: {
   accountId: "synthetic-private-id", emailVerified: true, sessionExpiresAt: new Date("2099-01-01") } } as const;
-const ready = { state: "ready", context: { organizationId: "synthetic-private-org", approvalState: "PENDING", suspended: false } } as const;
+const ready = { state: "ready", context: { organizationId: "synthetic-private-org", approvalState: "PENDING", approvalRevision: 1, suspended: false } } as const;
 const location = { locationId: "loc-1", label: "Synthetic Clinic", displayAddress: "1 Synthetic Street", cityId: "city-1", countryCode: "MK", version: 0 };
 const paid = { serviceId: "svc-paid", name: "Synthetic consultation", description: '<script>alert("x")</script>',
   price: { amount: "9999999.99", currency: "EUR" as const }, locationIds: ["loc-1"], version: 2 };

@@ -19,7 +19,7 @@ import Page, { generateMetadata } from "./page";
 
 const authenticated = { state: "authenticated", account: {
   accountId: "synthetic-private-id", emailVerified: true, sessionExpiresAt: new Date("2099-01-01") } } as const;
-const ready = { state: "ready", context: { organizationId: "synthetic-private-org", approvalState: "PENDING", suspended: false } } as const;
+const ready = { state: "ready", context: { organizationId: "synthetic-private-org", approvalState: "PENDING", approvalRevision: 1, suspended: false } } as const;
 const clinic = { locationId: "loc-1", label: "Synthetic Clinic", displayAddress: "1 Synthetic Street", cityId: "city-skopje", countryCode: "MK", version: 3 };
 const retired = { locationId: "loc-2", displayAddress: "2 Synthetic Street", cityId: "city-retired", countryCode: "MK", version: 0 };
 const countries = [{ code: "MK", labels: { mk: "Македонија", en: "North Macedonia", bg: "Северна Македония" } }, { code: "BG", labels: { en: "Bulgaria" } }];

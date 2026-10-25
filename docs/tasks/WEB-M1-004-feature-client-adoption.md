@@ -46,10 +46,13 @@ Make the exact published feature contract available before dependent web integra
 | API-M1-004 | `OrganizationApi`: getCurrentContext, onboard | WEB-M1-005 |
 | API-M1-005 | `ProfileApi`: createOrGetProfile, getProfile, editProfile; `MedicalApi`: createOrGetMedicalProfile, getMedicalProfile, editMedicalProfile | WEB-M1-005, WEB-M1-006 |
 | API-M1-006 | `ServicesApi` and `LocationsApi` create/get/list/update/delete; `ReferenceApi`: listCountries, listCities, listSpecialties | WEB-M1-007 |
-| API-M1-007 | Absent — linked API blocker | WEB-M1-008 |
-| API-M1-008 | Absent — linked API blocker | WEB-M1-009 |
-| API-M1-009 | Absent — linked API blocker | WEB-M1-010 |
-| API-M1-010 | Absent — linked API blocker | WEB-M1-011 |
+| API-M1-007 | `MediaApi`: uploadMedia, getMedia, getMediaContent, getMediaContentAsAdministrator, getPublicMediaContent, deleteMedia (0.4.0) | WEB-M1-008 |
+| API-M1-013 | `ProfileApi`: attachProfilePhoto, detachProfilePhoto; `ProfileResponse.photoMediaId` (0.5.0) | WEB-M1-008 |
+| API-M1-008 | `CredentialsApi` create/get/list/update/delete/submit with `evidenceMediaIds`; `CredentialReviewApi` list/get/approve/reject (0.6.0) | WEB-M1-008 (evidence), WEB-M1-009, WEB-M1-010 |
+| API-M1-009 | `DoctorReviewApi` list/get/approve/reject/suspend/reinstate; `ProfileApi` getProfilePublication/publish/unpublish; required `ContextResponse.approvalRevision` (0.6.0) | WEB-M1-010 |
+| API-M1-010 | `PublicApi`: getPublicProfile, listPublicDoctors (0.7.0) | WEB-M1-011 |
+
+Upgrade record (2026-10-25, WEB-M1-008): pinned `0.7.0`, integrity `sha512-CmfMv4LL3hOIWh9uqHPXf5ykOrsNmVOICHWbnKhWfYNyHCi07Fs1OEN4RDQSPTA8ka2OSq70xeQ/5PU7pUD5uA==`. 0.6.0 was prepared but never reached the registry; the owner directed 0.7.0, which carries the 0.5.0/0.6.0 changes. The only breaking type change for existing code is the required `ContextResponse.approvalRevision`; runtime wrappers do not read it, and synthetic test fixtures were updated.
 
 ## Acceptance criteria
 
