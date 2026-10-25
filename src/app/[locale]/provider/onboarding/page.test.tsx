@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
+// SiteHeader is async and covered by its own tests; the stub proves each page renders it.
+vi.mock("@/components/site-header", () => ({ SiteHeader: ({ current }: { current?: string }) => <header data-current={current ?? "none"} /> }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => [{ name: "platform-session-local", value: "synthetic" }] }) }));
 vi.mock("@/features/provider-onboarding/actions", () => ({ startOnboarding: vi.fn() }));
 vi.mock("@/lib/api/identity", () => ({ currentAccount: vi.fn(), googleLoginHref: async (locale: string) => `/api/auth/login?returnTo=%2F${locale}%2Fprovider` }));
@@ -71,4 +73,8 @@ test.each<IdentityState>(["signedOut", "expired", "forbidden", "unavailable"])("
   expect(html).not.toContain("raw-private-error");
   expect(html).not.toContain(translator("en")("onboarding.create"));
   expect(currentContext).not.toHaveBeenCalled();
+});
+test("renders the site header before main", async () => {
+  vi.mocked(currentAccount).mockResolvedValue({ state: "signedOut" });
+  expect((await render()).startsWith('<header data-current="none"></header><main id="main-content"')).toBe(true);
 });

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { SiteHeader } from "@/components/site-header";
 import { LanguageLinks } from "@/components/site-shell";
 import { Heading, Notice } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
@@ -35,14 +36,14 @@ export default async function CredentialsPage({ params, searchParams }: Props) {
   const path = `/${locale}/provider/credentials`;
   if (account.state !== "authenticated") {
     const loginHref = await googleLoginHref(locale);
-    return <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+    return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
       <LanguageLinks locale={locale} path={path} />
       <Surface className="space-y-6">
         <Heading>{t("evidence.heading")}</Heading>
         <Notice>{t(`account.${account.state}`)}</Notice>
         <a className={linkClass} href={loginHref}>{t("account.login")}</a>
       </Surface>
-    </main>;
+    </main></>;
   }
   // Credentials require a workspace, so they are only read once the API confirms one exists.
   const workspace = await currentContext(session);
@@ -50,7 +51,7 @@ export default async function CredentialsPage({ params, searchParams }: Props) {
   const failed = workspace.state !== "ready" && workspace.state !== "notOnboarded" ? workspace.state :
     credentials && credentials.state !== "ready" ? credentials.state : undefined;
   const message = outcomeMessage(evidenceOutcomes, (await searchParams).evidence);
-  return <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+  return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     <LanguageLinks locale={locale} path={path} />
     <ProviderNavigation locale={locale} current="credentials" />
     <Surface className="space-y-6">
@@ -67,5 +68,5 @@ export default async function CredentialsPage({ params, searchParams }: Props) {
       {workspace.state === "ready" && workspace.context.suspended && <Notice>{t("workspace.suspended")}</Notice>}
       {credentials?.state === "ready" && <EvidenceList locale={locale} credentials={credentials.credentials} />}
     </Surface>
-  </main>;
+  </main></>;
 }

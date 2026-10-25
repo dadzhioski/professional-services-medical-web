@@ -63,7 +63,7 @@ for (const locale of localeCodes) {
       await page.getByLabel(tr("profileEditor.displayName")).fill("Dr. Synthetic Draft");
       await page.getByLabel(tr("profileEditor.biography")).fill("Synthetic line one\nSynthetic line two");
       await page.getByRole("button", { name: tr("profileEditor.save"), exact: true }).click();
-      await expect(page.getByRole("status")).toHaveText(tr("profileEditor.saved"));
+      await expect(page.getByRole("status").first()).toHaveText(tr("profileEditor.saved"));
       const response = await page.goto(`${origin}/${locale}/provider/profile`);
       expect(response!.headers()["cache-control"]).toContain("no-store");
       await expect(page.getByLabel(tr("profileEditor.displayName"))).toHaveValue("Dr. Synthetic Draft");
@@ -81,7 +81,7 @@ test("saves with JavaScript, keeps the slug stable and prevents repeated submiss
   const slug = await slugOf(page);
   await name(page).fill("Dr. Synthetic Renamed");
   await page.getByRole("button", { name: t("profileEditor.save"), exact: true }).dblclick();
-  await expect(page.getByRole("status")).toHaveText(t("profileEditor.saved"));
+  await expect(page.getByRole("status").first()).toHaveText(t("profileEditor.saved"));
   await expect(page.getByRole("region", { name: t("profileEditor.previewHeading") })).toContainText("Dr. Synthetic Renamed");
   await name(page).fill("Dr. Synthetic Second");
   await save(page);
@@ -125,7 +125,7 @@ test("a stale edit is reviewed and never silently overwritten", async ({ page, r
   await save(page);
   await expect(summaryOf(page)).toContainText(t("profileEditor.conflict"));
   await page.getByRole("button", { name: t("profileEditor.overwrite") }).click();
-  await expect(page.getByRole("status")).toHaveText(t("profileEditor.saved"));
+  await expect(page.getByRole("status").first()).toHaveText(t("profileEditor.saved"));
   await page.reload();
   await expect(name(page)).toHaveValue("Dr. Mine");
   await bump(request);
@@ -166,7 +166,7 @@ test("submissions require the site Origin and ignore foreign identifiers", async
     const page = await context.newPage();
     await openDraft(page);
     const slug = await slugOf(page);
-    const fields = await page.locator("form").filter({ has: name(page) }).locator("input, textarea").evaluateAll(inputs => Object.fromEntries(
+    const fields = await page.locator("main form").filter({ has: name(page) }).locator("input, textarea").evaluateAll(inputs => Object.fromEntries(
       inputs.map(input => [(input as HTMLInputElement).name, (input as HTMLInputElement).value])));
     const crossSite = await context.request.post(`${origin}/en/provider/profile`, { multipart: { ...fields, displayName: "Cross-site" } });
     const crossSiteHtml = await crossSite.text();
@@ -189,7 +189,7 @@ test("drafts never reach anonymous visitors or other accounts", async ({ page, b
   const slug = await slugOf(page);
   await name(page).fill("Dr. Private Draft Name");
   await save(page);
-  await expect(page.getByRole("status")).toBeVisible();
+  await expect(page.getByRole("status").first()).toBeVisible();
   const anonymous = await playwright.request.newContext();
   try {
     for (const path of ["/en/provider/profile", "/mk/provider/profile", `/mk/doctors/${slug}`, `/en/doctors/${slug}`]) {

@@ -13,10 +13,13 @@ export function approvalKey(state: string) {
   return Object.hasOwn(approvalKeys, state) ? approvalKeys[state as keyof typeof approvalKeys] : "workspace.approval.unknown";
 }
 
-export function ProviderNavigation({ locale, current }: { locale: Locale; current: "workspace" | "onboarding" | "profile" | "credentials" }) {
+export type ProviderPage = "workspace" | "onboarding" | "profile" | "services" | "locations" | "credentials";
+
+export function ProviderNavigation({ locale, current }: { locale: Locale; current: ProviderPage }) {
   const t = translator(locale);
   const links = [["workspace", `/${locale}/provider`], ["onboarding", `/${locale}/provider/onboarding`],
-    ["profile", `/${locale}/provider/profile`], ["credentials", `/${locale}/provider/credentials`]] as const;
+    ["profile", `/${locale}/provider/profile`], ["services", `/${locale}/provider/services`],
+    ["locations", `/${locale}/provider/locations`], ["credentials", `/${locale}/provider/credentials`]] as const;
   return <nav aria-label={t("provider.navigation")}>
     <ul className="flex flex-wrap gap-4">
       {links.map(([key, href]) => <li key={key}><a href={href} aria-current={key === current ? "page" : undefined}

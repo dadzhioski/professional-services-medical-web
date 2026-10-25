@@ -47,6 +47,120 @@ function filePart(body, contentType) {
   }
   return null;
 }
+const services = new Map();
+const locations = new Map();
+const medical = new Map();
+const catalogPaths = /^\/api\/v1\/(?:services|locations)(?:\/[^/]+)?$|^\/api\/v1\/medical$|^\/api\/v1\/reference\/(?:specialties|countries|cities)$/;
+// Small synthetic reference dataset with stable IDs; Albanian labels are absent, as in the 0.3.0 contract.
+const cityIds = { skopje: "0a6b1c2d-0000-4000-8000-000000000001", bitola: "0a6b1c2d-0000-4000-8000-000000000002", sofia: "0a6b1c2d-0000-4000-8000-000000000003" };
+const reference = {
+  specialties: [
+    { id: "5b0c1d2e-0000-4000-8000-000000000001", code: "cardiology", labels: { mk: "Кардиологија", en: "Cardiology", bg: "Кардиология" } },
+    { id: "5b0c1d2e-0000-4000-8000-000000000002", code: "dermatology", labels: { mk: "Дерматологија", en: "Dermatology", bg: "Дерматология" } },
+  ],
+  countries: [{ code: "MK", labels: { mk: "Северна Македонија", en: "North Macedonia", bg: "Северна Македония" } },
+    { code: "BG", labels: { mk: "Бугарија", en: "Bulgaria", bg: "България" } }],
+  cities: [
+    { id: cityIds.skopje, code: "skopje", countryCode: "MK", labels: { mk: "Скопје", en: "Skopje", bg: "Скопие" } },
+    { id: cityIds.bitola, code: "bitola", countryCode: "MK", labels: { mk: "Битола", en: "Bitola", bg: "Битоля" } },
+    { id: cityIds.sofia, code: "sofia", countryCode: "BG", labels: { mk: "Софија", en: "Sofia", bg: "София" } },
+  ],
+};
+const amountPattern = /^(0|[1-9][0-9]{0,6})(\.[0-9]{1,2})?$/;
+const text = (value, max, required = false) => value === undefined || value === null
+  ? !required : typeof value === "string" && value.length <= max && (!required || value.trim().length > 0);
+const withoutOrganization = record => { const copy = { ...record }; delete copy.organizationId; return copy; };
+
+// Owner CRUD for services, practice locations and the medical extension, scoped to the session's organization.
+function catalog(req, res, url, organization, fail, json) {
+  if (identityMode === "catalog-down") { fail(503); return; }
+  // Like the other owner endpoints, access without a workspace is a server error.
+  if (!organization) { fail(500); return; }
+  const owner = organization.organizationId;
+  const [, , , kind, id] = url.pathname.split("/");
+  const owned = store => [...store.values()].filter(record => record.organizationId === owner);
+  const profile = profiles.get(owner);
+  const body = handler => {
+    if (identityMode === "suspended") { fail(403); return; }
+    if (identityMode === "catalog-reject") { fail(400); return; }
+    if (req.headers["content-type"]?.split(";")[0].trim() !== "application/json") { fail(415); return; }
+    let raw = "";
+    req.on("data", chunk => { raw += chunk; });
+    req.on("end", () => {
+      let input;
+      try { input = JSON.parse(raw); } catch { fail(400); return; }
+      handler(input);
+    });
+  };
+  if (kind === "medical") {
+    if (req.method === "GET") { if (medical.has(owner)) json(withoutOrganization(medical.get(owner))); else fail(404); return; }
+    if (req.method === "POST") {
+      if (!medical.has(owner)) medical.set(owner, { medicalProfileId: randomUUID(), organizationId: owner, version: 0 });
+      json(withoutOrganization(medical.get(owner))); return;
+    }
+    if (req.method === "PATCH") {
+      body(input => {
+        const current = medical.get(owner);
+        if (!current) { fail(404); return; }
+        if (!Number.isInteger(input.version) || (input.specialtyId != null && !reference.specialties.some(s => s.id === input.specialtyId))) { fail(400); return; }
+        if (input.version !== current.version) { fail(409); return; }
+        // All three fields are replaced, as in the API.
+        Object.assign(current, { licenseNumber: input.licenseNumber ?? null, registrationBody: input.registrationBody ?? null,
+          specialtyId: input.specialtyId ?? null, version: current.version + 1 });
+        json(withoutOrganization(current));
+      });
+      return;
+    }
+    fail(405); return;
+  }
+  const store = kind === "services" ? services : locations;
+  const key = kind === "services" ? "serviceId" : "locationId";
+  const record = id && store.get(id)?.organizationId === owner ? store.get(id) : undefined;
+  const validService = input => text(input.name, 120, true) && text(input.description, 1000) &&
+    (input.price == null || (amountPattern.test(input.price.amount) && ["EUR", "MKD"].includes(input.price.currency))) &&
+    (input.locationIds == null || (Array.isArray(input.locationIds) && input.locationIds.length <= 10 &&
+      input.locationIds.every(locationId => locations.get(locationId)?.organizationId === owner)));
+  const validLocation = input => text(input.label, 120) && text(input.displayAddress, 255, true) &&
+    reference.cities.some(city => city.id === input.cityId && city.countryCode === input.countryCode);
+  const valid = kind === "services" ? validService : validLocation;
+  const fields = input => kind === "services"
+    ? { name: input.name, description: input.description ?? null, locationIds: input.locationIds ?? [],
+      // Responses always use two fraction digits.
+      price: input.price ? { amount: Number(input.price.amount).toFixed(2), currency: input.price.currency } : null }
+    : { label: input.label ?? null, displayAddress: input.displayAddress, countryCode: input.countryCode, cityId: input.cityId };
+  if (!id && req.method === "GET") { json(owned(store).map(withoutOrganization)); return; }
+  if (!id && req.method === "POST") {
+    body(input => {
+      if (!valid(input) || owned(store).length >= (kind === "services" ? 50 : 10)) { fail(400); return; }
+      const created = { [key]: randomUUID(), organizationId: owner, ...fields(input), version: 0 };
+      store.set(created[key], created);
+      json(withoutOrganization(created));
+    });
+    return;
+  }
+  if (!record) { fail(404); return; }
+  if (req.method === "GET") { json(withoutOrganization(record)); return; }
+  if (req.method === "PUT") {
+    body(input => {
+      if (!valid(input) || !Number.isInteger(input.version)) { fail(400); return; }
+      if (input.version !== record.version) { fail(409); return; }
+      Object.assign(record, fields(input), { version: record.version + 1 });
+      json(withoutOrganization(record));
+    });
+    return;
+  }
+  if (req.method === "DELETE") {
+    if (identityMode === "suspended") { fail(403); return; }
+    if (identityMode === "delete-fail") { fail(500); return; }
+    store.delete(id);
+    // Deleting a location unlinks it from services in the same step.
+    if (kind === "locations") for (const service of owned(services)) service.locationIds = service.locationIds.filter(locationId => locationId !== id);
+    // Removing the last service or location makes a published profile incomplete; the API unpublishes it.
+    if (profile?.publicationState === "PUBLISHED" && owned(store).length === 0) profile.publicationState = "UNPUBLISHED";
+    res.writeHead(204).end(); return;
+  }
+  fail(405);
+}
 let sequence = 0;
 let identityMode = "up";
 let reuseAccount = false;
@@ -55,7 +169,8 @@ const server = createServer((req, res) => {
   if (req.method === "POST" && url.pathname.startsWith("/control/identity/")) {
     identityMode = url.pathname.split("/").at(-1);
     if (identityMode === "reset") {
-      sessions.clear(); organizations.clear(); profiles.clear(); media.clear(); credentials.clear(); reuseAccount = false; identityMode = "up";
+      sessions.clear(); organizations.clear(); profiles.clear(); services.clear(); locations.clear(); medical.clear();
+      media.clear(); credentials.clear(); reuseAccount = false; identityMode = "up";
     }
     if (identityMode === "same-account") { reuseAccount = true; identityMode = "up"; }
     res.writeHead(204).end(); return;
@@ -90,8 +205,25 @@ const server = createServer((req, res) => {
     for (const [id, item] of media) if (!item.attached) media.delete(id);
     res.writeHead(204).end(); return;
   }
+  if (req.method === "POST" && url.pathname === "/control/catalog/bump") {
+    // Simulates service and location saves from another tab or device.
+    for (const record of [...services.values(), ...locations.values()]) Object.assign(record, record.serviceId
+      ? { name: "Edited elsewhere", version: record.version + 1 } : { label: "Edited elsewhere", version: record.version + 1 });
+    res.writeHead(204).end(); return;
+  }
+  if (req.method === "POST" && url.pathname === "/control/catalog/foreign") {
+    // A valid location identifier owned by another organization.
+    const location = { locationId: randomUUID(), organizationId: "synthetic-private-org-foreign", label: "Foreign clinic",
+      displayAddress: "Foreign street", countryCode: "MK", cityId: cityIds.skopje, version: 0 };
+    locations.set(location.locationId, location);
+    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ locationId: location.locationId })); return;
+  }
+  if (req.method === "POST" && url.pathname === "/control/profile/publish") {
+    for (const profile of profiles.values()) profile.publicationState = "PUBLISHED";
+    res.writeHead(204).end(); return;
+  }
   if (url.pathname.startsWith("/api/auth/") || ["/api/v1/account", "/api/v1/me", "/api/v1/onboarding", "/api/v1/profile",
-    "/api/v1/profile/photo"].includes(url.pathname) || /^\/api\/v1\/(media|credentials)(\/|$)/.test(url.pathname)) {
+    "/api/v1/profile/photo"].includes(url.pathname) || catalogPaths.test(url.pathname) || /^\/api\/v1\/(media|credentials)(\/|$)/.test(url.pathname)) {
     res.setHeader("Cache-Control", "no-store");
     const session = /(?:^|; )platform-session-local=([^;]+)/.exec(req.headers.cookie ?? "")?.[1];
     const state = sessions.get(session);
@@ -99,6 +231,11 @@ const server = createServer((req, res) => {
     const fail = status => { res.writeHead(status, { "Content-Type": "application/problem+json" }).end(JSON.stringify({ detail: "synthetic-private-error" })); };
     const json = body => { res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(body)); };
     if (identityMode === "down") { fail(503); return; }
+    if (url.pathname.startsWith("/api/v1/reference/")) {
+      // Anonymous reference data, like the API; sessions and CSRF are never required.
+      if (identityMode === "catalog-down" || req.headers.cookie) { fail(identityMode === "catalog-down" ? 503 : 400); return; }
+      json(reference[url.pathname.split("/").at(-1)]); return;
+    }
     if (url.pathname === "/api/auth/login") {
       const destination = url.searchParams.get("returnTo");
       if (!["/mk/provider", "/en/provider", "/bg/provider", "/sq/provider"].includes(destination)) { fail(400); return; }
@@ -168,6 +305,7 @@ const server = createServer((req, res) => {
         return;
       }
     }
+    if (catalogPaths.test(url.pathname)) { catalog(req, res, url, organizations.get(state.account), fail, json); return; }
     const organization = organizations.get(state.account);
     if (!organization) { fail(500); return; }
     const key = organization.organizationId;

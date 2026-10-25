@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { SiteHeader } from "@/components/site-header";
 import { LanguageLinks } from "@/components/site-shell";
 import { Heading, Notice } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
@@ -38,19 +39,19 @@ export default async function OnboardingPage({ params, searchParams }: Props) {
   const path = `/${locale}/provider/onboarding`;
   if (account.state !== "authenticated") {
     const loginHref = await googleLoginHref(locale);
-    return <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+    return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
       <LanguageLinks locale={locale} path={path} />
       <Surface className="space-y-6">
         <Heading>{t("onboarding.heading")}</Heading>
         <Notice>{t(`account.${safeNotice ?? account.state}`)}</Notice>
         <a className={linkClass} href={loginHref}>{t("account.login")}</a>
       </Surface>
-    </main>;
+    </main></>;
   }
   // Progress comes from the API; a failure notice never overrides an existing workspace.
   const workspace = await currentContext(session);
   const problem = workspace.state === "ready" ? undefined : workspace.state === "notOnboarded" ? safeNotice : workspace.state;
-  return <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+  return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     <LanguageLinks locale={locale} path={path} />
     <ProviderNavigation locale={locale} current="onboarding" />
     <Surface className="space-y-6">
@@ -73,5 +74,5 @@ export default async function OnboardingPage({ params, searchParams }: Props) {
         <SubmitButton label={t("onboarding.create")} pendingLabel={t("onboarding.creating")} />
       </form>}
     </Surface>
-  </main>;
+  </main></>;
 }
