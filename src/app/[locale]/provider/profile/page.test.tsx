@@ -3,6 +3,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => [{ name: "platform-session-local", value: "synthetic" }] }) }));
 vi.mock("@/features/provider-profile/actions", () => ({ createProfileDraft: vi.fn(), saveProfileDraft: vi.fn() }));
+vi.mock("@/features/provider-profile/photo-actions", () => ({ changeProfilePhoto: vi.fn(), removeProfilePhoto: vi.fn() }));
 vi.mock("@/lib/api/identity", () => ({ currentAccount: vi.fn(), googleLoginHref: async (locale: string) => `/api/auth/login?returnTo=%2F${locale}%2Fprovider` }));
 vi.mock("@/lib/api/organization", () => ({ currentContext: vi.fn() }));
 vi.mock("@/lib/api/profile", () => ({ readProfile: vi.fn() }));
@@ -14,11 +15,11 @@ import Page, { generateMetadata } from "./page";
 
 const authenticated = { state: "authenticated", account: {
   accountId: "synthetic-private-id", emailVerified: true, sessionExpiresAt: new Date("2099-01-01") } } as const;
-const ready = { state: "ready", context: { organizationId: "synthetic-private-org", approvalState: "PENDING", suspended: false } } as const;
+const ready = { state: "ready", context: { organizationId: "synthetic-private-org", approvalState: "PENDING", approvalRevision: 1, suspended: false } } as const;
 const profile = { profileId: "synthetic-private-profile", organizationId: "synthetic-private-org", slug: "dr-0000abcd",
   displayName: "Synthetic Doctor", biography: '<script>alert("synthetic")</script>', publicationState: "DRAFT", version: 2 };
-const render = async (locale = "en", notice?: string) =>
-  renderToStaticMarkup(await Page({ params: Promise.resolve({ locale }), searchParams: Promise.resolve({ notice }) }));
+const render = async (locale = "en", notice?: string, photo?: string) =>
+  renderToStaticMarkup(await Page({ params: Promise.resolve({ locale }), searchParams: Promise.resolve({ notice, photo }) }));
 const privateValues = /synthetic-private|synthetic-session|localhost:8080|@/;
 
 beforeEach(() => vi.clearAllMocks());
@@ -97,4 +98,41 @@ test.each<IdentityState>(["signedOut", "expired", "forbidden", "unavailable"])("
   expect(html).not.toContain("raw-private-error");
   expect(currentContext).not.toHaveBeenCalled();
   expect(readProfile).not.toHaveBeenCalled();
+});
+const photoId = "0b3f9c2e-6a1d-4c58-9e7f-2d4a8b1c5e60";
+test("a current photo is shown from the same-origin owner route with replace and remove controls", async () => {
+  const t = translator("en");
+  vi.mocked(currentAccount).mockResolvedValue(authenticated);
+  vi.mocked(currentContext).mockResolvedValue(ready);
+  vi.mocked(readProfile).mockResolvedValue({ state: "ready", profile: { ...profile, photoMediaId: photoId } });
+  const html = await render("en", undefined, "saved");
+  expect(html.match(new RegExp(`<img src="/api/v1/media/${photoId}/content"`, "g"))).toHaveLength(2);
+  expect(html).toContain(`alt="${t("photo.current")}"`);
+  expect(html).toContain('referrerPolicy="no-referrer"');
+  expect(html).not.toMatch(/_next\/image|srcSet|blob:/);
+  expect(html).toContain(t("photo.replace"));
+  expect(html).toContain(t("photo.remove"));
+  expect(html).toMatch(new RegExp(`role="status"[^>]*>${t("photo.saved")}`));
+  expect(html).toMatch(/<input[^>]*type="file"[^>]*accept="image\/jpeg,image\/png"[^>]*required/);
+  // The editor and both photo forms carry the same profile version.
+  expect(html.match(/<input type="hidden" name="version" value="2"/g)).toHaveLength(3);
+});
+test.each(["https://evil.test/x.png", "../../private", "javascript:alert(1)"])("an unsafe photo ID %s is never rendered", async photoMediaId => {
+  vi.mocked(currentAccount).mockResolvedValue(authenticated);
+  vi.mocked(currentContext).mockResolvedValue(ready);
+  vi.mocked(readProfile).mockResolvedValue({ state: "ready", profile: { ...profile, photoMediaId } });
+  const html = await render();
+  expect(html).not.toContain("<img");
+  expect(html).not.toContain(photoMediaId);
+  expect(html).toContain(translator("en")("photo.none"));
+  expect(html).toContain(translator("en")("photo.upload"));
+  expect(html).not.toContain(translator("en")("photo.remove"));
+});
+test("photo failures are announced and unknown outcomes ignored", async () => {
+  vi.mocked(currentAccount).mockResolvedValue(authenticated);
+  vi.mocked(currentContext).mockResolvedValue(ready);
+  vi.mocked(readProfile).mockResolvedValue({ state: "ready", profile });
+  expect(await render("en", undefined, "tooLarge")).toMatch(new RegExp(`role="alert"[^>]*>${translator("en")("media.tooLarge")}`));
+  const html = await render("en", undefined, "<b>raw-private-error</b>");
+  expect(html).not.toContain("raw-private-error");
 });

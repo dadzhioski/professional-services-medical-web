@@ -1,10 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, unlinkSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { randomBytes } from "node:crypto";
 import assert from "node:assert/strict";
-import { validateImage, validateSite, validateTopology } from "./production-config.mjs";
+import { validateEdgeLimits, validateImage, validateSite, validateTopology } from "./production-config.mjs";
 import { checkClient } from "./check-api-client-version.mjs";
 
 const statePath = resolve("reports/integration-state.json");
@@ -66,8 +66,8 @@ function synchronizeSmokeOrigin(s) {
   }
   assert.ok(inspect("container", service(s, "web")).Config.Env.includes(expected));
 }
-async function get(s, path, options = {}) {
-  const response = await fetch(`${s.origin ?? origin(s)}${path}`, { ...options, signal: AbortSignal.timeout(15_000), redirect: "manual" });
+async function get(s, path, { timeout = 15_000, ...options } = {}) {
+  const response = await fetch(`${s.origin ?? origin(s)}${path}`, { ...options, signal: AbortSignal.timeout(timeout), redirect: "manual" });
   const body = await response.text();
   assert.doesNotMatch(body, /http:\/\/api:8080|API_INTERNAL_URL|ResponseError|err_trace/);
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
@@ -105,8 +105,24 @@ async function validate() {
   for (const site of ["http://:80", "medical.example.test"]) {
     docker(["run", "--rm", "--network", "none", "--mount", `type=bind,src=${resolve("deployment/Caddyfile")},dst=/etc/caddy/Caddyfile,readonly`,
       "-e", `SITE_ADDRESS=${site}`, config.services.caddy.image, "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]);
+    const adapted = JSON.parse(docker(["run", "--rm", "--network", "none", "--mount", `type=bind,src=${resolve("deployment/Caddyfile")},dst=/etc/caddy/Caddyfile,readonly`,
+      "-e", `SITE_ADDRESS=${site}`, config.services.caddy.image, "caddy", "adapt", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]));
+    validateEdgeLimits(adapted, uploadContract());
   }
   console.log("Production and smoke topology/Caddy validation passed");
+}
+// The edge upload route must list exactly the localized pages that render image uploads, and outlast the web's budget.
+function uploadContract() {
+  const locales = [...readFileSync("src/lib/i18n/index.ts", "utf8").matchAll(/^ {2}([a-z]{2,3}): \{ name:/gm)].map(m => m[1]);
+  const features = readdirSync("src/features", { recursive: true }).filter(f => /\.tsx?$/.test(f) && !/\.test\./.test(f))
+    .filter(f => readFileSync(join("src/features", f), "utf8").includes('"@/features/media/image-input"'))
+    .map(f => `@/features/${f.replaceAll("\\", "/").replace(/\.tsx?$/, "")}`);
+  const pagesRoot = "src/app/[locale]/provider";
+  const uploadPages = readdirSync(pagesRoot).filter(page => existsSync(join(pagesRoot, page, "page.tsx")) &&
+    features.some(feature => readFileSync(join(pagesRoot, page, "page.tsx"), "utf8").includes(`"${feature}"`)));
+  const budget = /export const uploadBudget = ([\d_]+);/.exec(readFileSync("src/lib/api/media.ts", "utf8"));
+  assert.ok(locales.length && uploadPages.length && budget, "Upload contract sources not found");
+  return { locales, uploadPages, uploadBudgetMs: Number(budget[1].replaceAll("_", "")) };
 }
 async function up() {
   assert.ok(!existsSync(statePath), "Integration state already exists; finish or clean up that run first");
@@ -209,6 +225,108 @@ async function unavailable(s) {
   }
   console.log("API HTTP error, stalled response, refused connection, absent DNS and recovery passed");
 }
+// Caddy's most recent access log entry: route category, status, timing and bytes read from the client only.
+function lastAccess(s) {
+  const logs = compose(s, ["logs", "--no-color", "--no-log-prefix", "caddy"]);
+  const access = logs.split("\n").filter(l => l.startsWith("{")).map(l => JSON.parse(l)).filter(e => e.logger?.startsWith("http.log.access"));
+  assert.ok(access.length);
+  return access.at(-1);
+}
+// A synthetic session the fixture accepts; never a real credential.
+const uploadSession = "platform-session-local=synthetic-session-edge";
+const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const syntheticImage = bytes => Buffer.concat([pngSignature, Buffer.alloc(bytes - pngSignature.length)]);
+const entities = value => value.replaceAll("&quot;", '"').replaceAll("&#x27;", "'").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
+// The server-rendered photo form's hidden fields, as a browser without JavaScript would submit them.
+async function photoForm(s) {
+  const { response, body } = await get(s, "/en/provider/profile", { headers: { Cookie: uploadSession } });
+  assert.equal(response.status, 200);
+  const section = body.slice(body.indexOf('id="photo"'));
+  const form = section.slice(section.indexOf("<form"), section.indexOf("</form>"));
+  const fields = Object.fromEntries([...form.matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?/g)]
+    .map(([, name, value = ""]) => [entities(name), entities(value)]));
+  assert.ok(fields.version && Object.keys(fields).some(name => name.startsWith("$ACTION")));
+  return fields;
+}
+// Streams a body at a fixed rate, like a slow mobile connection.
+function throttled(stream, bytesPerSecond) {
+  const reader = stream.getReader();
+  return new ReadableStream({ async pull(controller) {
+    const { done, value } = await reader.read();
+    if (done) { controller.close(); return; }
+    for (let offset = 0; offset < value.length; offset += 64 * 1024) {
+      controller.enqueue(value.subarray(offset, offset + 64 * 1024));
+      await sleep(64 * 1024 / bytesPerSecond * 1000);
+    }
+  } });
+}
+async function uploadPhoto(s, bytes, { bytesPerSecond } = {}) {
+  const form = new FormData();
+  for (const [name, value] of Object.entries(await photoForm(s))) form.append(name, value);
+  form.append("photo", new Blob([bytes], { type: "image/png" }), "photo.png");
+  const encoded = new Response(form);
+  const headers = { Cookie: uploadSession, Origin: s.origin ?? origin(s), "Content-Type": encoded.headers.get("content-type") };
+  const body = bytesPerSecond ? throttled(encoded.body, bytesPerSecond) : Buffer.from(await encoded.arrayBuffer());
+  const start = Date.now();
+  const { response } = await get(s, "/en/provider/profile", { method: "POST", headers, body, duplex: "half", timeout: 90_000 });
+  return { status: response.status, location: response.headers.get("location") ?? "", elapsed: Date.now() - start };
+}
+async function uploads(s) {
+  const small = syntheticImage(64 * 1024);
+  try {
+    control(s, "up");
+    let result = await uploadPhoto(s, small);
+    assert.equal(result.status, 303);
+    assert.match(result.location, /\/en\/provider\/profile\?photo=saved#photo$/);
+    // The owner image is delivered through the edge's /api/* route, never cached.
+    const page = await get(s, "/en/provider/profile", { headers: { Cookie: uploadSession } });
+    const src = /<img src="(\/api\/v1\/media\/[0-9a-f-]{36}\/content)"/.exec(page.body)?.[1];
+    assert.ok(src);
+    const image = await fetch(`${s.origin}${src}`, { headers: { Cookie: uploadSession }, signal: AbortSignal.timeout(15_000) });
+    assert.equal(image.status, 200);
+    assert.equal(image.headers.get("content-type"), "image/png");
+    assert.equal(image.headers.get("cache-control"), "no-store");
+    assert.equal((await fetch(`${s.origin}${src}`, { signal: AbortSignal.timeout(15_000) })).status, 401);
+
+    // An API slower than the default 10s web timeout still completes through the upload route.
+    control(s, "media-slow");
+    result = await uploadPhoto(s, small);
+    assert.equal(result.status, 303);
+    assert.match(result.location, /photo=saved/);
+    assert.ok(result.elapsed >= 19_000 && result.elapsed < 50_000, "Slow upload timing out of range");
+
+    // A stalled API ends with the web's own translated outcome before the edge would give up.
+    control(s, "media-stall");
+    result = await uploadPhoto(s, small);
+    assert.equal(result.status, 303);
+    assert.match(result.location, /photo=unavailable/);
+    assert.ok(result.elapsed < 50_000, "The web budget must end before the edge timeout");
+
+    // Body limits: a 10 MiB image fits. Caddy cuts larger bodies off at the route limit, so the web never
+    // receives more than 12 MB on the upload route or 1 MB elsewhere, and an oversized upload never succeeds.
+    control(s, "media-fast");
+    result = await uploadPhoto(s, syntheticImage(10 * 1024 * 1024));
+    assert.equal(result.status, 303);
+    assert.match(result.location, /photo=saved/);
+    result = await uploadPhoto(s, syntheticImage(13_000_000));
+    assert.doesNotMatch(result.location, /photo=saved/);
+    assert.ok(lastAccess(s).bytes_read <= 12_000_001, "Upload route forwarded more than its limit");
+    for (const path of ["/en/provider/onboarding", "/system-status"]) {
+      await get(s, path, { method: "POST", headers: { Cookie: uploadSession, Origin: s.origin,
+        "Content-Type": "application/octet-stream" }, body: Buffer.alloc(2_000_000), timeout: 30_000 });
+      const entry = lastAccess(s);
+      assert.equal(entry.route, "web");
+      assert.ok(entry.bytes_read <= 1_000_001, "Web route forwarded more than its limit");
+    }
+
+    // A slow client (about 1 MiB/s) can send a full-size image without hitting the edge write timeout.
+    result = await uploadPhoto(s, syntheticImage(10 * 1024 * 1024), { bytesPerSecond: 1024 * 1024 });
+    assert.equal(result.status, 303);
+    assert.match(result.location, /photo=saved/);
+  } finally { control(s, "up"); }
+  await privacy(s);
+  console.log("Upload route timeout, web budget, body limits, slow client, owner image delivery and log privacy passed");
+}
 async function restart(s) {
   ownFixture(s);
   const before = inspect("container", s.fixture);
@@ -254,14 +372,15 @@ try {
   else if (command === "down") await down();
   else if (command === "routing") await routing(readState());
   else if (command === "unavailable") await unavailable(readState());
+  else if (command === "uploads") await uploads(readState());
   else if (command === "restart") await restart(readState());
   else if (command === "fixture-up") control(readState(), "up");
   else if (command === "fixture-down") control(readState(), "down");
   else if (command === "all") {
     assert.ok(!existsSync(statePath), "Finish the existing smoke run before starting all checks");
-    try { await validate(); await up(); const s = readState(); await routing(s); await unavailable(s); await restart(s); }
+    try { await validate(); await up(); const s = readState(); await routing(s); await unavailable(s); await uploads(s); await restart(s); }
     finally { await down(); }
-  } else throw new Error("Expected validate, edge-network, up, down, routing, unavailable, restart, or all");
+  } else throw new Error("Expected validate, edge-network, up, down, routing, unavailable, uploads, restart, or all");
 } catch (error) {
   // Assertions can embed response bodies; keep CI diagnostics free of raw data.
   console.error(error.code === "ERR_ASSERTION" ? `Integration assertion failed in ${command}; inspect synthetic results locally` : error.message);

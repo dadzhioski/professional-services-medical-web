@@ -5,7 +5,7 @@ import { checkClient } from "./check-api-client-version.mjs";
 const manifest = JSON.parse(readFileSync("package.json"));
 const lock = JSON.parse(readFileSync("package-lock.json"));
 const name = "@dadzhioski/professional-services-api-client";
-test("accepts the installed registry release", () => assert.equal(checkClient(manifest, lock), "0.4.0"));
+test("accepts the installed registry release", () => assert.equal(checkClient(manifest, lock), "0.7.0"));
 for (const version of ["^0.2.0", "~0.2.0", "*", "latest", "github:owner/repo", "file:client", "0.2", "01.2.0", "0.2.0-01"]) {
   test(`rejects ${version}`, () => assert.throws(() => checkClient({ ...manifest, dependencies: { [name]: version } }, lock)));
 }

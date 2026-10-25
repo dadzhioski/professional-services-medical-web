@@ -20,7 +20,7 @@ for (const locale of localeCodes) {
     const t = translator(locale);
     vi.mocked(currentAccount).mockResolvedValue(authenticated);
     vi.mocked(currentContext).mockResolvedValue({ state: "ready", context: {
-      organizationId: "synthetic-private-org", approvalState: "PENDING", suspended: false } });
+      organizationId: "synthetic-private-org", approvalState: "PENDING", approvalRevision: 1, suspended: false } });
     const params = Promise.resolve({ locale });
     const html = await render(locale);
     expect(html).toContain(t("account.authenticated"));
@@ -42,7 +42,7 @@ test("existing account without a workspace links to onboarding", async () => {
 test.each([["APPROVED", "workspace.approval.approved"], ["REJECTED", "workspace.approval.rejected"], ["NEW_STATE", "workspace.approval.unknown"]] as const)(
   "presents API approval %s and restriction without inventing permissions", async (approvalState, key) => {
     vi.mocked(currentAccount).mockResolvedValue(authenticated);
-    vi.mocked(currentContext).mockResolvedValue({ state: "ready", context: { organizationId: "o", approvalState, suspended: true } });
+    vi.mocked(currentContext).mockResolvedValue({ state: "ready", context: { organizationId: "o", approvalState, approvalRevision: 1, suspended: true } });
     const html = await render();
     expect(html).toContain(translator("en")(key));
     expect(html).toContain(translator("en")("workspace.suspended"));

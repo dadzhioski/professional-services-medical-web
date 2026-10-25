@@ -86,7 +86,7 @@ it does not prove real Google or deployed API compatibility.
 ### Generated client
 
 Installed production dependency:
-**@dadzhioski/professional-services-api-client@0.4.0**.
+**@dadzhioski/professional-services-api-client@0.7.0**.
 Authenticated GitHub Packages metadata and installation were verified.
 The npm-generated lock file records its immutable integrity.
 
@@ -119,7 +119,7 @@ Verify access with:
 
 ```sh
 npm whoami --registry=https://npm.pkg.github.com
-npm view @dadzhioski/professional-services-api-client@0.4.0 version dist.integrity --registry=https://npm.pkg.github.com
+npm view @dadzhioski/professional-services-api-client@0.7.0 version dist.integrity --registry=https://npm.pkg.github.com
 ```
 
 A successful identity check does not prove package permission; E404 may mean
