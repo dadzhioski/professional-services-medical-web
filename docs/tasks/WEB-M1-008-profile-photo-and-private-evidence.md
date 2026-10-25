@@ -59,6 +59,7 @@ Known gaps and open decisions:
 - Changing the photo with JavaScript on discards unsaved text in the profile editor.
 - Not executed: live API, real R2, Google sign-in and non-production VPS checks.
 - Dependency gate (2026-10-25): new advisories against the existing pins (`next` 16.4.0 critical and high; `undici` 8.11.2 and `zod` 4.6.5 high, both dev-only) failed CI on this branch and on `main`. Fixed here with patch upgrades: `next` and `eslint-config-next` 16.4.0 → 16.4.3, `undici` → 8.12.3 and `zod` → 4.6.7 in the lockfile. `npm audit` reports 0 vulnerabilities, and the gate passes with 0 accepted exceptions.
+- Edge container scan (2026-10-25): the pinned `caddy:2.11.7-alpine` base (Alpine 3.23.6), and also the newest rebuild of that tag, ships `brotli-libs` 1.2.0-r0 (CVE-2026-111497, HIGH), which failed `make edge-container-scan` in CI. `deployment/Dockerfile.caddy` now runs `apk upgrade --no-cache brotli-libs` (to 1.2.1-r0) in the final stage until upstream rebuilds the base. Only `curl` uses that library, and the Caddy health check uses busybox `wget`. Locally the rebuilt edge image scans with 0 HIGH/CRITICAL findings, and the full integration sequence passes with it.
 
 ## Edge change for uploads (implemented locally 2026-10-25; awaiting human review, not deployed)
 
