@@ -157,6 +157,11 @@ There is no compatible patched release; npm's proposed forced fix downgrades
 the Next.js lint configuration to another major version. This is temporary risk
 acceptance, not remediation.
 
+Update 2026-10-25 (WEB-M1-008): after upgrading `next` and `eslint-config-next`
+to 16.4.3, `npm audit` reports no finding for this chain and the gate passes
+with 0 accepted exceptions. The exception is therefore unused; it still expires
+as recorded, and removing its policy file is an owner decision.
+
 The machine-readable policy is `scripts/dependency-audit-exception.json`. The
 gate checks the entire advisory chain and lockfile: each package must have its
 approved version, exactly one expected top-level installation, and `dev: true`.

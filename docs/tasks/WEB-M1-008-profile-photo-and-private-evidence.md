@@ -58,7 +58,7 @@ Known gaps and open decisions:
 - Outcome notices do not name the credential and do not move focus.
 - Changing the photo with JavaScript on discards unsaved text in the profile editor.
 - Not executed: live API, real R2, Google sign-in and non-production VPS checks.
-- Pre-existing `npm audit` advisories: `next` 16.4.0 (critical), and `undici` and `zod` (high, transitive). They are unchanged by this task.
+- Dependency gate (2026-10-25): new advisories against the existing pins (`next` 16.4.0 critical and high; `undici` 8.11.2 and `zod` 4.6.5 high, both dev-only) failed CI on this branch and on `main`. Fixed here with patch upgrades: `next` and `eslint-config-next` 16.4.0 → 16.4.3, `undici` → 8.12.3 and `zod` → 4.6.7 in the lockfile. `npm audit` reports 0 vulnerabilities, and the gate passes with 0 accepted exceptions.
 
 ## Edge change for uploads (implemented locally 2026-10-25; awaiting human review, not deployed)
 
