@@ -1,6 +1,6 @@
 # WEB-M1-014: Add a public doctor directory with specialty and city filters
 
-- **Status:** APPROVED FOR IMPLEMENTATION (owner, 2026-10-26); not started. The owner amended [Milestone 1](../backlog/milestone-1.md#scope-and-milestone-acceptance) scope to include this directory, which WEB-M1-001 previously excluded, and accepted the defaults for every decision below.
+- **Status:** IMPLEMENTED (2026-10-26); local checks passed, non-production VPS checks not executed. Approved for implementation by the owner on 2026-10-26. The owner amended [Milestone 1](../backlog/milestone-1.md#scope-and-milestone-acceptance) scope to include this directory, which WEB-M1-001 previously excluded, and accepted the defaults for every decision below.
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-011 (public profile route, anonymous public wrapper, public photo path, SEO helpers and fixture routes); WEB-M1-013 (site header and entry page); owner decisions below
 - **Related ADRs:** WEB-ADR-0001; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (accepted for identity/session, PUBLIC_ORIGIN and media)
@@ -64,14 +64,14 @@ The owner accepted the default for each decision. Each entry keeps the question 
 ## Acceptance criteria
 
 - [x] (owner) Scope amendment recorded in this task and in `docs/backlog/milestone-1.md`.
-- [ ] From any localized page a visitor reaches the directory in one click from the header, and from the entry page.
-- [ ] Specialty and city filters, alone and combined, and pagination work without JavaScript; invalid input and out-of-range pages render safe translated states.
-- [ ] Results link to published profiles only; unpublished or suspended doctors and their photos disappear on the next request.
-- [ ] Empty, no-match, reference-unavailable and directory-unavailable states are server-rendered and the failure state is not indexed.
-- [ ] Keyboard, axe, mobile/desktop and 320 px checks pass; HTML contains no private data.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; the pinned client is unchanged.
+- [x] From any localized page a visitor reaches the directory in one click from the header, and from the entry page.
+- [x] Specialty and city filters, alone and combined, and pagination work without JavaScript; invalid input and out-of-range pages render safe translated states.
+- [x] Results link to published profiles only; unpublished or suspended doctors and their photos disappear on the next request.
+- [x] Empty, no-match, reference-unavailable and directory-unavailable states are server-rendered and the failure state is not indexed.
+- [x] Keyboard, axe, mobile/desktop and 320 px checks pass; HTML contains no private data.
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; the pinned client is unchanged.
 - [x] (owner) Header and entry wording, photo, indexing and Albanian-label decisions recorded in this task.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
 
 ## Verification
 
@@ -92,6 +92,8 @@ git diff --check
 **Local:** Use the isolated browser fixture for the scenarios above; no running API or real personal data is needed. For live checks, start `npm run dev` with existing local API configuration and at least two published synthetic doctors with different specialties and cities. Open `http://localhost:3000/mk`, follow the header link to the directory, filter by specialty, then by city, page through results, and open a profile. Repeat with JavaScript disabled, after unpublishing one doctor (it disappears on refresh), and with the API stopped (expect the unavailable message).
 
 **Non-production VPS:** When separately authorized and a compatible API is healthy, follow `deployment/README.md`: dispatch `Protected medical web release` (`deploy.yml`) from `main`, operation `deploy`, environment `non-production`, with the published full commit-SHA release. Open `/mk/doctors` on the site origin and repeat the local checks with synthetic accounts; check `/healthz` and `/system-status` for regressions. Record the release and any unexecuted live checks. No production deployment or API operation is authorized by this task.
+
+Evidence (2026-10-26): lint (excluding the untracked local `.claude/worktrees` checkout), type check, unit tests, production build, policy tests, API-client policy (0.7.0) and `npm run e2e` (desktop and Pixel 7) passed. The reference reads also include `listCountries`, so city options can be grouped by country; if it is unavailable, the groups show country codes.
 
 ## Security and privacy
 
