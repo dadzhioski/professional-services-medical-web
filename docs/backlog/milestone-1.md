@@ -1,6 +1,6 @@
 # Web Milestone 1 — Frontend planning authorization
 
-- **Status:** AUTHORIZED FOR PLANNING AND IMPLEMENTATION (owner decision, 2026-10-16); WEB-M1-001 through WEB-M1-012 created (WEB-M1-013 site navigation added 2026-10-21), with feature-specific decisions and API gates below.
+- **Status:** AUTHORIZED FOR PLANNING AND IMPLEMENTATION (owner decision, 2026-10-16); WEB-M1-001 through WEB-M1-012 created (WEB-M1-013 site navigation added 2026-10-21; WEB-M1-014 public directory added 2026-10-26), with feature-specific decisions and API gates below.
 - **Direction:** Public doctor profiles and provider onboarding, as described in `build-plan.md`.
 - **Starting point:** Implemented Next.js/SSR foundation, exact generated API client, CI/images and owner-confirmed working first non-production deployment.
 - **Milestone 0:** Formal acceptance remains open; deferred work is tracked in `milestone-0.md` and does not block unrelated frontend work.
@@ -34,6 +34,7 @@ Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005, WEB-M1-006 and WE
 | [WEB-M1-011](../tasks/WEB-M1-011-public-profile-and-seo.md) | Integrate public server-rendered doctor profiles and SEO | WEB-M1-002; WEB-M1-004 public-profile capability; WEB-M1-001 route/origin decisions |
 | [WEB-M1-012](../tasks/WEB-M1-012-milestone-acceptance.md) | Verify the Milestone 1 provider-to-public journey | WEB-M1-003 through WEB-M1-011 implemented; WEB-M1-001 decisions resolved |
 | [WEB-M1-013](../tasks/WEB-M1-013-site-navigation-and-entry.md) | Add a localized entry page and global site navigation with sign-in entry (added 2026-10-21) | WEB-M1-002, WEB-M1-003, WEB-M1-005; owner branding/entry-content decisions for final copy |
+| [WEB-M1-014](../tasks/WEB-M1-014-public-doctor-directory.md) | Add a public doctor directory with specialty and city filters and header/entry links (added 2026-10-26 by owner scope amendment) | WEB-M1-011, WEB-M1-013; client 0.7.0 directory capability |
 
 ### Observed capability and approval gates
 
@@ -57,7 +58,7 @@ Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005, WEB-M1-006 and WE
 
 ### Scope and milestone acceptance
 
-The default scope follows `build-plan.md`: public doctor profiles, credentials, services, locations, photo, provider onboarding/editing, administrator review and publication. Directory/search is excluded despite API-M1-010 also providing directory endpoints; adding it requires an explicit task amendment. Appointment requests remain Milestone 2, and analytics/pilot readiness remain later work.
+The default scope follows `build-plan.md`: public doctor profiles, credentials, services, locations, photo, provider onboarding/editing, administrator review and publication. Directory/search was excluded at first despite API-M1-010 also providing directory endpoints. On 2026-10-26 the owner amended scope to add the specialty/city directory in WEB-M1-014; free-text search remains excluded. Appointment requests remain Milestone 2, and analytics/pilot readiness remain later work.
 
 - [ ] Applicable product/security decisions reviewed without silently accepting proposed API policy.
 - [ ] Provider onboarding, private editing and review/publication journeys implemented against an approved exact client.
@@ -77,7 +78,7 @@ The default scope follows `build-plan.md`: public doctor profiles, credentials, 
 - [API-M1-007](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-007-media-and-private-evidence.md): Photos and private evidence.
 - [API-M1-008](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-008-credential-review.md): Credential review.
 - [API-M1-009](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-009-approval-and-publication.md): Doctor approval, publication and suspension.
-- [API-M1-010](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-010-public-profiles-and-directory.md): Public profiles; directory UI excluded here.
+- [API-M1-010](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-010-public-profiles-and-directory.md): Public profiles (WEB-M1-011) and directory (WEB-M1-014).
 - [API-M1-011](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-011-contract-and-release-readiness.md): Contract and client release preparation.
 - [API-M1-012](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-012-milestone-acceptance.md): API feature acceptance coordination.
 
