@@ -68,7 +68,8 @@ export default async function DoctorReviewPage({ params, searchParams }: Props) 
     </Surface>
     {deciding && <DecisionConfirmation id="decision" heading={t(confirmations[deciding].heading)}
       notes={confirmations[deciding].notes.map(note => t(note))} field="revision" value={doctor.revision}
-      reason={deciding === "reject" ? { label: t("review.reason"), hint: t("review.reasonHint") } : undefined}
+      reason={deciding === "reject" ? { label: t("review.reason"), hint: t("review.reasonHint"),
+        error: query.outcome === "reasonRequired" ? t("review.outcome.reasonRequired") : undefined } : undefined}
       confirmLabel={t(`review.action.${deciding}`)} pendingLabel={t("review.deciding")} cancelLabel={t("records.cancel")}
       cancelHref={path} action={decideDoctorAction.bind(null, locale, doctor.organizationId, deciding)}
       destructive={confirmations[deciding].destructive} />}

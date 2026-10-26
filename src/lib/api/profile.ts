@@ -152,10 +152,10 @@ export async function changePublication(origin: string | null, session: string |
       if (!valid(profile)) return { state: "unavailable" };
       return { state: publish ? "published" : "unpublished" };
     } catch (error) {
-      if (!(error instanceof ResponseError)) return { state: "unavailable" };
-      if (error.response.status === 409) return { state: "conflict" };
-      if (error.response.status === 422) return { state: "incomplete" };
-      if (error.response.status === 404) return { state: "missing" };
+      // Anything else, including transport failures, is mapped by csrfMutation like every other wrapper.
+      if (error instanceof ResponseError && error.response.status === 409) return { state: "conflict" };
+      if (error instanceof ResponseError && error.response.status === 422) return { state: "incomplete" };
+      if (error instanceof ResponseError && error.response.status === 404) return { state: "missing" };
       throw error;
     }
   });

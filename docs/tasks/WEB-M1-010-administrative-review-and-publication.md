@@ -50,10 +50,12 @@ Observed 0.7.0 behaviour and implementation notes:
 
 ## Acceptance criteria
 
-- [ ] Unauthorized and expired sessions, denied administrator access, stale decisions, rejection/resubmission and suspension/reinstatement are covered.
-- [ ] Eligible publication, denied publication, explicit unpublish and completeness-loss states match API responses; controls never replace API enforcement.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] Unauthorized and expired sessions, denied administrator access, stale decisions, rejection/resubmission and suspension/reinstatement are covered (unit tests and synthetic browser fixture; live API pending).
+- [x] Eligible publication, denied publication, explicit unpublish and completeness-loss states match API responses; controls never replace API enforcement (synthetic browser fixture; live API pending).
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly. Lint passes for the repository's own files; `npm run lint` also scans untracked local build output under `.claude/worktrees/`, which is not part of the repository.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
+
+Pending: the owner's WEB-ADR-0006 administrator-boundary review (including administrator evidence access) before merge; live API checks; non-production VPS checks. Follow-ups for the API: a single-doctor review read or paging (doctors beyond the first 100 per approval state are unreachable), and one shared time budget across the doctor page's chained reads (worst case exceeds Caddy's 10 s web response timeout under a slow API).
 
 ## Verification
 

@@ -27,7 +27,7 @@ export async function decideDoctorAction(locale: string, organizationId: string,
   const reviewed = formRevision(form);
   if (reviewed === undefined) return reload(path, "invalid");
   const reason = reasonOf(form);
-  if (decision === "reject" && !reason) return reload(path, "reasonRequired");
+  if (decision === "reject" && !reason) return redirect(`${path}?decide=reject&outcome=reasonRequired#decision`);
   const { session, origin, apply } = await actionSession();
   const result = decision === "reject" ? await rejectDoctor(origin, session, apply, organizationId, reviewed, reason) :
     await decideDoctor(origin, session, apply, organizationId, decision, reviewed);
@@ -40,7 +40,7 @@ export async function decideCredentialAction(locale: string, credentialId: strin
   const reviewed = formRevision(form);
   if (reviewed === undefined) return reload(path, "invalid");
   const reason = reasonOf(form);
-  if (decision === "reject" && !reason) return reload(path, "reasonRequired");
+  if (decision === "reject" && !reason) return redirect(`${path}?decide=reject&outcome=reasonRequired#decision`);
   const { session, origin, apply } = await actionSession();
   const result = decision === "reject" ? await rejectCredential(origin, session, apply, credentialId, reviewed, reason) :
     await approveCredential(origin, session, apply, credentialId, reviewed);

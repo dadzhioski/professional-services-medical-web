@@ -8,7 +8,7 @@ const cancelClass = "inline-block min-h-11 rounded-lg border-2 border-teal-800 p
 export function DecisionConfirmation({ id, heading, notes, field, value, reason, confirmLabel, pendingLabel, cancelLabel, cancelHref,
   action, destructive = false }: {
   id: string; heading: string; notes: string[]; field: "revision" | "version"; value: number;
-  reason?: { label: string; hint: string }; confirmLabel: string; pendingLabel: string; cancelLabel: string; cancelHref: string;
+  reason?: { label: string; hint: string; error?: string }; confirmLabel: string; pendingLabel: string; cancelLabel: string; cancelHref: string;
   action: (form: FormData) => Promise<void>; destructive?: boolean;
 }) {
   const frame = destructive ? "border-red-800 bg-red-50 text-red-950" : "border-teal-800 bg-teal-50 text-teal-950";
@@ -17,7 +17,7 @@ export function DecisionConfirmation({ id, heading, notes, field, value, reason,
     {notes.map(note => <p key={note}>{note}</p>)}
     <form action={action} className="space-y-4">
       <input type="hidden" name={field} value={value} />
-      {reason && <TextAreaField id={`${id}-reason`} name="reason" label={reason.label} hint={reason.hint} required />}
+      {reason && <TextAreaField id={`${id}-reason`} name="reason" label={reason.label} hint={reason.hint} error={reason.error} required />}
       <div className="flex flex-wrap items-center gap-4">
         <SubmitButton label={confirmLabel} pendingLabel={pendingLabel} className={destructive ? "!bg-red-800 hover:!bg-red-900" : ""} />
         <a className={cancelClass} href={cancelHref}>{cancelLabel}</a>

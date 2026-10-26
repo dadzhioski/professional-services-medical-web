@@ -59,6 +59,12 @@ test("confirming a rejection renders a reason field and the reviewed revision", 
   expect(html).toMatch(/<textarea[^>]*name="reason"[^>]*required/);
   expect(html).toContain(translator("en")("review.confirm.rejectNote"));
 });
+test("a missing reason keeps the rejection step open with the error tied to the field", async () => {
+  reviewing();
+  const html = await render({ decide: "reject", outcome: "reasonRequired" });
+  expect(html).toMatch(/<textarea[^>]*aria-describedby="decision-reason-hint decision-reason-error"[^>]*aria-invalid="true"/);
+  expect(html).toContain(`id="decision-reason-error" class="font-medium text-red-800">${translator("en")("review.outcome.reasonRequired")}`);
+});
 test.each([["approve", { approvalState: "APPROVED" }], ["reject", { approvalState: "REJECTED" }], ["reinstate", {}],
   ["suspend", { suspended: true }], ["delete", {}]] as const)("decision %s is not offered for this state", async (decide, overrides) => {
   reviewing(overrides);

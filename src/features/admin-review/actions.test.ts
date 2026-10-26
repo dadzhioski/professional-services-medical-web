@@ -45,11 +45,18 @@ test("a stale decision reloads for a new review and is never retried", async () 
   expect(await target(decideDoctorAction("en", organizationId, "approve", form({ revision: "7" })))).toBe(doctorPage("conflict"));
   expect(decideDoctor).toHaveBeenCalledTimes(1);
 });
-test.each([[{}, "invalid"], [{ revision: "x" }, "invalid"], [{ revision: "-1" }, "invalid"], [{ revision: "1".repeat(16) }, "invalid"],
-  [{ revision: "7", reason: "   " }, "reasonRequired"]])("rejects %j before any API call", async (entries, outcome) => {
-  expect(await target(decideDoctorAction("en", organizationId, "reject", form(entries)))).toBe(doctorPage(outcome));
-  expect(rejectDoctor).not.toHaveBeenCalled();
-});
+test.each([[{}], [{ revision: "x" }], [{ revision: "-1" }], [{ revision: "1".repeat(16) }]])(
+  "rejects %j before any API call", async entries => {
+    expect(await target(decideDoctorAction("en", organizationId, "reject", form(entries)))).toBe(doctorPage("invalid"));
+    expect(rejectDoctor).not.toHaveBeenCalled();
+  });
+test.each([[decideDoctorAction, organizationId, "doctors"], [decideCredentialAction, credentialId, "credentials"]] as const)(
+  "a blank reason keeps the rejection step open %#", async (action, id, kind) => {
+    expect(await target(action("en", id, "reject", form({ revision: "7", reason: "   " }))))
+      .toBe(`/en/admin/${kind}/${id}?decide=reject&outcome=reasonRequired#decision`);
+    expect(rejectDoctor).not.toHaveBeenCalled();
+    expect(rejectCredential).not.toHaveBeenCalled();
+  });
 test.each([["xx", organizationId, "approve"], ["en", "../x", "approve"], ["en", organizationId, "publish"], ["en", organizationId, "toString"]])(
   "ignores tampered bound arguments %s %s %s", async (locale, id, decision) => {
     expect(await target(decideDoctorAction(locale, id, decision, form({ revision: "1" })))).toBeUndefined();
