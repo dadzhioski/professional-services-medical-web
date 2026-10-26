@@ -39,3 +39,20 @@ export async function onboardWorkspace(origin: string | null, session: string | 
   });
   return result.ok ? result.value : result.state;
 }
+
+export type ResubmitResult = { state: "resubmitted" | "conflict" | IdentityState };
+
+// Only a rejected, non-suspended doctor at the given revision may resubmit; the API decides and 409s otherwise.
+export async function resubmitApproval(origin: string | null, session: string | undefined, apply: ApplySession,
+  revision: number): Promise<ResubmitResult> {
+  const result = await csrfMutation(origin, session, apply, async (configuration, token): Promise<ResubmitResult> => {
+    try {
+      const context = await new OrganizationApi(configuration).resubmitForApproval({ resubmissionRequest: { revision } }, csrfHeader(token));
+      return context && typeof context.approvalState === "string" ? { state: "resubmitted" } : { state: "unavailable" };
+    } catch (error) {
+      if (error instanceof ResponseError && error.response.status === 409) return { state: "conflict" };
+      throw error;
+    }
+  });
+  return result.ok ? result.value : { state: result.state };
+}

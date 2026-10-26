@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { currentContext, onboardWorkspace } from "./organization";
+import { currentContext, onboardWorkspace, resubmitApproval } from "./organization";
 
 const fetchMock = vi.fn<typeof fetch>();
 const origin = "http://localhost:3000";
@@ -105,5 +105,26 @@ describe("onboarding", () => {
       expect(await onboardWorkspace(origin, "synthetic-session", vi.fn())).toBe("unavailable");
       expect(log).not.toHaveBeenCalled();
     } finally { log.mockRestore(); }
+  });
+});
+
+describe("resubmit approval", () => {
+  test("sends only the approval revision with a fresh CSRF token", async () => {
+    fetchMock.mockResolvedValueOnce(csrf("fresh-token")).mockResolvedValueOnce(Response.json(context));
+    expect(await resubmitApproval(origin, "synthetic-session", vi.fn(), 3)).toEqual({ state: "resubmitted" });
+    const [url, init] = fetchMock.mock.calls[1];
+    expect(`${init?.method} ${url}`).toBe("POST http://localhost:8080/api/v1/approval/resubmission");
+    expect(JSON.parse(String(init?.body))).toEqual({ revision: 3 });
+    expect(new Headers(init?.headers).get("x-csrf-token")).toBe("fresh-token");
+  });
+  test.each([[409, "conflict"], [401, "expired"], [403, "forbidden"], [500, "unavailable"]] as const)(
+    "maps HTTP %s without retrying", async (status, state) => {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(status));
+      expect(await resubmitApproval(origin, "synthetic-session", vi.fn(), 3)).toEqual({ state });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+  test("rejects a foreign origin before any API call", async () => {
+    expect(await resubmitApproval("https://evil.test", "synthetic-session", vi.fn(), 3)).toEqual({ state: "forbidden" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

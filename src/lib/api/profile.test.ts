@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { createProfile, readProfile, removePhoto, replacePhoto, saveProfile } from "./profile";
+import { changePublication, createProfile, readProfile, readPublication, removePhoto, replacePhoto, saveProfile } from "./profile";
 import { sessionConfiguration } from "./session-transport";
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -277,5 +277,45 @@ describe("upload time budget", () => {
       await removePhoto(origin, "synthetic-session", vi.fn(), 3);
       expect(timeout.mock.calls.map(([ms]) => ms)).toEqual([5_000, 5_000]);
     } finally { timeout.mockRestore(); }
+  });
+});
+
+describe("publication", () => {
+  const publication = { approved: true, suspended: false, missing: [], publicationState: "DRAFT", version: 3 };
+  test("reads the API-reported eligibility and missing parts", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ ...publication, approved: false, missing: ["SERVICE", "FUTURE_PART"] }));
+    expect(await readPublication("synthetic-session")).toEqual({ state: "ready",
+      publication: { ...publication, approved: false, missing: ["SERVICE", "FUTURE_PART"] } });
+    expect(fetchMock.mock.calls[0][0]).toBe("http://localhost:8080/api/v1/profile/publication");
+  });
+  test.each([{}, { ...publication, version: "3" }, { ...publication, missing: "SERVICE" }, { ...publication, publicationState: "LIVE" },
+    { ...publication, approved: "yes" }])("rejects malformed publication %#", async payload => {
+    fetchMock.mockResolvedValueOnce(Response.json(payload));
+    expect(await readPublication("synthetic-session")).toEqual({ state: "unavailable" });
+  });
+  test.each([[404, "missing"], [401, "expired"], [403, "forbidden"]] as const)("maps read HTTP %s", async (status, state) => {
+    fetchMock.mockResolvedValueOnce(problem(status));
+    expect(await readPublication("synthetic-session")).toEqual({ state });
+  });
+  test("publishes and unpublishes at the version the owner saw", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json({ ...profile, publicationState: "PUBLISHED" }))
+      .mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json({ ...profile, publicationState: "UNPUBLISHED" }));
+    expect(await changePublication(origin, "synthetic-session", vi.fn(), true, 3)).toEqual({ state: "published" });
+    expect(await changePublication(origin, "synthetic-session", vi.fn(), false, 4)).toEqual({ state: "unpublished" });
+    const [publishUrl, publishInit] = fetchMock.mock.calls[1];
+    expect(`${publishInit?.method} ${publishUrl}`).toBe("POST http://localhost:8080/api/v1/profile/publication");
+    expect(JSON.parse(String(publishInit?.body))).toEqual({ version: 3 });
+    const [unpublishUrl, unpublishInit] = fetchMock.mock.calls[3];
+    expect(`${unpublishInit?.method} ${unpublishUrl}`).toBe("DELETE http://localhost:8080/api/v1/profile/publication?version=4");
+  });
+  test.each([[409, "conflict"], [422, "incomplete"], [404, "missing"], [401, "expired"], [403, "forbidden"], [500, "unavailable"]] as const)(
+    "maps publish HTTP %s without retrying", async (status, state) => {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(status));
+      expect(await changePublication(origin, "synthetic-session", vi.fn(), true, 3)).toEqual({ state });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+  test("rejects a foreign origin before any API call", async () => {
+    expect(await changePublication("https://evil.test", "synthetic-session", vi.fn(), true, 3)).toEqual({ state: "forbidden" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
