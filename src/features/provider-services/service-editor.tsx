@@ -3,7 +3,8 @@
 import { Field, TextAreaField } from "@/components/ui/presentation";
 import type { RecordMessages } from "@/features/provider-records/form";
 import { RecordEditor, linkClass, type RecordAction } from "@/features/provider-records/record-editor";
-import { formatPrice, serviceLimits, type ServiceEditorState, type ServiceMessages, type ServiceValues } from "./fields";
+import { formatPrice } from "@/lib/price";
+import { serviceLimits, type ServiceEditorState, type ServiceMessages, type ServiceValues } from "./fields";
 
 export type LocationOption = { id: string; label: string };
 const selectClass = "block min-h-11 w-full rounded-lg border border-slate-500 bg-white px-3 py-2";

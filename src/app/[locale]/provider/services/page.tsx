@@ -7,7 +7,8 @@ import { recordMessageKeys, recordNotice, type RecordMessages } from "@/features
 import { actionLinkClass, ProviderFrame, providerGate, PublicationStatus, RecordNoticeView, SignedOutView } from "@/features/provider-records/page-frame";
 import { RemoveConfirmation } from "@/features/provider-records/remove-confirmation";
 import { removeService, saveService } from "@/features/provider-services/actions";
-import { emptyService, formatPrice, serviceMessageKeys, type ServiceMessages } from "@/features/provider-services/fields";
+import { emptyService, serviceMessageKeys, type ServiceMessages } from "@/features/provider-services/fields";
+import { formatPrice } from "@/lib/price";
 import { ServiceEditor } from "@/features/provider-services/service-editor";
 import { listLocations } from "@/lib/api/locations";
 import { readProfile } from "@/lib/api/profile";

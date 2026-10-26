@@ -279,6 +279,72 @@ const server = createServer((req, res) => {
     for (const profile of profiles.values()) profile.publicationState = "PUBLISHED";
     res.writeHead(204).end(); return;
   }
+  if (req.method === "POST" && url.pathname === "/control/public/seed") {
+    // A complete, approved and published doctor with a photo, created without a session. Supplied text includes
+    // markup that must stay inert; private values exist only to prove they are never projected.
+    const organizationId = randomUUID();
+    organizations.set(`synthetic-account-public-${++sequence}`, { organizationId, approvalState: "APPROVED", approvalRevision: 1,
+      suspended: false, registeredAt: new Date().toISOString() });
+    const photoMediaId = randomUUID();
+    media.set(photoMediaId, { organizationId, purpose: "PROFILE_PHOTO", bytes: syntheticPng, contentType: "image/png", attached: true });
+    const slug = `dr-public-${sequence.toString(16).padStart(6, "0")}`;
+    profiles.set(organizationId, { profileId: `synthetic-private-profile-${organizationId}`, organizationId, slug,
+      displayName: "Dr. Synthetic Public", biography: 'Synthetic public biography <script>alert("x")</script>',
+      publicationState: "PUBLISHED", photoMediaId, version: 3 });
+    medical.set(organizationId, { medicalProfileId: randomUUID(), organizationId, licenseNumber: "synthetic-private-licence",
+      registrationBody: "synthetic-private-registration", specialtyId: reference.specialties[0].id, version: 1 });
+    const location = { locationId: randomUUID(), organizationId, label: "Synthetic clinic", displayAddress: "Synthetic street 1",
+      countryCode: "MK", cityId: cityIds.skopje, version: 0 };
+    locations.set(location.locationId, location);
+    const service = { serviceId: randomUUID(), organizationId, name: "Synthetic consultation", description: "Synthetic description",
+      locationIds: [location.locationId], price: { amount: "25.00", currency: "EUR" }, version: 0 };
+    services.set(service.serviceId, service);
+    credentials.set(organizationId, [{ credentialId: randomUUID(), version: 1, revision: 1, state: "APPROVED", type: "LICENSE",
+      title: "Synthetic licence", issuer: "Synthetic medical board", issuedOn: "2020-01-15", expiresOn: null,
+      evidenceMediaIds: [] }, { credentialId: randomUUID(), version: 0, revision: 1, state: "DRAFT", type: "OTHER",
+      title: "synthetic-private-draft", issuer: "Synthetic", issuedOn: "2021-01-15", expiresOn: null, evidenceMediaIds: [] }]);
+    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ slug, photoMediaId })); return;
+  }
+  if (req.method === "POST" && ["/control/public/unpublish", "/control/public/suspend"].includes(url.pathname)) {
+    // Stands in for the owner's unpublish and the administrator's suspension of every published doctor.
+    for (const profile of profiles.values()) {
+      if (url.pathname.endsWith("suspend")) organizationById(profile.organizationId).suspended = true;
+      if (profile.publicationState === "PUBLISHED") profile.publicationState = "UNPUBLISHED";
+    }
+    res.writeHead(204).end(); return;
+  }
+  const publicProfile = /^\/api\/v1\/public\/profiles\/([^/]+)$/.exec(url.pathname);
+  const publicPhoto = /^\/api\/v1\/public\/media\/([^/]+)\/content$/.exec(url.pathname);
+  if ((publicProfile || publicPhoto) && req.method === "GET") {
+    // Anonymous published-data projection, like the API: rechecked on every request and never cacheable.
+    // Unknown, unpublished and suspended doctors share one 404; a forwarded cookie is a web defect.
+    res.setHeader("Cache-Control", "no-store");
+    const fail = status => { res.writeHead(status, { "Content-Type": "application/problem+json" }).end(JSON.stringify({ detail: "synthetic-private-error" })); };
+    if (identityMode === "down") { fail(503); return; }
+    if (req.headers.cookie) { fail(400); return; }
+    const eligible = [...profiles.values()].filter(profile => profile.publicationState === "PUBLISHED" &&
+      !suspended(organizationById(profile.organizationId)));
+    if (publicPhoto) {
+      const profile = eligible.find(item => item.photoMediaId === publicPhoto[1]);
+      const item = profile && media.get(profile.photoMediaId);
+      if (!item || item.purpose !== "PROFILE_PHOTO") { fail(404); return; }
+      res.writeHead(200, { "Content-Type": item.contentType, "X-Content-Type-Options": "nosniff" }).end(item.bytes); return;
+    }
+    const profile = eligible.find(item => item.slug === decodeURIComponent(publicProfile[1]));
+    if (!profile) { fail(404); return; }
+    const key = profile.organizationId;
+    const owned = store => [...store.values()].filter(record => record.organizationId === key);
+    const city = id => { const found = reference.cities.find(item => item.id === id); return found && { id: found.id, code: found.code, labels: found.labels }; };
+    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
+      slug: profile.slug, displayName: profile.displayName, biography: profile.biography, photoMediaId: profile.photoMediaId,
+      specialty: reference.specialties.find(item => item.id === medical.get(key)?.specialtyId),
+      credentials: (credentials.get(key) ?? []).filter(item => item.state === "APPROVED")
+        .map(({ type, title, issuer, issuedOn, expiresOn }) => ({ type, title, issuer, issuedOn, expiresOn })),
+      services: owned(services).map(({ name, description, price }) => ({ name, description, price })),
+      locations: owned(locations).map(({ label, displayAddress, countryCode, cityId }) => ({ label, displayAddress, countryCode, city: city(cityId) })),
+    }));
+    return;
+  }
   if (url.pathname.startsWith("/api/auth/") || ["/api/v1/account", "/api/v1/me", "/api/v1/onboarding", "/api/v1/profile",
     "/api/v1/profile/photo", "/api/v1/profile/publication", "/api/v1/approval/resubmission"].includes(url.pathname) ||
     catalogPaths.test(url.pathname) || /^\/api\/v1\/(media|credentials|admin)(\/|$)/.test(url.pathname)) {
