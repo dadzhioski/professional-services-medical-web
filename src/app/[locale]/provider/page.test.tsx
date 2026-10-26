@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/components/site-header", () => ({ SiteHeader: ({ current }: { current?: string }) => <header data-current={current ?? "none"} /> }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => [{ name: "platform-session-local", value: "synthetic" }] }) }));
 vi.mock("@/features/provider-account/actions", () => ({ logout: vi.fn() }));
+vi.mock("@/features/provider-publication/actions", () => ({ resubmitApplication: vi.fn() }));
 vi.mock("@/lib/api/identity", () => ({ currentAccount: vi.fn(), googleLoginHref: async (locale: string) => `/api/auth/login?returnTo=%2F${locale}%2Fprovider` }));
 vi.mock("@/lib/api/organization", () => ({ currentContext: vi.fn() }));
 import { currentAccount, type IdentityState } from "@/lib/api/identity";
@@ -71,4 +72,37 @@ test.each<IdentityState>(["signedOut", "expired", "forbidden", "unavailable"])("
 test("renders the site header before main", async () => {
   vi.mocked(currentAccount).mockResolvedValue({ state: "signedOut" });
   expect((await render()).startsWith('<header data-current="workspace"></header><main id="main-content"')).toBe(true);
+});
+
+const rejected = { organizationId: "synthetic-private-org", approvalState: "REJECTED", approvalRevision: 6, suspended: false,
+  rejectionReason: "<b>Synthetic feedback</b>" };
+const renderWith = async (approval?: string) =>
+  renderToStaticMarkup(await Page({ params: Promise.resolve({ locale: "en" }), searchParams: Promise.resolve({ approval }) }));
+test("a rejected owner sees the reason as text and can resubmit at the current revision", async () => {
+  vi.mocked(currentAccount).mockResolvedValue(authenticated);
+  vi.mocked(currentContext).mockResolvedValue({ state: "ready", context: rejected });
+  const html = await renderWith();
+  expect(html).toContain(translator("en")("workspace.feedback"));
+  expect(html).toContain("&lt;b&gt;Synthetic feedback&lt;/b&gt;");
+  expect(html).toContain('<input type="hidden" name="revision" value="6"/>');
+  expect(html).toContain(translator("en")("workspace.resubmit"));
+});
+test.each([["suspended", { ...rejected, suspended: true }], ["pending", { ...rejected, approvalState: "PENDING" }],
+  ["approved", { ...rejected, approvalState: "APPROVED" }]])("a %s owner is not offered resubmission or feedback", async (_name, context) => {
+  vi.mocked(currentAccount).mockResolvedValue(authenticated);
+  vi.mocked(currentContext).mockResolvedValue({ state: "ready", context });
+  const html = await renderWith();
+  expect(html).not.toContain(translator("en")("workspace.resubmit"));
+  if (context.approvalState !== "REJECTED") expect(html).not.toContain("Synthetic feedback");
+});
+test.each([["resubmitted", "status", "workspace.outcome.resubmitted"], ["conflict", "alert", "workspace.outcome.conflict"]] as const)(
+  "resubmission outcome %s is announced as %s", async (approval, role, key) => {
+    vi.mocked(currentAccount).mockResolvedValue(authenticated);
+    vi.mocked(currentContext).mockResolvedValue({ state: "ready", context: { ...rejected, approvalState: "PENDING" } });
+    expect(await renderWith(approval)).toMatch(new RegExp(`role="${role}"[^>]*>${translator("en")(key)}`));
+  });
+test("unknown resubmission outcomes are ignored", async () => {
+  vi.mocked(currentAccount).mockResolvedValue(authenticated);
+  vi.mocked(currentContext).mockResolvedValue({ state: "ready", context: rejected });
+  expect(await renderWith("raw-private-error")).not.toContain("raw-private-error");
 });

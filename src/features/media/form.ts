@@ -14,7 +14,8 @@ export const credentialOutcomes = { created: "credentials.created", saved: "cred
   removed: "credentials.removed", conflict: "credentials.conflict", evidenceRequired: "credentials.evidenceRequired",
   missing: "credentials.missing", invalid: "records.invalid", signedOut: "account.signedOut", expired: "account.expired",
   forbidden: "account.forbidden", unavailable: "account.unavailable" } as const satisfies Record<string, TranslationKey>;
-const successes = ["saved", "removed", "created", "submitted"];
+const successes = ["saved", "removed", "created", "submitted", "approved", "rejected", "suspended", "reinstated", "published",
+  "unpublished", "resubmitted"];
 
 // Outcomes arrive in the query string, so only allow-listed values become messages.
 export function outcomeMessage<T extends Record<string, TranslationKey>>(outcomes: T, value: unknown) {
@@ -25,6 +26,7 @@ export function outcomeMessage<T extends Record<string, TranslationKey>>(outcome
 const integer = (value: FormDataEntryValue | null) =>
   typeof value === "string" && /^\d{1,15}$/.test(value) ? Number(value) : undefined;
 export const formVersion = (form: FormData) => integer(form.get("version"));
+export const formRevision = (form: FormData) => integer(form.get("revision"));
 
 // A user-chosen file worth sending: present, non-empty and within the byte limit.
 export function selectedImage(value: FormDataEntryValue | null): Blob | "noFile" | "tooLarge" {

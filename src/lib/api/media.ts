@@ -21,6 +21,11 @@ export function mediaContentPath(mediaId: unknown): string | null {
   return isUuid(mediaId) ? `/api/v1/media/${mediaId}/content` : null;
 }
 
+// Administrator evidence reads go through the API's grant check, which audits every attempt.
+export function adminMediaContentPath(mediaId: unknown): string | null {
+  return isUuid(mediaId) ? `/api/v1/admin/media/${mediaId}/content` : null;
+}
+
 // Runs inside an existing csrfMutation; identity failures propagate to its mapping.
 export async function uploadImage(configuration: Configuration, token: string, purpose: UploadMediaPurposeEnum,
   file: Blob): Promise<Uploaded> {

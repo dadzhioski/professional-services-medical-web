@@ -70,6 +70,26 @@ const amountPattern = /^(0|[1-9][0-9]{0,6})(\.[0-9]{1,2})?$/;
 const text = (value, max, required = false) => value === undefined || value === null
   ? !required : typeof value === "string" && value.length <= max && (!required || value.trim().length > 0);
 const withoutOrganization = record => { const copy = { ...record }; delete copy.organizationId; return copy; };
+// Suspension is stored by administrator decisions; the "suspended" mode forces it for owner-only checks.
+const suspended = organization => identityMode === "suspended" || !!organization?.suspended;
+// Accounts holding the stored administrator grant. Google sign-in alone never grants it.
+const administrators = new Set();
+let lastAccount;
+// Required parts for publication, in the contract's order and names.
+function missingParts(organizationId) {
+  const profile = profiles.get(organizationId);
+  const owns = store => [...store.values()].some(record => record.organizationId === organizationId);
+  return [[!profile?.displayName, "DISPLAY_NAME"], [!profile?.biography, "BIOGRAPHY"], [!medical.get(organizationId)?.specialtyId, "SPECIALTY"],
+    [!owns(services), "SERVICE"], [!owns(locations), "PRACTICE_LOCATION"],
+    [!(credentials.get(organizationId) ?? []).some(item => item.state === "APPROVED"), "APPROVED_CREDENTIAL"]]
+    .filter(([missing]) => missing).map(([, part]) => part);
+}
+// An edit that removes a required part unpublishes the profile, as in the API; it must be published again explicitly.
+function enforceCompleteness(organizationId) {
+  const profile = profiles.get(organizationId);
+  if (profile?.publicationState === "PUBLISHED" && missingParts(organizationId).length) profile.publicationState = "UNPUBLISHED";
+}
+const organizationById = id => [...organizations.values()].find(organization => organization.organizationId === id);
 
 // Owner CRUD for services, practice locations and the medical extension, scoped to the session's organization.
 function catalog(req, res, url, organization, fail, json) {
@@ -81,7 +101,7 @@ function catalog(req, res, url, organization, fail, json) {
   const owned = store => [...store.values()].filter(record => record.organizationId === owner);
   const profile = profiles.get(owner);
   const body = handler => {
-    if (identityMode === "suspended") { fail(403); return; }
+    if (suspended(organization)) { fail(403); return; }
     if (identityMode === "catalog-reject") { fail(400); return; }
     if (req.headers["content-type"]?.split(";")[0].trim() !== "application/json") { fail(415); return; }
     let raw = "";
@@ -107,6 +127,7 @@ function catalog(req, res, url, organization, fail, json) {
         // All three fields are replaced, as in the API.
         Object.assign(current, { licenseNumber: input.licenseNumber ?? null, registrationBody: input.registrationBody ?? null,
           specialtyId: input.specialtyId ?? null, version: current.version + 1 });
+        enforceCompleteness(owner);
         json(withoutOrganization(current));
       });
       return;
@@ -150,7 +171,7 @@ function catalog(req, res, url, organization, fail, json) {
     return;
   }
   if (req.method === "DELETE") {
-    if (identityMode === "suspended") { fail(403); return; }
+    if (suspended(organization)) { fail(403); return; }
     if (identityMode === "delete-fail") { fail(500); return; }
     store.delete(id);
     // Deleting a location unlinks it from services in the same step.
@@ -170,9 +191,36 @@ const server = createServer((req, res) => {
     identityMode = url.pathname.split("/").at(-1);
     if (identityMode === "reset") {
       sessions.clear(); organizations.clear(); profiles.clear(); services.clear(); locations.clear(); medical.clear();
-      media.clear(); credentials.clear(); reuseAccount = false; identityMode = "up";
+      media.clear(); credentials.clear(); administrators.clear(); reuseAccount = false; identityMode = "up";
     }
     if (identityMode === "same-account") { reuseAccount = true; identityMode = "up"; }
+    res.writeHead(204).end(); return;
+  }
+  if (req.method === "POST" && url.pathname === "/control/admin/grant") {
+    // The operator-controlled bootstrap, applied to the account that signed in last.
+    if (lastAccount) administrators.add(lastAccount);
+    res.writeHead(204).end(); return;
+  }
+  if (req.method === "POST" && url.pathname === "/control/review/bump") {
+    // Simulates another administrator's decision or an owner change after the review page was loaded.
+    for (const organization of organizations.values()) organization.approvalRevision += 1;
+    for (const list of credentials.values()) for (const credential of list) credential.revision += 1;
+    res.writeHead(204).end(); return;
+  }
+  if (req.method === "POST" && url.pathname === "/control/profile/complete") {
+    // Fills every owner-provided part except the approved credential, for publication checks.
+    for (const { organizationId } of organizations.values()) {
+      const profile = profiles.get(organizationId);
+      if (profile) Object.assign(profile, { displayName: "Dr. Synthetic", biography: "Synthetic biography" });
+      medical.set(organizationId, { medicalProfileId: randomUUID(), organizationId, licenseNumber: null, registrationBody: null,
+        specialtyId: reference.specialties[0].id, version: 1 });
+      const service = { serviceId: randomUUID(), organizationId, name: "Synthetic consultation", description: null,
+        locationIds: [], price: null, version: 0 };
+      services.set(service.serviceId, service);
+      const location = { locationId: randomUUID(), organizationId, label: "Synthetic clinic", displayAddress: "Synthetic street 1",
+        countryCode: "MK", cityId: cityIds.skopje, version: 0 };
+      locations.set(location.locationId, location);
+    }
     res.writeHead(204).end(); return;
   }
   if (req.method === "POST" && url.pathname === "/control/profile/bump") {
@@ -232,7 +280,8 @@ const server = createServer((req, res) => {
     res.writeHead(204).end(); return;
   }
   if (url.pathname.startsWith("/api/auth/") || ["/api/v1/account", "/api/v1/me", "/api/v1/onboarding", "/api/v1/profile",
-    "/api/v1/profile/photo"].includes(url.pathname) || catalogPaths.test(url.pathname) || /^\/api\/v1\/(media|credentials)(\/|$)/.test(url.pathname)) {
+    "/api/v1/profile/photo", "/api/v1/profile/publication", "/api/v1/approval/resubmission"].includes(url.pathname) ||
+    catalogPaths.test(url.pathname) || /^\/api\/v1\/(media|credentials|admin)(\/|$)/.test(url.pathname)) {
     res.setHeader("Cache-Control", "no-store");
     const session = /(?:^|; )platform-session-local=([^;]+)/.exec(req.headers.cookie ?? "")?.[1];
     const state = sessions.get(session);
@@ -250,7 +299,8 @@ const server = createServer((req, res) => {
       if (!["/mk/provider", "/en/provider", "/bg/provider", "/sq/provider"].includes(destination)) { fail(400); return; }
       // Synthetic navigation only: no Google/OIDC implementation or credentials.
       const id = `synthetic-session-${++sequence}`;
-      sessions.set(id, { csrf: `synthetic-csrf-${sequence}`, account: reuseAccount ? "synthetic-account-reused" : `synthetic-account-${sequence}` });
+      lastAccount = reuseAccount ? "synthetic-account-reused" : `synthetic-account-${sequence}`;
+      sessions.set(id, { csrf: `synthetic-csrf-${sequence}`, account: lastAccount });
       setCookie(id); res.writeHead(302, { Location: destination }).end(); return;
     }
     if (!state || identityMode === "expired") { fail(401); return; }
@@ -265,17 +315,90 @@ const server = createServer((req, res) => {
     if (url.pathname === "/api/auth/logout" && req.method === "POST") {
       sessions.delete(session); setCookie(""); res.writeHead(204).end(); return;
     }
+    if (url.pathname.startsWith("/api/v1/admin/")) {
+      // The stored grant decides; an administrator needs no doctor workspace. Every denial looks the same.
+      if (!administrators.has(state.account)) { fail(403); return; }
+      const review = organization => ({ organizationId: organization.organizationId, approvalState: organization.approvalState,
+        registeredAt: organization.registeredAt, revision: organization.approvalRevision, suspended: !!organization.suspended });
+      const submitted = () => [...credentials.entries()].flatMap(([organizationId, list]) => list
+        .filter(item => item.state === "SUBMITTED").map(item => ({ ...item, organizationId })));
+      const anyCredential = id => [...credentials.entries()].flatMap(([organizationId, list]) => list
+        .map(item => ({ item, organizationId }))).find(({ item }) => item.credentialId === id);
+      if (url.pathname === "/api/v1/admin/doctors" && req.method === "GET") {
+        const approvalState = url.searchParams.get("approvalState") ?? "PENDING";
+        if (!["PENDING", "APPROVED", "REJECTED"].includes(approvalState)) { fail(400); return; }
+        json([...organizations.values()].filter(item => item.approvalState === approvalState).map(review)); return;
+      }
+      const doctorMatch = /^\/api\/v1\/admin\/doctors\/([^/]+)\/(profile|approve|reject|suspend|reinstate)$/.exec(url.pathname);
+      if (doctorMatch) {
+        const organization = organizationById(doctorMatch[1]);
+        if (!organization) { fail(404); return; }
+        const [, , action] = doctorMatch;
+        if (action === "profile") {
+          if (req.method !== "GET") { fail(405); return; }
+          if (profiles.has(organization.organizationId)) json(withoutOrganization(profiles.get(organization.organizationId))); else fail(404);
+          return;
+        }
+        if (req.method !== "POST") { fail(405); return; }
+        readJson(req, res, fail, input => {
+          if (!Number.isInteger(input.revision) || (action === "reject" && !text(input.reason, 1000, true))) { fail(400); return; }
+          const allowed = { approve: organization.approvalState === "PENDING", reject: organization.approvalState === "PENDING",
+            suspend: !organization.suspended, reinstate: !!organization.suspended }[action];
+          if (input.revision !== organization.approvalRevision || !allowed) { fail(409); return; }
+          if (action === "approve") Object.assign(organization, { approvalState: "APPROVED", rejectionReason: undefined });
+          if (action === "reject") Object.assign(organization, { approvalState: "REJECTED", rejectionReason: input.reason.trim() });
+          if (action === "suspend") {
+            organization.suspended = true;
+            const profile = profiles.get(organization.organizationId);
+            if (profile?.publicationState === "PUBLISHED") profile.publicationState = "UNPUBLISHED";
+          }
+          // Reinstatement keeps the approval state and never republishes.
+          if (action === "reinstate") organization.suspended = false;
+          organization.approvalRevision += 1;
+          json(review(organization));
+        });
+        return;
+      }
+      if (url.pathname === "/api/v1/admin/credentials" && req.method === "GET") { json(submitted()); return; }
+      const reviewMatch = /^\/api\/v1\/admin\/credentials\/([^/]+)(?:\/(approve|reject))?$/.exec(url.pathname);
+      if (reviewMatch) {
+        const found = anyCredential(reviewMatch[1]);
+        if (!found) { fail(404); return; }
+        const { item: credential, organizationId } = found;
+        const view = () => ({ ...credential, rejectionReason: undefined, organizationId,
+          submittedAt: credential.submittedAt ?? null });
+        if (!reviewMatch[2]) { if (req.method === "GET") json(view()); else fail(405); return; }
+        if (req.method !== "POST") { fail(405); return; }
+        readJson(req, res, fail, input => {
+          if (!Number.isInteger(input.revision) || (reviewMatch[2] === "reject" && !text(input.reason, 1000, true))) { fail(400); return; }
+          if (input.revision !== credential.revision || credential.state !== "SUBMITTED") { fail(409); return; }
+          Object.assign(credential, reviewMatch[2] === "approve" ? { state: "APPROVED" } :
+            { state: "REJECTED", rejectionReason: input.reason.trim() }, { version: credential.version + 1 });
+          enforceCompleteness(organizationId);
+          json(view());
+        });
+        return;
+      }
+      const evidenceMatch = /^\/api\/v1\/admin\/media\/([^/]+)\/content$/.exec(url.pathname);
+      if (evidenceMatch && req.method === "GET") {
+        const item = media.get(evidenceMatch[1]);
+        if (!item) { fail(404); return; }
+        res.writeHead(200, { "Content-Type": item.contentType, "X-Content-Type-Options": "nosniff" }).end(item.bytes); return;
+      }
+      fail(404); return;
+    }
     if (url.pathname === "/api/v1/me" && req.method === "GET") {
       if (identityMode === "context-down") { fail(503); return; }
       const organization = organizations.get(state.account);
       if (!organization) { fail(404); return; }
-      json({ ...organization, suspended: identityMode === "suspended" }); return;
+      json({ ...organization, suspended: suspended(organization) }); return;
     }
     if (url.pathname === "/api/v1/onboarding" && req.method === "POST") {
       if (identityMode === "onboard-down") { fail(503); return; }
       // Idempotent per account, like the API: repeated calls return the same organization.
       if (!organizations.has(state.account)) {
-        organizations.set(state.account, { organizationId: `synthetic-private-org-${state.account}`, approvalState: "PENDING", approvalRevision: 1 });
+        organizations.set(state.account, { organizationId: randomUUID(), approvalState: "PENDING", approvalRevision: 1, suspended: false,
+          registeredAt: new Date().toISOString() });
       }
       // Simulates a committed request whose response is lost in transit.
       if (identityMode === "onboard-lost") { fail(504); return; }
@@ -294,7 +417,7 @@ const server = createServer((req, res) => {
         json(profiles.get(key)); return;
       }
       if (req.method === "PATCH") {
-        if (identityMode === "suspended") { fail(403); return; }
+        if (suspended(organization)) { fail(403); return; }
         // Like the API's @RequestBody handling, only JSON bodies are accepted.
         if (req.headers["content-type"]?.split(";")[0].trim() !== "application/json") { fail(415); return; }
         let body = "";
@@ -309,6 +432,7 @@ const server = createServer((req, res) => {
           if (input.version !== profile.version) { fail(409); return; }
           // Both fields are replaced, as in the API.
           Object.assign(profile, { displayName: input.displayName ?? null, biography: input.biography ?? null, version: profile.version + 1 });
+          enforceCompleteness(key);
           json(profile);
         });
         return;
@@ -319,7 +443,41 @@ const server = createServer((req, res) => {
     if (!organization) { fail(500); return; }
     const key = organization.organizationId;
     const mutating = req.method !== "GET";
-    if (mutating && identityMode === "suspended") { fail(403); return; }
+    if (mutating && suspended(organization)) { fail(403); return; }
+    if (url.pathname === "/api/v1/approval/resubmission") {
+      if (req.method !== "POST") { fail(405); return; }
+      readJson(req, res, fail, input => {
+        if (!Number.isInteger(input.revision)) { fail(400); return; }
+        if (organization.approvalState !== "REJECTED" || input.revision !== organization.approvalRevision) { fail(409); return; }
+        Object.assign(organization, { approvalState: "PENDING", rejectionReason: undefined, approvalRevision: organization.approvalRevision + 1 });
+        json({ ...organization, suspended: suspended(organization) });
+      });
+      return;
+    }
+    if (url.pathname === "/api/v1/profile/publication") {
+      const profile = profiles.get(key);
+      if (!profile) { fail(404); return; }
+      const status = () => ({ approved: organization.approvalState === "APPROVED", suspended: suspended(organization),
+        missing: missingParts(key), publicationState: profile.publicationState, version: profile.version });
+      if (req.method === "GET") { json(status()); return; }
+      if (req.method === "DELETE") {
+        if (!/^\d+$/.test(url.searchParams.get("version") ?? "")) { fail(400); return; }
+        if (Number(url.searchParams.get("version")) !== profile.version) { fail(409); return; }
+        if (profile.publicationState === "PUBLISHED") profile.publicationState = "UNPUBLISHED";
+        json(profile); return;
+      }
+      if (req.method === "POST") {
+        readJson(req, res, fail, input => {
+          if (!Number.isInteger(input.version)) { fail(400); return; }
+          if (input.version !== profile.version) { fail(409); return; }
+          if (!status().approved || missingParts(key).length) { fail(422); return; }
+          profile.publicationState = "PUBLISHED";
+          json(profile);
+        });
+        return;
+      }
+      fail(405); return;
+    }
     const mediaMatch = /^\/api\/v1\/media\/([^/]+)(\/content)?$/.exec(url.pathname);
     if (url.pathname === "/api/v1/media" && req.method === "POST") {
       if (identityMode === "upload-reset") { req.socket.destroy(); return; }
@@ -395,11 +553,6 @@ const server = createServer((req, res) => {
         (input.expiresOn != null && (!date(input.expiresOn) || input.expiresOn < input.issuedOn)) ||
         !Array.isArray(evidence) || evidence.length > 5 || new Set(evidence).size !== evidence.length;
     };
-    // Losing the last approved credential makes a published profile incomplete, as in the API.
-    const enforceCompleteness = () => {
-      const profile = profiles.get(key);
-      if (profile?.publicationState === "PUBLISHED" && !owned.some(item => item.state === "APPROVED")) profile.publicationState = "UNPUBLISHED";
-    };
     if (url.pathname === "/api/v1/credentials" && req.method === "GET") { json(owned); return; }
     if (url.pathname === "/api/v1/credentials" && req.method === "POST") {
       readJson(req, res, fail, input => {
@@ -424,7 +577,7 @@ const server = createServer((req, res) => {
           if (!Number.isInteger(input.version)) { fail(400); return; }
           if (input.version !== credential.version || !["DRAFT", "REJECTED"].includes(credential.state)) { fail(409); return; }
           if (!credential.evidenceMediaIds.length) { fail(422); return; }
-          Object.assign(credential, { state: "SUBMITTED", rejectionReason: undefined, version: credential.version + 1 });
+          Object.assign(credential, { state: "SUBMITTED", rejectionReason: undefined, submittedAt: new Date().toISOString(), version: credential.version + 1 });
           json(credential);
         });
         return;
@@ -435,7 +588,7 @@ const server = createServer((req, res) => {
         if (Number(url.searchParams.get("version")) !== credential.version) { fail(409); return; }
         for (const id of credential.evidenceMediaIds) media.delete(id);
         owned.splice(owned.indexOf(credential), 1);
-        enforceCompleteness();
+        enforceCompleteness(key);
         res.writeHead(204).end(); return;
       }
       if (req.method === "PUT") {
@@ -458,7 +611,7 @@ const server = createServer((req, res) => {
           // Any change starts a new draft revision and clears the previous review.
           Object.assign(credential, { ...fields, state: "DRAFT", rejectionReason: undefined, revision: credential.revision + 1,
             version: credential.version + 1 });
-          enforceCompleteness();
+          enforceCompleteness(key);
           json(credential);
         });
         return;

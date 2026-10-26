@@ -1,5 +1,6 @@
 import "server-only";
-import { ProfileApi, ResponseError, UploadMediaPurposeEnum, type Configuration, type EditProfileRequest, type ProfileResponse } from "@dadzhioski/professional-services-api-client";
+import { ProfileApi, PublicationResponsePublicationStateEnum, ResponseError, UploadMediaPurposeEnum, type Configuration, type EditProfileRequest,
+  type ProfileResponse, type PublicationResponse } from "@dadzhioski/professional-services-api-client";
 import { discardImage, uploadImage, uploadBudget, type UploadFailure } from "./media";
 import { csrfHeader, csrfMutation, failure, sessionConfiguration, type ApplySession, type IdentityState } from "./session-transport";
 
@@ -109,6 +110,52 @@ export async function removePhoto(origin: string | null, session: string | undef
     } catch (error) {
       const rejected = photoRejection(error);
       if (rejected) return rejected;
+      throw error;
+    }
+  });
+  return result.ok ? result.value : { state: result.state };
+}
+
+export type Publication = PublicationResponse;
+export type PublicationResult = { state: "ready"; publication: Publication } | { state: "missing" } | { state: IdentityState };
+export type PublishResult = { state: "published" | "unpublished" | "conflict" | "incomplete" | "missing" | IdentityState };
+
+const publicationStates: readonly string[] = Object.values(PublicationResponsePublicationStateEnum);
+
+// Unknown missing parts are kept: the page names them generically instead of hiding a blocker.
+function validPublication(publication: PublicationResponse | null | undefined): publication is Publication {
+  return !!publication && typeof publication.approved === "boolean" && typeof publication.suspended === "boolean" &&
+    Number.isSafeInteger(publication.version) && publicationStates.includes(publication.publicationState) &&
+    Array.isArray(publication.missing) && publication.missing.every(part => typeof part === "string");
+}
+
+// Eligibility and missing parts come from the API; the web never recomputes them.
+export async function readPublication(session?: string): Promise<PublicationResult> {
+  if (!session) return { state: "signedOut" };
+  try {
+    const publication = await new ProfileApi(sessionConfiguration(session)).getProfilePublication();
+    return validPublication(publication) ? { state: "ready", publication } : { state: "unavailable" };
+  } catch (error) {
+    if (error instanceof ResponseError && error.response.status === 404) return { state: "missing" };
+    return { state: failure(error, session) };
+  }
+}
+
+// 422 lists missing parts in its body; the page rereads the publication state instead of parsing problem details.
+export async function changePublication(origin: string | null, session: string | undefined, apply: ApplySession,
+  publish: boolean, version: number): Promise<PublishResult> {
+  const result = await csrfMutation(origin, session, apply, async (configuration, token): Promise<PublishResult> => {
+    const api = new ProfileApi(configuration);
+    try {
+      const profile = publish ? await api.publishProfile({ publicationRequest: { version } }, csrfHeader(token)) :
+        await api.unpublishProfile({ version }, csrfHeader(token));
+      if (!valid(profile)) return { state: "unavailable" };
+      return { state: publish ? "published" : "unpublished" };
+    } catch (error) {
+      // Anything else, including transport failures, is mapped by csrfMutation like every other wrapper.
+      if (error instanceof ResponseError && error.response.status === 409) return { state: "conflict" };
+      if (error instanceof ResponseError && error.response.status === 422) return { state: "incomplete" };
+      if (error instanceof ResponseError && error.response.status === 404) return { state: "missing" };
       throw error;
     }
   });
