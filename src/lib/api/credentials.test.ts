@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { addEvidence, readCredentials, removeEvidence } from "./credentials";
+import { addEvidence, createCredential, deleteCredential, readCredentials, removeEvidence, submitForReview,
+  updateCredentialFields } from "./credentials";
 
 const fetchMock = vi.fn<typeof fetch>();
 const origin = "http://localhost:3000";
@@ -117,5 +118,111 @@ describe("remove evidence", () => {
     fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json(credential)).mockResolvedValueOnce(problem(status));
     expect(await removeEvidence(origin, "synthetic-session", vi.fn(), credentialId, 2, evidenceA)).toEqual({ state });
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
+
+const draft = { type: "SPECIALIZATION" as const, title: "Synthetic specialty", issuer: "Synthetic chamber",
+  issuedOn: new Date(2019, 5, 1), expiresOn: undefined };
+const sent = { type: "SPECIALIZATION", title: "Synthetic specialty", issuer: "Synthetic chamber", issuedOn: "2019-06-01" };
+
+describe("create credential", () => {
+  test("rejects a foreign origin before any API call", async () => {
+    expect(await createCredential("https://evil.test", "synthetic-session", vi.fn(), draft)).toEqual({ state: "forbidden" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  test("posts only the typed fields with CSRF, so a new draft never carries evidence", async () => {
+    fetchMock.mockResolvedValueOnce(csrf("fresh-token")).mockResolvedValueOnce(Response.json({ ...credential, ...sent, state: "DRAFT",
+      evidenceMediaIds: [] }, { status: 201 }));
+    expect(await createCredential(origin, "synthetic-session", vi.fn(), draft)).toMatchObject({ state: "saved" });
+    expect(calls()).toEqual(["GET /api/auth/csrf", "POST /api/v1/credentials"]);
+    expect(body(1)).toEqual(sent);
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("x-csrf-token")).toBe("fresh-token");
+  });
+  test.each([[400, "invalid"], [401, "expired"], [403, "forbidden"], [500, "unavailable"]] as const)("maps HTTP %s safely", async (status, state) => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(status));
+    expect(await createCredential(origin, "synthetic-session", vi.fn(), draft)).toEqual({ state });
+  });
+  test("a malformed reply is never treated as saved", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json({ ...credential, credentialId: "../x" }, { status: 201 }));
+    expect(await createCredential(origin, "synthetic-session", vi.fn(), draft)).toEqual({ state: "unavailable" });
+  });
+});
+
+describe("update credential fields", () => {
+  test("rejects a malformed ID before any API call", async () => {
+    expect(await updateCredentialFields(origin, "synthetic-session", vi.fn(), "../x", draft, 2)).toEqual({ state: "notFound" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  test("rereads the credential and resends the current evidence with the new fields", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json({ ...credential, evidenceMediaIds: [evidenceA, evidenceB] }))
+      .mockResolvedValueOnce(Response.json({ ...credential, ...sent, version: 3, state: "DRAFT" }));
+    expect(await updateCredentialFields(origin, "synthetic-session", vi.fn(), credentialId, draft, 2)).toMatchObject({ state: "saved" });
+    expect(calls()).toEqual(["GET /api/auth/csrf", `GET /api/v1/credentials/${credentialId}`, `PUT /api/v1/credentials/${credentialId}`]);
+    expect(body(2)).toEqual({ ...sent, evidenceMediaIds: [evidenceA, evidenceB], version: 2 });
+  });
+  test("a newer credential is a conflict with its latest values, before any write", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json({ ...credential, version: 5, title: "Edited elsewhere" }));
+    const result = await updateCredentialFields(origin, "synthetic-session", vi.fn(), credentialId, draft, 2);
+    expect(result).toMatchObject({ state: "conflict", latest: { version: 5, title: "Edited elsewhere" } });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+  test("a write that loses a race rereads the latest version", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json(credential)).mockResolvedValueOnce(problem(409))
+      .mockResolvedValueOnce(Response.json({ ...credential, version: 3 }));
+    expect(await updateCredentialFields(origin, "synthetic-session", vi.fn(), credentialId, draft, 2))
+      .toMatchObject({ state: "conflict", latest: { version: 3 } });
+  });
+  test.each([[500, { state: "conflict" }], [404, { state: "notFound" }], [401, { state: "expired" }]] as const)(
+    "a conflict whose reread fails with %s stays safe", async (reread, expected) => {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json(credential)).mockResolvedValueOnce(problem(409))
+        .mockResolvedValueOnce(problem(reread));
+      expect(await updateCredentialFields(origin, "synthetic-session", vi.fn(), credentialId, draft, 2)).toEqual(expected);
+    });
+  test.each([[400, "invalid"], [422, "invalid"], [404, "notFound"], [403, "forbidden"], [503, "unavailable"]] as const)(
+    "a refused write %s maps safely", async (status, state) => {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json(credential)).mockResolvedValueOnce(problem(status));
+      expect(await updateCredentialFields(origin, "synthetic-session", vi.fn(), credentialId, draft, 2)).toEqual({ state });
+    });
+  test.each([[404, "notFound"], [400, "notFound"], [401, "expired"]] as const)("a failed reread %s maps safely", async (status, state) => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(status));
+    expect(await updateCredentialFields(origin, "synthetic-session", vi.fn(), credentialId, draft, 2)).toEqual({ state });
+  });
+});
+
+describe("submit credential", () => {
+  test("submits the version shown with CSRF", async () => {
+    fetchMock.mockResolvedValueOnce(csrf("fresh-token")).mockResolvedValueOnce(Response.json({ ...credential, state: "SUBMITTED", version: 3 }));
+    expect(await submitForReview(origin, "synthetic-session", vi.fn(), credentialId, 2)).toEqual({ state: "submitted" });
+    expect(calls()).toEqual(["GET /api/auth/csrf", `POST /api/v1/credentials/${credentialId}/submit`]);
+    expect(body(1)).toEqual({ version: 2 });
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("x-csrf-token")).toBe("fresh-token");
+  });
+  test.each([[409, "conflict"], [422, "evidenceRequired"], [404, "missing"], [400, "missing"], [401, "expired"], [500, "unavailable"]] as const)(
+    "maps HTTP %s to %s", async (status, state) => {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(status));
+      expect(await submitForReview(origin, "synthetic-session", vi.fn(), credentialId, 2)).toEqual({ state });
+    });
+  test("a malformed reply or ID is never reported as submitted", async () => {
+    expect(await submitForReview(origin, "synthetic-session", vi.fn(), "x", 2)).toEqual({ state: "missing" });
+    expect(await submitForReview("https://evil.test", "synthetic-session", vi.fn(), credentialId, 2)).toEqual({ state: "forbidden" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json({ state: "SUBMITTED" }));
+    expect(await submitForReview(origin, "synthetic-session", vi.fn(), credentialId, 2)).toEqual({ state: "unavailable" });
+  });
+});
+
+describe("delete credential", () => {
+  test("deletes the version shown with CSRF", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(new Response(null, { status: 204 }));
+    expect(await deleteCredential(origin, "synthetic-session", vi.fn(), credentialId, 2)).toEqual({ state: "removed" });
+    expect(calls()).toEqual(["GET /api/auth/csrf", `DELETE /api/v1/credentials/${credentialId}?version=2`]);
+  });
+  test.each([[409, "conflict"], [404, "missing"], [403, "forbidden"], [500, "unavailable"]] as const)("maps HTTP %s to %s", async (status, state) => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(status));
+    expect(await deleteCredential(origin, "synthetic-session", vi.fn(), credentialId, 2)).toEqual({ state });
+  });
+  test("a malformed ID never reaches the API", async () => {
+    expect(await deleteCredential(origin, "synthetic-session", vi.fn(), "../x", 2)).toEqual({ state: "missing" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

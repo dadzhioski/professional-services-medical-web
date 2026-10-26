@@ -10,11 +10,16 @@ const shared = {
 export const photoOutcomes = { ...shared, saved: "photo.saved", removed: "photo.removed", conflict: "photo.conflict" } as const;
 export const evidenceOutcomes = { ...shared, saved: "evidence.saved", removed: "evidence.removed",
   conflict: "evidence.conflict", full: "evidence.full", missing: "evidence.missingCredential" } as const;
+export const credentialOutcomes = { created: "credentials.created", saved: "credentials.saved", submitted: "credentials.submitted",
+  removed: "credentials.removed", conflict: "credentials.conflict", evidenceRequired: "credentials.evidenceRequired",
+  missing: "credentials.missing", invalid: "records.invalid", signedOut: "account.signedOut", expired: "account.expired",
+  forbidden: "account.forbidden", unavailable: "account.unavailable" } as const satisfies Record<string, TranslationKey>;
+const successes = ["saved", "removed", "created", "submitted"];
 
 // Outcomes arrive in the query string, so only allow-listed values become messages.
 export function outcomeMessage<T extends Record<string, TranslationKey>>(outcomes: T, value: unknown) {
   if (typeof value !== "string" || !Object.hasOwn(outcomes, value)) return undefined;
-  return { key: outcomes[value] as T[keyof T], success: value === "saved" || value === "removed" };
+  return { key: outcomes[value] as T[keyof T], success: successes.includes(value) };
 }
 
 const integer = (value: FormDataEntryValue | null) =>

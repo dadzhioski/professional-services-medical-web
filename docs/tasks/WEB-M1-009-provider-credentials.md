@@ -1,6 +1,6 @@
 # WEB-M1-009: Add structured credential editing and submission
 
-- **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
+- **Status:** IMPLEMENTED LOCALLY (2026-10-26) against pinned client 0.7.0, which contains the API-M1-008 owner credential lifecycle (create/get/list/update/delete/submit, `state`, `revision`, `version`, `rejectionReason`), so the earlier capability block is resolved. Live API and non-production checks pending.
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-006, WEB-M1-008; WEB-M1-004 credential capability
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
@@ -39,10 +39,19 @@ Use /[locale]/provider/credentials with four-locale interface messages and provi
 
 ## Acceptance criteria
 
-- [ ] Submission, rejection, correction, resubmission, stale revisions and foreign/invalid evidence errors are covered.
-- [ ] Editing an approved credential refreshes API state; private evidence and feedback never enter anonymous output.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] Submission, rejection, correction, resubmission, stale revisions and foreign/invalid evidence errors are covered.
+- [x] Editing an approved credential refreshes API state; private evidence and feedback never enter anonymous output.
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
+
+Implementation record (2026-10-26):
+- `/[locale]/provider/credentials` now creates, edits, submits and deletes credentials (deletion added on the owner's direction), next to the WEB-M1-008 evidence controls. Removal uses the server-rendered confirmation step. Everything works without JavaScript.
+- New credentials are created without evidence; images are then added through the existing evidence upload. A field edit rereads the credential at the shown version and resends the API's current evidence, so the browser never supplies evidence IDs. Stale edits show the latest values with an explicit overwrite choice; stale submissions and deletions are refused with a reload notice.
+- States, the owner-visible rejection reason (REJECTED only, plain text) and the API's profile publication status are shown as reported. Editing a SUBMITTED or APPROVED credential warns that it returns to draft. The web computes no eligibility. Submission is offered only for DRAFT/REJECTED credentials with evidence; the API remains authoritative (422 and 409 are mapped).
+- Title/issuer bounds (200) and the 20-credential limit come from the published contract. Expiry before issue is checked for usability; the future-issue-date rule is left to the API.
+- The browser fixture adds credential create, submit and delete, a no-op for identical updates, a simulated administrator decision (`/control/credentials/review`) and the API's completeness unpublish when the last approved credential is lost.
+
+Local evidence (2026-10-26): Passed: lint on `src tests scripts next.config.ts` (`npm run lint` also scans the untracked `.claude/worktrees` build output, as in WEB-M1-008), typecheck, 688 unit tests, production build, API-client policy (0.7.0), 39 policy tests, 192 desktop/mobile browser scenarios (14 in `credentials.spec.ts`) and `git diff --check`. Not executed: live API, Google sign-in and non-production VPS checks.
 
 ## Verification
 

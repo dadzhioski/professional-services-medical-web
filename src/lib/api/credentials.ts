@@ -3,11 +3,16 @@ import { CredentialsApi, ResponseError, UploadMediaPurposeEnum, type Configurati
   type UpdateCredentialRequest } from "@dadzhioski/professional-services-api-client";
 import { imageLimits } from "@/features/media/limits";
 import { discardImage, isUuid, uploadImage, uploadBudget, type UploadFailure } from "./media";
+import { changeRecord, type RecordChange } from "./owned-records";
 import { csrfHeader, csrfMutation, failure, sessionConfiguration, type ApplySession, type IdentityState } from "./session-transport";
 
 export type Credential = CredentialResponse & Required<Pick<CredentialResponse,
   "credentialId" | "version" | "title" | "issuer" | "type" | "state" | "issuedOn" | "evidenceMediaIds">>;
 export type CredentialsResult = { state: "ready"; credentials: Credential[] } | { state: IdentityState };
+// Field edits never carry evidence: the API's current evidence list is resent unchanged.
+export type CredentialDraft = Omit<UpdateCredentialRequest, "version" | "evidenceMediaIds">;
+export type SubmitResult = { state: "submitted" | "conflict" | "evidenceRequired" | "missing" | IdentityState };
+export type DeleteResult = { state: "removed" | "conflict" | "missing" | IdentityState };
 export type EvidenceResult = { state: "saved" | "removed" | "invalid" | "conflict" | "full" | "missing" | UploadFailure | IdentityState };
 
 const validDate = (value: unknown) => value instanceof Date && !Number.isNaN(value.getTime());
@@ -100,6 +105,85 @@ export async function removeEvidence(origin: string | null, session: string | un
     }
     // The API deletes removed evidence itself.
     return { state: "removed" };
+  });
+  return result.ok ? result.value : { state: result.state };
+}
+
+const status = (error: unknown) => error instanceof ResponseError ? error.response.status : undefined;
+
+// New credentials start as drafts without evidence; images are then added through the evidence upload.
+export const createCredential = (origin: string | null, session: string | undefined, apply: ApplySession, draft: CredentialDraft) =>
+  changeRecord<CredentialResponse>(origin, session, apply,
+    (configuration, init) => new CredentialsApi(configuration).createCredential({ credentialRequest: draft }, init), valid);
+
+// The credential is reread at the owner's version, so a field edit never resends evidence the owner has not
+// seen and the browser never supplies evidence IDs. A stale edit returns the latest values for explicit review.
+export async function updateCredentialFields(origin: string | null, session: string | undefined, apply: ApplySession,
+  credentialId: string, draft: CredentialDraft, version: number): Promise<RecordChange<Credential>> {
+  if (!isUuid(credentialId)) return { state: "notFound" };
+  const result = await csrfMutation(origin, session, apply, async (configuration, token, validSession): Promise<RecordChange<Credential>> => {
+    const api = new CredentialsApi(configuration);
+    let credential: CredentialResponse;
+    try { credential = await api.getCredential({ credentialId }); } catch (error) {
+      if (status(error) === 400 || status(error) === 404) return { state: "notFound" };
+      throw error;
+    }
+    if (!valid(credential)) return { state: "unavailable" };
+    if (credential.version !== version) return { state: "conflict", latest: credential };
+    try {
+      const saved = await api.updateCredential({ credentialId, updateCredentialRequest: {
+        ...draft, evidenceMediaIds: credential.evidenceMediaIds, version } }, csrfHeader(token));
+      return valid(saved) ? { state: "saved", record: saved } : { state: "unavailable" };
+    } catch (error) {
+      if (status(error) === 400 || status(error) === 422) return { state: "invalid" };
+      if (status(error) === 404) return { state: "notFound" };
+      if (status(error) !== 409) throw error;
+    }
+    try {
+      const latest = await api.getCredential({ credentialId });
+      return valid(latest) ? { state: "conflict", latest } : { state: "conflict" };
+    } catch (error) {
+      if (status(error) === 400 || status(error) === 404) return { state: "notFound" };
+      const state = failure(error, validSession);
+      return state === "unavailable" ? { state: "conflict" } : { state };
+    }
+  });
+  return result.ok ? result.value : { state: result.state };
+}
+
+// Submission only asks for review; a malformed reply is never shown as submitted.
+export async function submitForReview(origin: string | null, session: string | undefined, apply: ApplySession,
+  credentialId: string, version: number): Promise<SubmitResult> {
+  if (!isUuid(credentialId)) return { state: "missing" };
+  const result = await csrfMutation(origin, session, apply, async (configuration, token): Promise<SubmitResult> => {
+    try {
+      const submitted = await new CredentialsApi(configuration).submitCredential(
+        { credentialId, submitCredentialRequest: { version } }, csrfHeader(token));
+      return valid(submitted) ? { state: "submitted" } : { state: "unavailable" };
+    } catch (error) {
+      // 409 is a stale version or a credential that is no longer a draft or rejected.
+      if (status(error) === 409) return { state: "conflict" };
+      if (status(error) === 422) return { state: "evidenceRequired" };
+      if (status(error) === 400 || status(error) === 404) return { state: "missing" };
+      throw error;
+    }
+  });
+  return result.ok ? result.value : { state: result.state };
+}
+
+// The API stops delivering the credential's evidence and deletes it.
+export async function deleteCredential(origin: string | null, session: string | undefined, apply: ApplySession,
+  credentialId: string, version: number): Promise<DeleteResult> {
+  if (!isUuid(credentialId)) return { state: "missing" };
+  const result = await csrfMutation(origin, session, apply, async (configuration, token): Promise<DeleteResult> => {
+    try {
+      await new CredentialsApi(configuration).deleteCredential({ credentialId, version }, csrfHeader(token));
+      return { state: "removed" };
+    } catch (error) {
+      if (status(error) === 409) return { state: "conflict" };
+      if (status(error) === 400 || status(error) === 404) return { state: "missing" };
+      throw error;
+    }
   });
   return result.ok ? result.value : { state: result.state };
 }
