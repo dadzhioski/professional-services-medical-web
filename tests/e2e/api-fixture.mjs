@@ -181,11 +181,20 @@ const server = createServer((req, res) => {
     res.writeHead(204).end(); return;
   }
   if (req.method === "POST" && url.pathname === "/control/credentials/seed") {
-    // Credential creation belongs to WEB-M1-009; seed one approved credential per workspace.
+    // Seeds one approved credential per workspace, for evidence checks that do not go through review.
     for (const { organizationId } of organizations.values()) {
       if (!credentials.has(organizationId)) credentials.set(organizationId, [{ credentialId: randomUUID(), version: 0, revision: 1,
         state: "APPROVED", type: "LICENSE", title: "Synthetic licence", issuer: "Synthetic medical board", issuedOn: "2020-01-15",
         expiresOn: null, evidenceMediaIds: [] }]);
+    }
+    res.writeHead(204).end(); return;
+  }
+  if (req.method === "POST" && url.pathname === "/control/credentials/review") {
+    // Simulates an administrator decision on every submitted credential; the reviewer is never exposed.
+    const reason = url.searchParams.get("reject");
+    for (const list of credentials.values()) for (const credential of list) {
+      if (credential.state === "SUBMITTED") Object.assign(credential, reason ? { state: "REJECTED", rejectionReason: reason } :
+        { state: "APPROVED" }, { version: credential.version + 1 });
     }
     res.writeHead(204).end(); return;
   }
@@ -375,29 +384,81 @@ const server = createServer((req, res) => {
         return;
       }
     }
-    if (url.pathname === "/api/v1/credentials" && req.method === "GET") { json(credentials.get(key) ?? []); return; }
-    const credentialMatch = /^\/api\/v1\/credentials\/([^/]+)$/.exec(url.pathname);
+    const owned = credentials.get(key) ?? [];
+    // Bounds and date rules from the credential contract.
+    const invalidCredential = input => {
+      const evidence = input.evidenceMediaIds ?? [];
+      const text = value => typeof value === "string" && value.trim() && value.length <= 200;
+      const date = value => /^\d{4}-\d{2}-\d{2}$/.test(value ?? "");
+      return !["EDUCATION", "SPECIALIZATION", "LICENSE", "CERTIFICATION", "OTHER"].includes(input.type) || !text(input.title) ||
+        !text(input.issuer) || !date(input.issuedOn) || input.issuedOn > new Date().toISOString().slice(0, 10) ||
+        (input.expiresOn != null && (!date(input.expiresOn) || input.expiresOn < input.issuedOn)) ||
+        !Array.isArray(evidence) || evidence.length > 5 || new Set(evidence).size !== evidence.length;
+    };
+    // Losing the last approved credential makes a published profile incomplete, as in the API.
+    const enforceCompleteness = () => {
+      const profile = profiles.get(key);
+      if (profile?.publicationState === "PUBLISHED" && !owned.some(item => item.state === "APPROVED")) profile.publicationState = "UNPUBLISHED";
+    };
+    if (url.pathname === "/api/v1/credentials" && req.method === "GET") { json(owned); return; }
+    if (url.pathname === "/api/v1/credentials" && req.method === "POST") {
+      readJson(req, res, fail, input => {
+        const evidence = input.evidenceMediaIds ?? [];
+        if (invalidCredential(input) || owned.length >= 20) { fail(400); return; }
+        if (!evidence.every(id => usable(id, "CREDENTIAL_EVIDENCE"))) { fail(422); return; }
+        for (const id of evidence) media.get(id).attached = true;
+        const credential = { credentialId: randomUUID(), version: 0, revision: 1, state: "DRAFT", type: input.type, title: input.title,
+          issuer: input.issuer, issuedOn: input.issuedOn, expiresOn: input.expiresOn ?? null, evidenceMediaIds: evidence };
+        credentials.set(key, [...owned, credential]);
+        res.writeHead(201, { "Content-Type": "application/json" }).end(JSON.stringify(credential));
+      });
+      return;
+    }
+    const credentialMatch = /^\/api\/v1\/credentials\/([^/]+)(\/submit)?$/.exec(url.pathname);
     if (credentialMatch) {
-      const credential = (credentials.get(key) ?? []).find(item => item.credentialId === credentialMatch[1]);
+      const credential = owned.find(item => item.credentialId === credentialMatch[1]);
       if (!credential) { fail(404); return; }
+      if (credentialMatch[2]) {
+        if (req.method !== "POST") { fail(405); return; }
+        readJson(req, res, fail, input => {
+          if (!Number.isInteger(input.version)) { fail(400); return; }
+          if (input.version !== credential.version || !["DRAFT", "REJECTED"].includes(credential.state)) { fail(409); return; }
+          if (!credential.evidenceMediaIds.length) { fail(422); return; }
+          Object.assign(credential, { state: "SUBMITTED", rejectionReason: undefined, version: credential.version + 1 });
+          json(credential);
+        });
+        return;
+      }
       if (req.method === "GET") { json(credential); return; }
+      if (req.method === "DELETE") {
+        if (!/^\d+$/.test(url.searchParams.get("version") ?? "")) { fail(400); return; }
+        if (Number(url.searchParams.get("version")) !== credential.version) { fail(409); return; }
+        for (const id of credential.evidenceMediaIds) media.delete(id);
+        owned.splice(owned.indexOf(credential), 1);
+        enforceCompleteness();
+        res.writeHead(204).end(); return;
+      }
       if (req.method === "PUT") {
         readJson(req, res, fail, input => {
           const evidence = input.evidenceMediaIds ?? [];
-          if (!Number.isInteger(input.version) || !["EDUCATION", "SPECIALIZATION", "LICENSE", "CERTIFICATION", "OTHER"].includes(input.type) ||
-            typeof input.title !== "string" || !input.title || typeof input.issuer !== "string" || !input.issuer ||
-            !/^\d{4}-\d{2}-\d{2}$/.test(input.issuedOn ?? "") || !Array.isArray(evidence) || evidence.length > 5 ||
-            new Set(evidence).size !== evidence.length) { fail(400); return; }
+          if (!Number.isInteger(input.version) || invalidCredential(input)) { fail(400); return; }
           if (input.version !== credential.version) { fail(409); return; }
+          const fields = { type: input.type, title: input.title, issuer: input.issuer, issuedOn: input.issuedOn,
+            expiresOn: input.expiresOn ?? null, evidenceMediaIds: evidence };
+          // Re-sending the current values returns the credential unchanged.
+          if (JSON.stringify(fields) === JSON.stringify({ type: credential.type, title: credential.title, issuer: credential.issuer,
+            issuedOn: credential.issuedOn, expiresOn: credential.expiresOn, evidenceMediaIds: credential.evidenceMediaIds })) {
+            json(credential); return;
+          }
           const added = evidence.filter(id => !credential.evidenceMediaIds.includes(id));
           if (!added.every(id => usable(id, "CREDENTIAL_EVIDENCE"))) { fail(422); return; }
           // Removed evidence is deleted, as in the API.
           for (const id of credential.evidenceMediaIds) if (!evidence.includes(id)) media.delete(id);
           for (const id of added) media.get(id).attached = true;
           // Any change starts a new draft revision and clears the previous review.
-          Object.assign(credential, { type: input.type, title: input.title, issuer: input.issuer, issuedOn: input.issuedOn,
-            expiresOn: input.expiresOn ?? null, evidenceMediaIds: evidence, state: "DRAFT", revision: credential.revision + 1,
+          Object.assign(credential, { ...fields, state: "DRAFT", rejectionReason: undefined, revision: credential.revision + 1,
             version: credential.version + 1 });
+          enforceCompleteness();
           json(credential);
         });
         return;

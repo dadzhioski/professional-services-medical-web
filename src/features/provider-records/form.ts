@@ -3,7 +3,7 @@ import type { TranslationKey } from "@/lib/i18n/en";
 // Shared editor state for organization-owned records. Values are always echoed back so input survives failures.
 export type RecordStatus = "idle" | "saved" | "invalid" | "rejected" | "conflict" | "notFound" |
   "signedOut" | "expired" | "forbidden" | "unavailable";
-export type FieldError = "required" | "tooLong" | "format" | "tooMany" | "mismatch";
+export type FieldError = "required" | "tooLong" | "format" | "tooMany" | "mismatch" | "dateOrder";
 export type RecordState<V, L = V> = {
   status: RecordStatus; values: V; version?: number; latest?: L & { version: number };
   errors: Partial<Record<keyof V & string, FieldError>>;
@@ -13,6 +13,7 @@ export const recordMessageKeys = [
   "records.problem", "records.invalid", "records.rejected", "records.conflict", "records.notFound", "records.latestHeading",
   "records.overwrite", "records.discard", "records.keptInput", "records.saving", "records.empty",
   "records.error.required", "records.error.tooLong", "records.error.format", "records.error.tooMany", "records.error.mismatch",
+  "records.error.dateOrder",
   "account.signedOut", "account.expired", "account.forbidden", "account.unavailable", "account.login",
 ] as const satisfies readonly TranslationKey[];
 export type RecordMessages = Record<(typeof recordMessageKeys)[number], string>;
