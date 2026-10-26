@@ -281,20 +281,23 @@ const server = createServer((req, res) => {
   }
   if (req.method === "POST" && url.pathname === "/control/public/seed") {
     // A complete, approved and published doctor with a photo, created without a session. Supplied text includes
-    // markup that must stay inert; private values exist only to prove they are never projected.
+    // markup that must stay inert; private values exist only to prove they are never projected. Optional name,
+    // specialty and city codes vary the directory entries.
     const organizationId = randomUUID();
+    const specialty = reference.specialties.find(item => item.code === (url.searchParams.get("specialty") ?? "cardiology"));
+    const seededCity = reference.cities.find(item => item.code === (url.searchParams.get("city") ?? "skopje"));
     organizations.set(`synthetic-account-public-${++sequence}`, { organizationId, approvalState: "APPROVED", approvalRevision: 1,
       suspended: false, registeredAt: new Date().toISOString() });
     const photoMediaId = randomUUID();
     media.set(photoMediaId, { organizationId, purpose: "PROFILE_PHOTO", bytes: syntheticPng, contentType: "image/png", attached: true });
     const slug = `dr-public-${sequence.toString(16).padStart(6, "0")}`;
     profiles.set(organizationId, { profileId: `synthetic-private-profile-${organizationId}`, organizationId, slug,
-      displayName: "Dr. Synthetic Public", biography: 'Synthetic public biography <script>alert("x")</script>',
+      displayName: url.searchParams.get("name") ?? "Dr. Synthetic Public", biography: 'Synthetic public biography <script>alert("x")</script>',
       publicationState: "PUBLISHED", photoMediaId, version: 3 });
     medical.set(organizationId, { medicalProfileId: randomUUID(), organizationId, licenseNumber: "synthetic-private-licence",
-      registrationBody: "synthetic-private-registration", specialtyId: reference.specialties[0].id, version: 1 });
+      registrationBody: "synthetic-private-registration", specialtyId: specialty.id, version: 1 });
     const location = { locationId: randomUUID(), organizationId, label: "Synthetic clinic", displayAddress: "Synthetic street 1",
-      countryCode: "MK", cityId: cityIds.skopje, version: 0 };
+      countryCode: seededCity.countryCode, cityId: seededCity.id, version: 0 };
     locations.set(location.locationId, location);
     const service = { serviceId: randomUUID(), organizationId, name: "Synthetic consultation", description: "Synthetic description",
       locationIds: [location.locationId], price: { amount: "25.00", currency: "EUR" }, version: 0 };
@@ -315,7 +318,8 @@ const server = createServer((req, res) => {
   }
   const publicProfile = /^\/api\/v1\/public\/profiles\/([^/]+)$/.exec(url.pathname);
   const publicPhoto = /^\/api\/v1\/public\/media\/([^/]+)\/content$/.exec(url.pathname);
-  if ((publicProfile || publicPhoto) && req.method === "GET") {
+  const publicDirectory = url.pathname === "/api/v1/public/doctors";
+  if ((publicProfile || publicPhoto || publicDirectory) && req.method === "GET") {
     // Anonymous published-data projection, like the API: rechecked on every request and never cacheable.
     // Unknown, unpublished and suspended doctors share one 404; a forwarded cookie is a web defect.
     res.setHeader("Cache-Control", "no-store");
@@ -324,6 +328,26 @@ const server = createServer((req, res) => {
     if (req.headers.cookie) { fail(400); return; }
     const eligible = [...profiles.values()].filter(profile => profile.publicationState === "PUBLISHED" &&
       !suspended(organizationById(profile.organizationId)));
+    const city = id => { const found = reference.cities.find(item => item.id === id); return found && { id: found.id, code: found.code, labels: found.labels }; };
+    const cityIdsOf = key => [...locations.values()].filter(record => record.organizationId === key).map(record => record.cityId);
+    if (publicDirectory) {
+      // Published-only, AND-combined filters, ordered by display name; unknown well-formed IDs give an empty page.
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+      const query = name => url.searchParams.get(name);
+      const page = Number(query("page") ?? 0), size = Number(query("size") ?? 20);
+      if ((query("specialtyId") !== null && !uuid.test(query("specialtyId"))) || (query("cityId") !== null && !uuid.test(query("cityId"))) ||
+        !Number.isInteger(page) || page < 0 || !Number.isInteger(size) || size < 1 || size > 100) { fail(400); return; }
+      const matches = eligible.filter(profile => (query("specialtyId") === null || medical.get(profile.organizationId)?.specialtyId === query("specialtyId")) &&
+        (query("cityId") === null || cityIdsOf(profile.organizationId).includes(query("cityId"))))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName) || a.slug.localeCompare(b.slug));
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
+        content: matches.slice(page * size, page * size + size).map(profile => ({ slug: profile.slug, displayName: profile.displayName,
+          photoMediaId: profile.photoMediaId, specialty: reference.specialties.find(item => item.id === medical.get(profile.organizationId)?.specialtyId),
+          cities: [...new Set(cityIdsOf(profile.organizationId))].map(city) })),
+        page, size, totalElements: matches.length, totalPages: Math.ceil(matches.length / size),
+      }));
+      return;
+    }
     if (publicPhoto) {
       const profile = eligible.find(item => item.photoMediaId === publicPhoto[1]);
       const item = profile && media.get(profile.photoMediaId);
@@ -334,7 +358,6 @@ const server = createServer((req, res) => {
     if (!profile) { fail(404); return; }
     const key = profile.organizationId;
     const owned = store => [...store.values()].filter(record => record.organizationId === key);
-    const city = id => { const found = reference.cities.find(item => item.id === id); return found && { id: found.id, code: found.code, labels: found.labels }; };
     res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
       slug: profile.slug, displayName: profile.displayName, biography: profile.biography, photoMediaId: profile.photoMediaId,
       specialty: reference.specialties.find(item => item.id === medical.get(key)?.specialtyId),

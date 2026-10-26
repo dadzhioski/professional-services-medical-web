@@ -13,7 +13,7 @@ import { SiteHeader } from "./site-header";
 
 const authenticated = { state: "authenticated", account: {
   accountId: "synthetic-private-id", emailVerified: true, sessionExpiresAt: new Date("2099-01-01") } } as const;
-const render = async (locale: Locale = "en", current?: "home" | "workspace") =>
+const render = async (locale: Locale = "en", current?: "home" | "directory" | "workspace") =>
   renderToStaticMarkup(await SiteHeader({ locale, current }));
 const documentOf = (html: string) => new DOMParser().parseFromString(html, "text/html");
 
@@ -23,13 +23,14 @@ beforeEach(() => {
 });
 
 for (const locale of localeCodes) {
-  test(`${locale} signed-out header links to the localized sign-in page only`, async () => {
+  test(`${locale} signed-out header links to the directory, then the localized sign-in page`, async () => {
     const t = translator(locale);
     vi.mocked(currentAccount).mockResolvedValue({ state: "signedOut" });
     const page = documentOf(await render(locale));
     const header = page.querySelector("header")!;
     const links = [...header.querySelectorAll("a")].map(link => [link.getAttribute("href"), link.textContent]);
-    expect(links).toEqual([[`/${locale}`, t("app.title")], [`/${locale}/provider`, t("navigation.doctors")]]);
+    expect(links).toEqual([[`/${locale}`, t("app.title")], [`/${locale}/doctors`, t("navigation.directory")],
+      [`/${locale}/provider`, t("navigation.doctors")]]);
     expect(header.querySelector("nav")?.getAttribute("aria-label")).toBe(t("navigation.primary"));
     expect(header.querySelector("form")).toBeNull();
     expect(header.innerHTML).not.toContain("/api/");
@@ -49,6 +50,7 @@ test("signed-in header shows the workspace and a sign-out form without account d
   const html = await render("en", "workspace");
   const header = documentOf(html).querySelector("header")!;
   expect(currentAccount).toHaveBeenCalledWith("synthetic-session");
+  expect(header.querySelector('nav a[href="/en/doctors"]')?.textContent).toBe(t("navigation.directory"));
   const workspace = header.querySelector('nav a[href="/en/provider"]')!;
   expect(workspace.textContent).toBe(t("navigation.workspace"));
   expect(workspace.getAttribute("aria-current")).toBe("page");
@@ -75,6 +77,8 @@ test("current page is marked only on the matching link", async () => {
   vi.mocked(currentAccount).mockResolvedValue({ state: "signedOut" });
   const home = documentOf(await render("en", "home"));
   expect(home.querySelector('a[aria-current="page"]')?.getAttribute("href")).toBe("/en");
+  const directory = documentOf(await render("en", "directory"));
+  expect([...directory.querySelectorAll("[aria-current]")].map(link => link.getAttribute("href"))).toEqual(["/en/doctors"]);
   const other = documentOf(await render("en"));
   expect(other.querySelector("[aria-current]")).toBeNull();
 });

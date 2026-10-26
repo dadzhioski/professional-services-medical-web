@@ -21,7 +21,7 @@ async function signedIn(): Promise<boolean> {
   }
 }
 
-export async function SiteHeader({ locale, current }: { locale: Locale; current?: "home" | "workspace" }) {
+export async function SiteHeader({ locale, current }: { locale: Locale; current?: "home" | "directory" | "workspace" }) {
   const t = translator(locale);
   const authenticated = await signedIn();
   const provider = `/${locale}/provider`;
@@ -31,6 +31,8 @@ export async function SiteHeader({ locale, current }: { locale: Locale; current?
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
       <nav aria-label={t("navigation.primary")}>
         <ul className="flex flex-wrap gap-4">
+          <li><a href={`/${locale}/doctors`} aria-current={current === "directory" ? "page" : undefined} className={linkClass}>
+            {t("navigation.directory")}</a></li>
           <li><a href={provider} aria-current={current === "workspace" ? "page" : undefined} className={linkClass}>
             {t(authenticated ? "navigation.workspace" : "navigation.doctors")}</a></li>
         </ul>

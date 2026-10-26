@@ -8,11 +8,11 @@ import { sessionConfiguration } from "./session-transport";
 
 export type PublicProfileResult = { state: "ready"; profile: PublicProfileResponse } | { state: "missing" } | { state: "unavailable" };
 
-const text = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
+export const text = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
 const date = (value: unknown): value is Date => value instanceof Date && !Number.isNaN(value.getTime());
 const list = <T>(value: unknown, valid: (item: T) => boolean) =>
   value === undefined || (Array.isArray(value) && value.every(item => !!item && valid(item)));
-const reference = (value: PublicReference | undefined) => value === undefined ||
+export const reference = (value: PublicReference | undefined) => value === undefined ||
   (!!value && identifier(value.id) && identifier(value.code) &&
     (value.labels === undefined || (!!value.labels && Object.values(value.labels).every(optionalText))));
 const credential = (value: PublicCredential) => text(value.title) && optionalText(value.issuer) &&

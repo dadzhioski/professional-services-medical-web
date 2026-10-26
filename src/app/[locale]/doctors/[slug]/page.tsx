@@ -6,9 +6,10 @@ import { Heading, Notice } from "@/components/ui/presentation";
 import { OwnerImage } from "@/features/media/owner-image";
 import { ProfilePresentation } from "@/features/professional-profile/presentation";
 import { publicContent } from "@/features/public-profile/content";
+import { publicLinkClass } from "@/features/public-directory/results";
 import { publicMediaContentPath } from "@/lib/api/media";
 import { readPublicProfile } from "@/lib/api/public-profile";
-import { isLocale, translator } from "@/lib/i18n";
+import { isLocale, translator, type Locale } from "@/lib/i18n";
 import { canonicalUrl, languageAlternates } from "@/lib/seo/canonical";
 import { physicianJsonLd, serializeJsonLd } from "@/lib/seo/structured-data";
 
@@ -17,6 +18,8 @@ export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ locale: string; slug: string }> };
 
 const profilePath = (slug: string) => `/doctors/${encodeURIComponent(slug)}`;
+const BackLink = ({ locale }: { locale: Locale }) =>
+  <a className={publicLinkClass} href={`/${locale}/doctors`}>{translator(locale)("publicProfile.backToDirectory")}</a>;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
@@ -48,6 +51,7 @@ export default async function PublicProfilePage({ params }: Props) {
   if (result.state !== "ready") {
     return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
       <LanguageLinks locale={locale} path={path} />
+      <BackLink locale={locale} />
       <Heading>{t("publicProfile.unavailableTitle")}</Heading>
       <Notice role="alert">{t("publicProfile.unavailable")}</Notice>
     </main></>;
@@ -59,6 +63,7 @@ export default async function PublicProfilePage({ params }: Props) {
     description: content.description, ...content.structured });
   return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     <LanguageLinks locale={locale} path={path} />
+    <BackLink locale={locale} />
     <ProfilePresentation locale={locale} name={profile.displayName!} introduction={profile.biography ?? undefined}
       photo={photoPath && <OwnerImage path={photoPath} alt="" />} specialties={content.specialties}
       credentials={content.credentials} services={content.services} locations={content.locations} />

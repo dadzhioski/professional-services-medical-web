@@ -5,7 +5,7 @@ import { Heading, Section } from "@/components/ui/presentation";
 
 const linkClass = "inline-block min-h-11 rounded-lg bg-teal-800 px-5 py-3 font-semibold text-white underline hover:bg-teal-900";
 
-// Neutral entry content until the owner records the patient-facing copy (WEB-M1-013 decision 2).
+// Patient-facing directory entry first, then the doctor entry (WEB-M1-014 decision 2).
 export default function Home({ locale }: { locale: Locale }) {
   const t = translator(locale);
   return (
@@ -15,6 +15,10 @@ export default function Home({ locale }: { locale: Locale }) {
         <Heading>{t("home.heading")}</Heading>
         <p className="mt-4 leading-relaxed text-slate-700">{t("home.description")}</p>
       </Surface>
+      <Section id="home-directory" title={t("home.directoryHeading")}>
+        <p className="leading-relaxed text-slate-700">{t("home.directoryDescription")}</p>
+        <a className={linkClass} href={`/${locale}/doctors`}>{t("home.directoryAction")}</a>
+      </Section>
       <Section id="home-doctors" title={t("home.doctorsHeading")}>
         <p className="leading-relaxed text-slate-700">{t("home.doctorsDescription")}</p>
         <a className={linkClass} href={`/${locale}/provider`}>{t("home.doctorsAction")}</a>
