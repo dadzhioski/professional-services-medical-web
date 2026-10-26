@@ -44,13 +44,6 @@ export function readServiceForm(form: FormData, currencies: readonly string[]) {
   return { values, errors, ...versions(form) };
 }
 
-// Intl formats decimal strings exactly (no float conversion); unknown currencies fall back to the raw values.
-export function formatPrice(locale: string, amount: string, currency: string) {
-  try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount as Intl.StringNumericLiteral);
-  } catch { return `${amount} ${currency}`; }
-}
-
 // Absent price stays absent; a supplied price is forwarded exactly as typed.
 export function serviceDraft(values: ServiceValues) {
   return {

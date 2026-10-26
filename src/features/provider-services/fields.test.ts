@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
-import { formatPrice, readServiceForm, serviceDraft } from "./fields";
+import { formatPrice } from "@/lib/price";
+import { readServiceForm, serviceDraft } from "./fields";
 
 const currencies = ["EUR", "MKD"];
 const form = (entries: [string, string][]) => {

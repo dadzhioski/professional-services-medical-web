@@ -26,6 +26,11 @@ export function adminMediaContentPath(mediaId: unknown): string | null {
   return isUuid(mediaId) ? `/api/v1/admin/media/${mediaId}/content` : null;
 }
 
+// Anonymous published photo route; the API rechecks publication and suspension on every request.
+export function publicMediaContentPath(mediaId: unknown): string | null {
+  return isUuid(mediaId) ? `/api/v1/public/media/${mediaId}/content` : null;
+}
+
 // Runs inside an existing csrfMutation; identity failures propagate to its mapping.
 export async function uploadImage(configuration: Configuration, token: string, purpose: UploadMediaPurposeEnum,
   file: Blob): Promise<Uploaded> {
