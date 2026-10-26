@@ -52,6 +52,7 @@ Implementation record (2026-10-26):
 - The browser fixture adds credential create, submit and delete, a no-op for identical updates, a simulated administrator decision (`/control/credentials/review`) and the API's completeness unpublish when the last approved credential is lost.
 
 Local evidence (2026-10-26): Passed: lint on `src tests scripts next.config.ts` (`npm run lint` also scans the untracked `.claude/worktrees` build output, as in WEB-M1-008), typecheck, 688 unit tests, production build, API-client policy (0.7.0), 39 policy tests, 192 desktop/mobile browser scenarios (14 in `credentials.spec.ts`) and `git diff --check`. Not executed: live API, Google sign-in and non-production VPS checks.
+- Edge container scan (2026-10-26): CI failed on two new HIGH findings in the pinned Caddy base, `curl` and `libcurl` 8.22.0-r0 (CVE-2026-92392). `deployment/Dockerfile.caddy` now also upgrades both packages to 8.23.0-r0, next to the existing `brotli-libs` patch. Locally the rebuilt edge image scans with 0 HIGH/CRITICAL findings, the web image is unchanged at 0, and the full edge integration sequence passes.
 
 ## Verification
 

@@ -7,10 +7,11 @@ RUN go mod init medical-web-edge && \
     go build -mod=mod -trimpath -ldflags="-s -w" -o /caddy github.com/caddyserver/caddy/v2/cmd/caddy
 
 FROM caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
-# The base still ships brotli-libs 1.2.0-r0 (CVE-2026-111497, HIGH; only curl uses it, and the
-# health check uses busybox wget). Take Alpine's fixed package until upstream rebuilds the image;
-# drop this once the pinned base includes brotli-libs >= 1.2.1-r0.
-RUN apk upgrade --no-cache brotli-libs
+# The base still ships brotli-libs 1.2.0-r0 (CVE-2026-111497, HIGH) and curl/libcurl 8.22.0-r0
+# (CVE-2026-92392, HIGH); the health check uses busybox wget, not curl. Take Alpine's fixed packages
+# until upstream rebuilds the image; drop this once the pinned base includes brotli-libs >= 1.2.1-r0
+# and curl/libcurl >= 8.23.0-r0.
+RUN apk upgrade --no-cache brotli-libs curl libcurl
 COPY --from=builder /caddy /usr/bin/caddy
 ARG REVISION
 LABEL org.opencontainers.image.revision=$REVISION \
