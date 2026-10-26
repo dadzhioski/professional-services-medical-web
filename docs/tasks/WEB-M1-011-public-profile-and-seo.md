@@ -1,6 +1,6 @@
 # WEB-M1-011: Integrate public server-rendered doctor profiles and SEO
 
-- **Status:** IMPLEMENTED LOCALLY (2026-10-26) against pinned client 0.7.0, which contains `PublicApi.getPublicProfile` and `MediaApi.getPublicMediaContent`, so the earlier capability block is resolved. Owner decision (2026-10-26): the photo is not placed in og:image or JSON-LD, because third-party copies would outlive revocation. A transient API failure renders HTTP 200 with noindex (not a 5xx). Live API and non-production checks are pending.
+- **Status:** IMPLEMENTED LOCALLY (2026-10-26) against pinned client 0.7.0, which contains `PublicApi.getPublicProfile` and `MediaApi.getPublicMediaContent`, so the earlier capability block is resolved. Owner decision (2026-10-26): the photo is not placed in og:image or JSON-LD, because third-party copies would outlive revocation. Owner decision (2026-10-26): a transient API failure keeps HTTP 200 with noindex rather than a 5xx. Live API and non-production checks are pending.
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-002; WEB-M1-004 public-profile capability; WEB-M1-001 route/origin decisions
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
