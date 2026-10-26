@@ -16,8 +16,11 @@ test("home has one heading and a focusable main landmark", () => {
   expect(screen.getByRole("main")).toHaveAttribute("tabindex", "-1");
 });
 
-test("home offers the doctor entry point without development copy", () => {
+test("home offers the directory before the doctor entry point without development copy", () => {
   render(<Home locale="en" />);
+  expect(screen.getByRole("heading", { level: 2, name: t("home.directoryHeading") })).toBeVisible();
+  expect(screen.getByRole("link", { name: t("home.directoryAction") })).toHaveAttribute("href", "/en/doctors");
+  expect([...document.querySelectorAll("section a")].map(link => link.getAttribute("href"))).toEqual(["/en/doctors", "/en/provider"]);
   expect(screen.getByRole("link", { name: t("home.doctorsAction") })).toHaveAttribute("href", "/en/provider");
   expect(screen.getByRole("heading", { level: 2, name: t("home.doctorsHeading") })).toBeVisible();
   expect(document.body.textContent).not.toMatch(/development|foundation/i);

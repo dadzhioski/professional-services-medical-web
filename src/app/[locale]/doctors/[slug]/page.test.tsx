@@ -52,6 +52,7 @@ for (const locale of localeCodes) {
     expect(html).toContain(`src="/api/v1/public/media/${photoMediaId}/content"`);
     expect(html).toContain('referrerPolicy="no-referrer"');
     expect(html).toContain(`href="/${locale === "mk" ? "en" : "mk"}/doctors/dr-synthetic"`);
+    expect(html).toContain(`href="/${locale}/doctors">${t("publicProfile.backToDirectory")}</a>`);
     const data = jsonLd(html);
     expect(data).toMatchObject({ "@type": "Physician", name: "Synthetic Doctor", url: `http://localhost:3000/${locale}/doctors/dr-synthetic` });
     expect(JSON.stringify(data)).not.toMatch(/media|image|rating|evil/);
@@ -105,6 +106,7 @@ test("an unavailable API renders a translated, non-indexed failure without profi
     const html = await render$(locale);
     expect(html).toContain(`role="alert"`);
     expect(html).toContain(t("publicProfile.unavailable"));
+    expect(html).toContain(`href="/${locale}/doctors"`);
     expect(html).not.toContain("application/ld+json");
     expect(await generateMetadata(params(locale))).toEqual({ title: t("publicProfile.unavailableTitle"), robots: { index: false, follow: false } });
   }
