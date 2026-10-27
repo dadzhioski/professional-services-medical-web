@@ -63,8 +63,8 @@ The default scope follows `build-plan.md`: public doctor profiles, credentials, 
 - [ ] Applicable product/security decisions reviewed without silently accepting proposed API policy.
 - [ ] Provider onboarding, private editing and review/publication journeys implemented against an approved exact client.
 - [ ] Public profile HTML, SEO and eligible images reflect current API publication state without leaking private evidence.
-- [ ] Accessible responsive UI and JavaScript-disabled public reading verified.
-- [ ] Synthetic success/failure, isolation, session, CSRF and stale-revision scenarios pass.
+- [x] Accessible responsive UI and JavaScript-disabled public reading verified (synthetic fixture, WEB-M1-012 2026-10-27).
+- [x] Synthetic success/failure, isolation, session, CSRF and stale-revision scenarios pass (WEB-M1-012 2026-10-27).
 - [ ] Quality/security gates pass for the affected release; no automatic dependency-exception extension.
 - [ ] Live API, Google, media and non-production checks are separately evidenced or explicitly unexecuted; pending feature checks prevent an unqualified completion claim.
 - [ ] Owner reviews feature acceptance; deferred Milestone 0 obligations remain open.
