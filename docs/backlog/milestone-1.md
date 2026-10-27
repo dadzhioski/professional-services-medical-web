@@ -1,6 +1,6 @@
 # Web Milestone 1 — Frontend planning authorization
 
-- **Status:** AUTHORIZED FOR PLANNING AND IMPLEMENTATION (owner decision, 2026-10-16); WEB-M1-001 through WEB-M1-012 created (WEB-M1-013 site navigation added 2026-10-21; WEB-M1-014 public directory added 2026-10-26), with feature-specific decisions and API gates below.
+- **Status:** AUTHORIZED FOR PLANNING AND IMPLEMENTATION (owner decision, 2026-10-16); WEB-M1-001 through WEB-M1-012 created (WEB-M1-013 site navigation added 2026-10-21; WEB-M1-014 public directory added 2026-10-26; WEB-M1-015 guided onboarding checklist added 2026-10-27), with feature-specific decisions and API gates below.
 - **Direction:** Public doctor profiles and provider onboarding, as described in `build-plan.md`.
 - **Starting point:** Implemented Next.js/SSR foundation, exact generated API client, CI/images and owner-confirmed working first non-production deployment.
 - **Milestone 0:** Formal acceptance remains open; deferred work is tracked in `milestone-0.md` and does not block unrelated frontend work.
@@ -35,6 +35,7 @@ Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005, WEB-M1-006 and WE
 | [WEB-M1-012](../tasks/WEB-M1-012-milestone-acceptance.md) | Verify the Milestone 1 provider-to-public journey | WEB-M1-003 through WEB-M1-011 implemented; WEB-M1-001 decisions resolved |
 | [WEB-M1-013](../tasks/WEB-M1-013-site-navigation-and-entry.md) | Add a localized entry page and global site navigation with sign-in entry (added 2026-10-21) | WEB-M1-002, WEB-M1-003, WEB-M1-005; owner branding/entry-content decisions for final copy |
 | [WEB-M1-014](../tasks/WEB-M1-014-public-doctor-directory.md) | Add a public doctor directory with specialty and city filters and header/entry links (added 2026-10-26 by owner scope amendment) | WEB-M1-011, WEB-M1-013; client 0.7.0 directory capability |
+| [WEB-M1-015](../tasks/WEB-M1-015-guided-onboarding-checklist.md) | Merge the provider workspace page into a guided onboarding checklist with API-derived step status (added 2026-10-27; approved for implementation with owner decisions recorded) | WEB-M1-005 through WEB-M1-010, WEB-M1-013; no client upgrade |
 
 ### Observed capability and approval gates
 
