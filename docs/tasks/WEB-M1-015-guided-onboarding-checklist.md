@@ -1,6 +1,6 @@
 # WEB-M1-015: Merge the provider workspace page into a guided onboarding checklist
 
-- **Status:** APPROVED FOR IMPLEMENTATION (2026-10-27). The owner accepted the default for every decision below. Drafted from owner feedback that the workspace page only shows a status and a sign-out button, and that the onboarding checklist does not reflect completed steps.
+- **Status:** IMPLEMENTED (2026-10-27); lint, types, unit tests, production build, API-client policy, policy tests and the full Playwright suite (desktop and Pixel 7) pass locally. Non-production VPS checks not executed. Interpretations: when the next required step is blocked (suspension or a failed read) no step is current; the signed-in notice and workspace-ready text stay on the checklist; header and entry-page links keep pointing at `/[locale]/provider` (redirected); the last action's safe notice is shown to signed-in doctors too; out-of-scope specs (`identity`, `profile`, `admin-review`) were adjusted only where they relied on the removed workspace page or the exact saved-notice text. Previously: APPROVED FOR IMPLEMENTATION (2026-10-27). The owner accepted the default for every decision below. Drafted from owner feedback that the workspace page only shows a status and a sign-out button, and that the onboarding checklist does not reflect completed steps.
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-005 (onboarding and workspace), WEB-M1-006/007/008/009 (profile, services, locations, photo, credentials editors), WEB-M1-010 (approval, resubmission and publication), WEB-M1-013 (site header with workspace link and sign-out); owner decisions below
 - **Related ADRs:** WEB-ADR-0001; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (identity/session and login return allowlist)
@@ -75,14 +75,14 @@ The owner accepted the default for each decision. Each entry keeps the question 
 ## Acceptance criteria
 
 - [x] (owner) Decisions 1–5 recorded in this task.
-- [ ] Signing in, the header workspace link, the entry page link and `/[locale]/provider` all land on the checklist.
-- [ ] Each step's status reflects API state on the next request after a save, without JavaScript and without any web-stored progress.
-- [ ] One clearly marked next step links to the page that completes it; blocked steps say why.
-- [ ] Approval status, rejection feedback, resubmission and the suspended notice remain available on the checklist.
-- [ ] Read failures never show a step as done; unknown API values are not treated as done.
-- [ ] Keyboard, axe, mobile/desktop and 320 px checks pass; HTML contains no private data beyond the owner's own rejection feedback.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; the pinned client is unchanged.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] Signing in, the header workspace link, the entry page link and `/[locale]/provider` all land on the checklist.
+- [x] Each step's status reflects API state on the next request after a save, without JavaScript and without any web-stored progress.
+- [x] One clearly marked next step links to the page that completes it; blocked steps say why.
+- [x] Approval status, rejection feedback, resubmission and the suspended notice remain available on the checklist.
+- [x] Read failures never show a step as done; unknown API values are not treated as done.
+- [x] Keyboard, axe, mobile/desktop and 320 px checks pass; HTML contains no private data beyond the owner's own rejection feedback.
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; the pinned client is unchanged.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
 
 ## Verification
 

@@ -106,7 +106,7 @@ test("rejection, owner resubmission and approval work without JavaScript", async
     await decide(admin.page, "approve");
     await expect(admin.page.getByText(t("review.outcome.approved"))).toBeVisible();
     await page.reload();
-    await expect(page.getByText(t("workspace.approval.approved"))).toBeVisible();
+    await expect(page.getByText(t("workspace.approval.approved"), { exact: true })).toBeVisible();
   } finally { await admin.context.close(); }
 });
 

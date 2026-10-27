@@ -8,6 +8,7 @@ import { CredentialEditor } from "@/features/provider-credentials/credential-edi
 import { CredentialList } from "@/features/provider-credentials/credential-list";
 import { credentialLimits, credentialMessageKeys, credentialTypes, dateText, emptyCredential,
   type CredentialMessages } from "@/features/provider-credentials/fields";
+import { ChecklistLink } from "@/features/provider-onboarding/workspace";
 import { recordMessageKeys, type RecordMessages } from "@/features/provider-records/form";
 import { actionLinkClass, ProviderFrame, providerGate, PublicationStatus, SignedOutView } from "@/features/provider-records/page-frame";
 import { RemoveConfirmation } from "@/features/provider-records/remove-confirmation";
@@ -67,9 +68,11 @@ export default async function CredentialsPage({ params, searchParams }: Props) {
       <p>{t("evidence.privacy")}</p>
       <p>{t("evidence.revision")}</p>
       {credentialMessage && <div id="credential-outcome">
-        <Notice role={credentialMessage.success ? "status" : "alert"}>{t(credentialMessage.key)}</Notice></div>}
+        <Notice role={credentialMessage.success ? "status" : "alert"}>{t(credentialMessage.key)}
+          {credentialMessage.success && <> <ChecklistLink locale={locale} /></>}</Notice></div>}
       {evidenceMessage && <div id="evidence-outcome">
-        <Notice role={evidenceMessage.success ? "status" : "alert"}>{t(evidenceMessage.key)}</Notice></div>}
+        <Notice role={evidenceMessage.success ? "status" : "alert"}>{t(evidenceMessage.key)}
+          {evidenceMessage.success && <> <ChecklistLink locale={locale} /></>}</Notice></div>}
       {failed && <Notice role="alert">{t(`account.${failed}`)}</Notice>}
       {workspace.state === "notOnboarded" && <div className="space-y-4">
         <p>{t("workspace.missing")}</p>

@@ -33,6 +33,6 @@ export async function resubmitApplication(locale: string, form: FormData) {
     const { session, origin, apply } = await actionSession();
     state = (await resubmitApproval(origin, session, apply, revision)).state;
   }
-  revalidatePath(`/${locale}/provider`);
-  redirect(`/${locale}/provider?approval=${state}#approval-outcome`);
+  revalidatePath(`/${locale}/provider/onboarding`);
+  redirect(`/${locale}/provider/onboarding?approval=${state}#approval-outcome`);
 }

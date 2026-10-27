@@ -3,14 +3,15 @@
 import { useActionState, useEffect, useRef } from "react";
 import { Field, Notice, TextAreaField } from "@/components/ui/presentation";
 import { SubmitButton } from "@/features/provider-onboarding/submit-button";
+import type { SavedLink } from "@/features/provider-records/record-editor";
 import { profileLimits, type EditorMessages, type EditorState, type ProfileField } from "./fields";
 
 type SaveAction = (previous: EditorState, form: FormData) => Promise<EditorState>;
 const labels = { displayName: "profileEditor.displayName", biography: "profileEditor.biography" } as const;
 const linkClass = "font-semibold text-blue-800 underline underline-offset-4";
 
-export function ProfileEditor({ action, initial, messages: m, loginHref, reloadHref }: {
-  action: SaveAction; initial: EditorState; messages: EditorMessages; loginHref: string; reloadHref: string;
+export function ProfileEditor({ action, initial, messages: m, loginHref, reloadHref, savedLink }: {
+  action: SaveAction; initial: EditorState; messages: EditorMessages; loginHref: string; reloadHref: string; savedLink?: SavedLink;
 }) {
   const [state, formAction] = useActionState(action, initial);
   const summary = useRef<HTMLElement>(null);
@@ -26,7 +27,8 @@ export function ProfileEditor({ action, initial, messages: m, loginHref, reloadH
   const fieldError = (field: ProfileField) => state.errors[field] ? m["profileEditor.tooLong"] : undefined;
   return <div className="space-y-6">
     {/* The live region stays mounted so screen readers announce text added to it. */}
-    <div role="status">{state.status === "saved" && <Notice>{m["profileEditor.saved"]}</Notice>}</div>
+    <div role="status">{state.status === "saved" && <Notice>{m["profileEditor.saved"]}
+      {savedLink && <> <a className={linkClass} href={savedLink.href}>{savedLink.label}</a></>}</Notice>}</div>
     {/* Focus moves here on failure, so no alert role is added to avoid a second announcement. */}
     {failed && <section ref={summary} tabIndex={-1} aria-labelledby="profile-problem"
       className="space-y-3 rounded-lg border-2 border-red-800 bg-red-50 p-4 text-red-950">

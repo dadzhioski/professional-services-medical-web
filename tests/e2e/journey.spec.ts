@@ -62,7 +62,7 @@ async function prepareDoctor(page: Page) {
   await page.getByLabel(t("profileEditor.displayName")).fill(doctorName);
   await page.getByLabel(t("profileEditor.biography")).fill("Synthetic journey biography");
   await page.getByRole("button", { name: t("profileEditor.save"), exact: true }).click();
-  await expect(page.getByRole("status").first()).toHaveText(t("profileEditor.saved"));
+  await expect(page.getByRole("status").first()).toContainText(t("profileEditor.saved"));
   await page.getByLabel(t("specialtyEditor.label"), { exact: true }).selectOption({ label: "Cardiology" });
   await page.getByRole("button", { name: t("specialtyEditor.save") }).click();
   await expect(page.getByText(t("specialtyEditor.saved"))).toBeVisible();

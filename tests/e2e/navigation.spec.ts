@@ -44,11 +44,11 @@ for (const locale of ["mk", "en"] as const) {
       await expect(header.getByRole("navigation", { name: t("navigation.primary") })).toBeVisible();
       await expect(header.getByRole("button")).toHaveCount(0);
       await header.getByRole("link", { name: t("navigation.doctors") }).click();
-      await expect(page).toHaveURL(`${origin}/${locale}/provider`);
+      await expect(page).toHaveURL(`${origin}/${locale}/provider/onboarding`);
       await expect(page.getByRole("main").getByRole("link", { name: t("account.login") })).toBeVisible();
       await page.goto(`${origin}/${locale}`);
       await page.getByRole("main").getByRole("link", { name: t("home.doctorsAction") }).click();
-      await expect(page).toHaveURL(`${origin}/${locale}/provider`);
+      await expect(page).toHaveURL(`${origin}/${locale}/provider/onboarding`);
       await expect(page.getByRole("main").getByRole("link", { name: t("account.login") })).toBeVisible();
     });
   });

@@ -173,7 +173,7 @@ test("a current photo is shown from the same-origin owner route with replace and
   expect(html).not.toMatch(/_next\/image|srcSet|blob:/);
   expect(html).toContain(t("photo.replace"));
   expect(html).toContain(t("photo.remove"));
-  expect(html).toMatch(new RegExp(`role="status"[^>]*>${t("photo.saved")}`));
+  expect(html).toMatch(new RegExp(`role="status"[^>]*>${t("photo.saved")} <a href="/en/provider/onboarding"[^>]*>${t("onboarding.backToChecklist")}</a>`));
   expect(html).toMatch(/<input[^>]*type="file"[^>]*accept="image\/jpeg,image\/png"[^>]*required/);
   // Both photo forms carry the current profile version.
   const photoSection = html.slice(html.indexOf('id="photo"'), html.indexOf("</section>", html.indexOf('id="photo"')));

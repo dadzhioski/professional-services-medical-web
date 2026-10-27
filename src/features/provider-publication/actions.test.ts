@@ -46,14 +46,14 @@ test.each([["xx", "publish"], ["en", "approve"], ["en", "true"]])("ignores tampe
   expect(await target(changePublicationAction(locale, change, form({ version: "4" })))).toBeUndefined();
   expect(changePublication).not.toHaveBeenCalled();
 });
-test("resubmission sends the approval revision and returns to the workspace", async () => {
+test("resubmission sends the approval revision and returns to the checklist", async () => {
   vi.mocked(resubmitApproval).mockResolvedValue({ state: "resubmitted" });
   expect(await target(resubmitApplication("en", form({ revision: "5", approvalState: "APPROVED" }))))
-    .toBe("/en/provider?approval=resubmitted#approval-outcome");
+    .toBe("/en/provider/onboarding?approval=resubmitted#approval-outcome");
   expect(vi.mocked(resubmitApproval).mock.calls[0].slice(0, 2)).toEqual(["http://localhost:3000", "synthetic"]);
   expect(vi.mocked(resubmitApproval).mock.calls[0][3]).toBe(5);
 });
 test("resubmission without a revision is invalid before any API call", async () => {
-  expect(await target(resubmitApplication("en", form({})))).toBe("/en/provider?approval=invalid#approval-outcome");
+  expect(await target(resubmitApplication("en", form({})))).toBe("/en/provider/onboarding?approval=invalid#approval-outcome");
   expect(resubmitApproval).not.toHaveBeenCalled();
 });

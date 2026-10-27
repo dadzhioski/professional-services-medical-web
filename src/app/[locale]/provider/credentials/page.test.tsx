@@ -83,6 +83,12 @@ test.each([["saved", "status", "evidence.saved"], ["full", "alert", "evidence.fu
   signedIn([credential]);
   expect(await render("en", outcome)).toMatch(new RegExp(`role="${role}"[^>]*>${translator("en")(key)}`));
 });
+test.each([["evidence", "saved", true], ["evidence", "full", false], ["credential", "submitted", true], ["credential", "conflict", false]] as const)(
+  "%s outcome %s links back to the checklist: %s", async (kind, outcome, linked) => {
+    signedIn([credential]);
+    const html = await render("en", kind === "evidence" ? outcome : undefined, kind === "credential" ? { credential: outcome } : {});
+    expect(new RegExp(`href="/en/provider/onboarding"[^>]*>${translator("en")("onboarding.backToChecklist")}</a>`).test(html)).toBe(linked);
+  });
 test("unknown outcomes are ignored", async () => {
   signedIn([credential]);
   const html = await render("en", "<b>raw-private-error</b>");
