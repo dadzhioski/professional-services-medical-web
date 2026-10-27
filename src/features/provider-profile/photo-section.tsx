@@ -3,6 +3,7 @@ import { outcomeMessage, photoOutcomes } from "@/features/media/form";
 import { ImageInput } from "@/features/media/image-input";
 import { OwnerImage } from "@/features/media/owner-image";
 import { SubmitButton } from "@/features/provider-onboarding/submit-button";
+import { ChecklistLink } from "@/features/provider-onboarding/workspace";
 import { mediaContentPath } from "@/lib/api/media";
 import { translator, type Locale } from "@/lib/i18n";
 import { changeProfilePhoto, removeProfilePhoto } from "./photo-actions";
@@ -16,7 +17,8 @@ export function PhotoSection({ locale, version, photoMediaId, outcome }: {
   return <section id="photo" aria-labelledby="photo-heading" className="space-y-4">
     <h2 id="photo-heading" className="text-xl font-semibold text-teal-950">{t("photo.heading")}</h2>
     <p>{t("photo.description")}</p>
-    {message && <Notice role={message.success ? "status" : "alert"}>{t(message.key)}</Notice>}
+    {message && <Notice role={message.success ? "status" : "alert"}>{t(message.key)}
+      {message.success && <> <ChecklistLink locale={locale} /></>}</Notice>}
     {path ? <OwnerImage path={path} alt={t("photo.current")} className="w-40 rounded-xl" /> : <p>{t("photo.none")}</p>}
     <form action={changeProfilePhoto.bind(null, locale)} className="space-y-4">
       <input type="hidden" name="version" value={version} />

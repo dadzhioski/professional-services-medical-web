@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { LanguageLinks } from "@/components/site-shell";
 import { Heading, Notice } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
-import { ProviderNavigation, type ProviderPage } from "@/features/provider-onboarding/workspace";
+import { ChecklistLink, ProviderNavigation, type ProviderPage } from "@/features/provider-onboarding/workspace";
 import { publicationKey } from "@/features/provider-profile/fields";
 import { noticeKey, type RecordNotice } from "./form";
 import { currentAccount, googleLoginHref } from "@/lib/api/identity";
@@ -37,7 +37,9 @@ export function ProviderFrame({ locale, path, current, children }: {
 
 export function RecordNoticeView({ locale, notice }: { locale: Locale; notice?: RecordNotice }) {
   if (!notice) return null;
-  return <Notice role={notice === "saved" || notice === "removed" ? "status" : "alert"}>{translator(locale)(noticeKey(notice))}</Notice>;
+  const success = notice === "saved" || notice === "removed";
+  return <Notice role={success ? "status" : "alert"}>{translator(locale)(noticeKey(notice))}
+    {success && <> <ChecklistLink locale={locale} /></>}</Notice>;
 }
 
 // Shows the publication state the API reports after each change; eligibility is never computed here.

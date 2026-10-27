@@ -98,6 +98,10 @@ test.each(["saved", "removed", "forbidden", "unavailable"])("known notice %s is 
 test("unknown notices are ignored", async () => {
   expect(await render({ notice: "raw-private-error" })).not.toContain("raw-private-error");
 });
+test.each([["saved", true], ["removed", true], ["unavailable", false]])("notice %s links back to the checklist: %s", async (notice, linked) => {
+  const html = await render({ notice });
+  expect(new RegExp(`href="/en/provider/onboarding"[^>]*>${t("onboarding.backToChecklist")}</a>`).test(html)).toBe(linked);
+});
 test.each<[string, () => void]>([
   ["services", () => vi.mocked(listServices).mockResolvedValue({ state: "unavailable" })],
   ["locations", () => vi.mocked(listLocations).mockResolvedValue({ state: "unavailable" })],

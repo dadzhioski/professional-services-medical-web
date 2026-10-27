@@ -63,7 +63,7 @@ for (const locale of localeCodes) {
       await page.getByLabel(tr("profileEditor.displayName")).fill("Dr. Synthetic Draft");
       await page.getByLabel(tr("profileEditor.biography")).fill("Synthetic line one\nSynthetic line two");
       await page.getByRole("button", { name: tr("profileEditor.save"), exact: true }).click();
-      await expect(page.getByRole("status").first()).toHaveText(tr("profileEditor.saved"));
+      await expect(page.getByRole("status").first()).toContainText(tr("profileEditor.saved"));
       const response = await page.goto(`${origin}/${locale}/provider/profile`);
       expect(response!.headers()["cache-control"]).toContain("no-store");
       await expect(page.getByLabel(tr("profileEditor.displayName"))).toHaveValue("Dr. Synthetic Draft");
@@ -81,7 +81,7 @@ test("saves with JavaScript, keeps the slug stable and prevents repeated submiss
   const slug = await slugOf(page);
   await name(page).fill("Dr. Synthetic Renamed");
   await page.getByRole("button", { name: t("profileEditor.save"), exact: true }).dblclick();
-  await expect(page.getByRole("status").first()).toHaveText(t("profileEditor.saved"));
+  await expect(page.getByRole("status").first()).toContainText(t("profileEditor.saved"));
   await expect(page.getByRole("region", { name: t("profileEditor.previewHeading") })).toContainText("Dr. Synthetic Renamed");
   await name(page).fill("Dr. Synthetic Second");
   await save(page);
@@ -125,7 +125,7 @@ test("a stale edit is reviewed and never silently overwritten", async ({ page, r
   await save(page);
   await expect(summaryOf(page)).toContainText(t("profileEditor.conflict"));
   await page.getByRole("button", { name: t("profileEditor.overwrite") }).click();
-  await expect(page.getByRole("status").first()).toHaveText(t("profileEditor.saved"));
+  await expect(page.getByRole("status").first()).toContainText(t("profileEditor.saved"));
   await page.reload();
   await expect(name(page)).toHaveValue("Dr. Mine");
   await bump(request);
@@ -176,7 +176,8 @@ test("submissions require the site Origin and ignore foreign identifiers", async
     await expect(name(page)).toHaveValue("");
     const forged = await context.request.post(`${origin}/en/provider/profile`, { headers: { Origin: origin },
       multipart: { ...fields, displayName: "Dr. Forged Fields", slug: "dr-foreign", organizationId: "foreign-org" } });
-    expect(await forged.text()).toContain(`<div role="status"><p class="rounded-lg border border-teal-700 bg-teal-50 p-4 text-teal-950">${t("profileEditor.saved")}</p></div>`);
+    // The saved notice links back to the onboarding checklist (WEB-M1-015).
+    expect(await forged.text()).toMatch(new RegExp(`<div role="status"><p class="rounded-lg border border-teal-700 bg-teal-50 p-4 text-teal-950">${t("profileEditor.saved")}(<!-- -->)? <a [^>]*href="/en/provider/onboarding">${t("onboarding.backToChecklist")}</a></p></div>`));
     await page.reload();
     await expect(name(page)).toHaveValue("Dr. Forged Fields");
     expect(await slugOf(page)).toBe(slug);

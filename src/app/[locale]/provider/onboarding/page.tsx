@@ -5,19 +5,24 @@ import { SiteHeader } from "@/components/site-header";
 import { LanguageLinks } from "@/components/site-shell";
 import { Heading, Notice } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
+import { outcomeMessage } from "@/features/media/form";
 import { startOnboarding } from "@/features/provider-onboarding/actions";
-import { SubmitButton } from "@/features/provider-onboarding/submit-button";
-import { ProviderNavigation, WorkspaceSummary } from "@/features/provider-onboarding/workspace";
+import { OnboardingChecklist } from "@/features/provider-onboarding/checklist";
+import { onboardingProgress } from "@/features/provider-onboarding/progress";
+import { ProviderNavigation } from "@/features/provider-onboarding/workspace";
+import { resubmitApplication } from "@/features/provider-publication/actions";
+import { approvalOutcomes } from "@/features/provider-publication/labels";
+import { readCredentials } from "@/lib/api/credentials";
 import { currentAccount, googleLoginHref } from "@/lib/api/identity";
 import { currentContext } from "@/lib/api/organization";
+import { readProfile, readPublication } from "@/lib/api/profile";
 import { incomingSession, sessionCookieName } from "@/lib/api/session-cookie";
 import { getServerEnvironment } from "@/lib/config/server";
 import { isLocale, translator } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
-type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ notice?: string }> };
+type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ notice?: string; approval?: string }> };
 
-const upcomingSteps = ["onboarding.step.profile", "onboarding.step.photo", "onboarding.step.review", "onboarding.step.publication"] as const;
 const linkClass = "inline-block min-h-11 rounded-lg bg-teal-800 px-5 py-3 font-semibold text-white underline hover:bg-teal-900";
 
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
@@ -34,12 +39,12 @@ export default async function OnboardingPage({ params, searchParams }: Props) {
   const name = sessionCookieName(getServerEnvironment().publicOrigin);
   const session = incomingSession((await cookies()).getAll(), name);
   const account = await currentAccount(session);
-  const { notice } = await searchParams;
+  const { notice, approval } = await searchParams;
   const safeNotice = notice === "forbidden" || notice === "unavailable" || notice === "expired" ? notice : undefined;
   const path = `/${locale}/provider/onboarding`;
   if (account.state !== "authenticated") {
     const loginHref = await googleLoginHref(locale);
-    return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+    return <><SiteHeader locale={locale} current="workspace" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
       <LanguageLinks locale={locale} path={path} />
       <Surface className="space-y-6">
         <Heading>{t("onboarding.heading")}</Heading>
@@ -48,31 +53,29 @@ export default async function OnboardingPage({ params, searchParams }: Props) {
       </Surface>
     </main></>;
   }
-  // Progress comes from the API; a failure notice never overrides an existing workspace.
-  const workspace = await currentContext(session);
-  const problem = workspace.state === "ready" ? undefined : workspace.state === "notOnboarded" ? safeNotice : workspace.state;
-  return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+  // Progress comes only from the API, read in parallel with the visitor's own session and never cached.
+  // Record reads are ignored until the context confirms a workspace.
+  const [workspace, publication, profile, credentials] = await Promise.all([currentContext(session), readPublication(session),
+    readProfile(session), readCredentials(session)]);
+  const ready = workspace.state === "ready";
+  const steps = onboardingProgress(ready ? { context: workspace, publication, profile, credentials } : { context: workspace });
+  const failedRead = ready ? [publication, profile, credentials].find(read => read.state !== "ready" && read.state !== "missing") : undefined;
+  // API failures win over the notice of the last action (workspace creation or sign-out), which wins over the signed-in state.
+  const failure = workspace.state !== "ready" && workspace.state !== "notOnboarded" ? workspace.state :
+    failedRead?.state ?? safeNotice;
+  const approvalMessage = outcomeMessage(approvalOutcomes, approval);
+  return <><SiteHeader locale={locale} current="workspace" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     <LanguageLinks locale={locale} path={path} />
     <ProviderNavigation locale={locale} current="onboarding" />
     <Surface className="space-y-6">
       <Heading>{t("onboarding.heading")}</Heading>
       <p>{t("onboarding.description")}</p>
-      {problem && <Notice role="alert">{t(`account.${problem}`)}</Notice>}
-      <section aria-labelledby="checklist-heading" className="space-y-4">
-        <h2 id="checklist-heading" className="text-xl font-semibold text-teal-950">{t("onboarding.checklist")}</h2>
-        <ol className="list-decimal space-y-3 pl-6">
-          <li>{t("onboarding.step.workspace")}: <strong>{t(workspace.state === "ready" ? "onboarding.done" : "onboarding.todo")}</strong></li>
-          {upcomingSteps.map(step => <li key={step}>{t(step)}: <span className="text-slate-700">{t("onboarding.upcoming")}</span></li>)}
-        </ol>
-      </section>
-      {workspace.state === "ready" && <>
-        <WorkspaceSummary locale={locale} context={workspace.context} />
-        <a className={linkClass} href={`/${locale}/provider`}>{t("onboarding.continue")}</a>
-      </>}
-      {workspace.state === "notOnboarded" && <form action={startOnboarding.bind(null, locale)} className="space-y-4">
-        <p>{t("onboarding.privacy")}</p>
-        <SubmitButton label={t("onboarding.create")} pendingLabel={t("onboarding.creating")} />
-      </form>}
+      <Notice role={failure ? "alert" : undefined}>{t(`account.${failure ?? "authenticated"}`)}</Notice>
+      {approvalMessage && <div id="approval-outcome">
+        <Notice role={approvalMessage.success ? "status" : "alert"}>{t(approvalMessage.key)}</Notice></div>}
+      {ready && workspace.context.suspended && <Notice>{t("workspace.suspended")}</Notice>}
+      <OnboardingChecklist locale={locale} steps={steps} context={ready ? workspace.context : undefined}
+        create={startOnboarding.bind(null, locale)} resubmit={resubmitApplication.bind(null, locale)} />
     </Surface>
   </main></>;
 }

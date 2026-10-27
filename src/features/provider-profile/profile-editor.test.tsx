@@ -65,3 +65,11 @@ test("a saved draft is announced as status, not as an error", () => {
   expect(screen.getByRole("status")).toHaveTextContent(t("profileEditor.saved"));
   expect(screen.queryByRole("region", { name: t("profileEditor.problem") })).toBeNull();
 });
+test("a saved draft links back to the checklist; failures do not", () => {
+  const savedLink = { href: "/en/provider/onboarding", label: t("onboarding.backToChecklist") };
+  const { unmount } = render(<ProfileEditor action={vi.fn()} initial={{ ...idle, status: "saved" }} messages={messages} loginHref="/login" reloadHref="/en/provider/profile" savedLink={savedLink} />);
+  expect(screen.getByRole("link", { name: t("onboarding.backToChecklist") })).toHaveAttribute("href", "/en/provider/onboarding");
+  unmount();
+  render(<ProfileEditor action={vi.fn()} initial={{ ...idle, status: "invalid" }} messages={messages} loginHref="/login" reloadHref="/en/provider/profile" savedLink={savedLink} />);
+  expect(screen.queryByRole("link", { name: t("onboarding.backToChecklist") })).toBeNull();
+});

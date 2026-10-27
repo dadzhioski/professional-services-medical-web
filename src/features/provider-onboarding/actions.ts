@@ -13,5 +13,5 @@ export async function startOnboarding(locale: string) {
   const jar = await cookies();
   const name = sessionCookieName(getServerEnvironment().publicOrigin);
   const state = await onboardWorkspace((await headers()).get("origin"), incomingSession(jar.getAll(), name), cookie => jar.set(cookie));
-  redirect(state === "ready" ? `/${locale}/provider` : `/${locale}/provider/onboarding?notice=${state}`);
+  redirect(`/${locale}/provider/onboarding${state === "ready" ? "" : `?notice=${state}`}`);
 }

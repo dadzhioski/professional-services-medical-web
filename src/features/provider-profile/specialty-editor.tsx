@@ -1,21 +1,21 @@
 "use client";
 
 import type { RecordMessages } from "@/features/provider-records/form";
-import { RecordEditor, type RecordAction } from "@/features/provider-records/record-editor";
+import { RecordEditor, type RecordAction, type SavedLink } from "@/features/provider-records/record-editor";
 import type { SpecialtyEditorState, SpecialtyMessages, SpecialtyValues } from "./specialty";
 
 export type SpecialtyOption = { id: string; label: string };
 
 // A current specialty that is no longer offered stays selected until the provider changes it.
-export function SpecialtyEditor({ action, initial, messages: m, recordMessages, specialties, loginHref, reloadHref }: {
+export function SpecialtyEditor({ action, initial, messages: m, recordMessages, specialties, loginHref, reloadHref, savedLink }: {
   action: RecordAction<SpecialtyValues, SpecialtyValues>; initial: SpecialtyEditorState; messages: SpecialtyMessages;
-  recordMessages: RecordMessages; specialties: SpecialtyOption[]; loginHref: string; reloadHref: string;
+  recordMessages: RecordMessages; specialties: SpecialtyOption[]; loginHref: string; reloadHref: string; savedLink?: SavedLink;
 }) {
   const labelOf = (id: string) => !id ? m["specialtyEditor.none"] :
     specialties.find(option => option.id === id)?.label ?? m["specialtyEditor.retired"];
   return <RecordEditor id="specialty" action={action} initial={initial} messages={recordMessages}
     labels={{ specialtyId: m["specialtyEditor.label"] }} loginHref={loginHref} reloadHref={reloadHref}
-    saveLabel={m["specialtyEditor.save"]} savedLabel={m["specialtyEditor.saved"]}
+    saveLabel={m["specialtyEditor.save"]} savedLabel={m["specialtyEditor.saved"]} savedLink={savedLink}
     latest={latest => <p>{labelOf(latest.specialtyId)}</p>}>
     {(state, error) => {
       const current = state.values.specialtyId;

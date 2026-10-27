@@ -7,13 +7,14 @@ import type { RecordMessages, RecordState } from "./form";
 
 type Values = Record<string, unknown>;
 export type RecordAction<V extends Values, L> = (previous: RecordState<V, L>, form: FormData) => Promise<RecordState<V, L>>;
+export type SavedLink = { href: string; label: string };
 export const linkClass = "font-semibold text-blue-800 underline underline-offset-4";
 
 // Shared failure summary, conflict review and submission for record editors; callers render the fields.
 export function RecordEditor<V extends Values, L = V>({ id, action, initial, messages: m, labels, loginHref, reloadHref,
-  saveLabel, savedLabel, latest, children }: {
+  saveLabel, savedLabel, savedLink, latest, children }: {
   id: string; action: RecordAction<V, L>; initial: RecordState<V, L>; messages: RecordMessages;
-  labels: Partial<Record<keyof V & string, string>>; loginHref: string; reloadHref: string; saveLabel: string; savedLabel?: string;
+  labels: Partial<Record<keyof V & string, string>>; loginHref: string; reloadHref: string; saveLabel: string; savedLabel?: string; savedLink?: SavedLink;
   latest: (latest: L) => ReactNode; children: (state: RecordState<V, L>, error: (field: keyof V & string) => string | undefined) => ReactNode;
 }) {
   const [state, formAction] = useActionState(action, initial);
@@ -42,7 +43,8 @@ export function RecordEditor<V extends Values, L = V>({ id, action, initial, mes
       `${m[`account.${status}`]} ${m["records.keptInput"]}`;
   return <div className="space-y-6">
     {/* The live region stays mounted so screen readers announce text added to it. */}
-    <div role="status">{status === "saved" && savedLabel && <Notice>{savedLabel}</Notice>}</div>
+    <div role="status">{status === "saved" && savedLabel && <Notice>{savedLabel}
+      {savedLink && <> <a className={linkClass} href={savedLink.href}>{savedLink.label}</a></>}</Notice>}</div>
     {/* Focus moves here on failure, so no alert role is added to avoid a second announcement. */}
     {failed && <section ref={summary} tabIndex={-1} aria-labelledby={`${id}-problem`}
       className="space-y-3 rounded-lg border-2 border-red-800 bg-red-50 p-4 text-red-950">

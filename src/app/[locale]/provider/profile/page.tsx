@@ -8,7 +8,7 @@ import { Surface } from "@/components/ui/surface";
 import { OwnerImage } from "@/features/media/owner-image";
 import { ProfilePresentation } from "@/features/professional-profile/presentation";
 import { SubmitButton } from "@/features/provider-onboarding/submit-button";
-import { ProviderNavigation } from "@/features/provider-onboarding/workspace";
+import { checklistPath, ProviderNavigation } from "@/features/provider-onboarding/workspace";
 import { createProfileDraft, saveProfileDraft, saveProfileSpecialty } from "@/features/provider-profile/actions";
 import { editorMessageKeys, publicationKey, type EditorMessages } from "@/features/provider-profile/fields";
 import { PhotoSection } from "@/features/provider-profile/photo-section";
@@ -79,6 +79,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const problem = failed ?? (profile?.state === "missing" ? safeNotice : undefined);
   const photoPath = profile?.state === "ready" ? mediaContentPath(profile.profile.photoMediaId) : null;
   const messages = Object.fromEntries(editorMessageKeys.map(key => [key, t(key)])) as EditorMessages;
+  const savedLink = { href: checklistPath(locale), label: t("onboarding.backToChecklist") };
   return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     <LanguageLinks locale={locale} path={path} />
     <ProviderNavigation locale={locale} current="profile" />
@@ -106,7 +107,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         <p>{t("profileEditor.contactNote")}</p>
         <p>{t("profileEditor.privacy")}</p>
         {/* Photo changes also bump the profile version; remounting on a photo change hands the editor that version. */}
-        <ProfileEditor key={profile.profile.photoMediaId ?? "no-photo"} action={saveProfileDraft.bind(null, locale)} messages={messages} loginHref={loginHref} reloadHref={path}
+        <ProfileEditor key={profile.profile.photoMediaId ?? "no-photo"} action={saveProfileDraft.bind(null, locale)} messages={messages} loginHref={loginHref} reloadHref={path} savedLink={savedLink}
           initial={{ status: "idle", errors: {}, version: profile.profile.version!,
             values: { displayName: profile.profile.displayName ?? "", biography: profile.profile.biography ?? "" } }} />
       </>}
@@ -116,7 +117,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         <h2 id="specialty-heading" className="text-xl font-semibold text-teal-950">{t("specialtyEditor.heading")}</h2>
         <p>{t("specialtyEditor.description")}</p>
         {specialty ? <SpecialtyEditor action={saveProfileSpecialty.bind(null, locale)} messages={specialtyMessages}
-          recordMessages={recordMessages} specialties={specialty.options} loginHref={loginHref} reloadHref={path}
+          recordMessages={recordMessages} specialties={specialty.options} loginHref={loginHref} reloadHref={path} savedLink={savedLink}
           initial={{ status: "idle", errors: {}, version: specialty.version, values: { specialtyId: specialty.current } }} /> :
           <Notice role="alert">{t(`account.${specialtyFailure ?? "unavailable"}`)}</Notice>}
       </section>
