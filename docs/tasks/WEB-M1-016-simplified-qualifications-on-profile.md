@@ -1,10 +1,10 @@
 # WEB-M1-016: Replace credential records with free-text qualifications on the profile page
 
-- **Status:** BLOCKED (2026-10-27) on a linked API task and an approved client upgrade; see "Required API contract". Owner decisions are recorded below. Drafted from owner feedback that credential entry is too heavy: doctors want to paste their education, specialties and certificates from a CV without date pickers, and proof images should not be needed to publish.
+- **Status:** BLOCKED (2026-10-27) on [API-M1-014](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-014-simplified-qualifications.md) and an approved client upgrade; see "Required API contract". Owner decisions are recorded below. Drafted from owner feedback that credential entry is too heavy: doctors want to paste their education, specialties and certificates from a CV without date pickers, and proof images should not be needed to publish.
 - **Target repository:** `professional-services-medical-web`
-- **Depends on:** WEB-M1-006 (profile editor), WEB-M1-008 (photo and private evidence), WEB-M1-009 (credentials, superseded by this task), WEB-M1-010 (approval and publication), WEB-M1-011 (public profile), WEB-M1-014 (directory), WEB-M1-015 (onboarding checklist); the linked API task; an explicitly approved client upgrade (WEB-M1-004 process)
+- **Depends on:** WEB-M1-006 (profile editor), WEB-M1-008 (photo and private evidence), WEB-M1-009 (credentials, superseded by this task), WEB-M1-010 (approval and publication), WEB-M1-011 (public profile), WEB-M1-014 (directory), WEB-M1-015 (onboarding checklist); API-M1-014; an explicitly approved client upgrade (WEB-M1-004 process)
 - **Related ADRs:** WEB-ADR-0001; [WEB-ADR-0002](../adr/WEB-ADR-0002-exact-api-client-version.md) (exact client version); [WEB-ADR-0005](../adr/WEB-ADR-0005-independent-release-compatibility.md) (API deploys additive changes before the web release); [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (private evidence never appears in public output)
-- **Cross-repository dependency:** A new linked API task, ID to be assigned by the API owner, amending [API-M1-005](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-005-professional-profile-drafts.md), [API-M1-007](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-007-media-and-private-evidence.md), [API-M1-008](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-008-credential-review.md), [API-M1-009](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-009-approval-and-publication.md) and [API-M1-010](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-010-public-profiles-and-directory.md). Pinned client 0.7.0 cannot support this task: `CredentialRequest.issuedOn` is a required date, credentials are typed records (`EDUCATION | SPECIALIZATION | LICENSE | CERTIFICATION | OTHER`), `submitCredential` requires at least one evidence image, and `PublicationResponse.missing` contains `APPROVED_CREDENTIAL`, so publishing needs an approved credential.
+- **Cross-repository dependency:** [API-M1-014](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-014-simplified-qualifications.md) (created 2026-10-27; planned, with open owner decisions A–C on contract compatibility, edits after approval and migration of published profiles), amending [API-M1-005](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-005-professional-profile-drafts.md), [API-M1-007](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-007-media-and-private-evidence.md), [API-M1-008](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-008-credential-review.md), [API-M1-009](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-009-approval-and-publication.md) and [API-M1-010](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-010-public-profiles-and-directory.md). Pinned client 0.7.0 cannot support this task: `CredentialRequest.issuedOn` is a required date, credentials are typed records (`EDUCATION | SPECIALIZATION | LICENSE | CERTIFICATION | OTHER`), `submitCredential` requires at least one evidence image, and `PublicationResponse.missing` contains `APPROVED_CREDENTIAL`, so publishing needs an approved credential.
 - **Risk:** High
 
 ## Goal
@@ -26,7 +26,7 @@ The profile page (`src/app/[locale]/provider/profile/page.tsx`) already holds di
 5. **Review.** Publishing needs the doctor's account approval only. The administrator reviews the qualification text and any proofs as part of that approval; there is no separate per-credential approval.
 6. **Specialty select stays.** The existing reference specialty `<select>` (directory filter) is unchanged; the Specialties text is additional, descriptive content.
 
-## Required API contract (for the linked API task)
+## Required API contract (API-M1-014)
 
 The web must not invent these DTOs; it starts only once a published client contains them.
 
@@ -82,7 +82,8 @@ The web must not invent these DTOs; it starts only once a published client conta
 ## Acceptance criteria
 
 - [x] (owner) Decisions 1–6 recorded in this task.
-- [ ] Linked API task created and its client version published; upgrade approved.
+- [x] Linked API task created: API-M1-014 (2026-10-27).
+- [ ] A client version containing API-M1-014 is published and the upgrade is approved.
 - [ ] Qualifications are entered as three free-text sections on the profile page, with no date or duration inputs.
 - [ ] Education and Specialties are required to publish; Certificates is optional.
 - [ ] A profile without any proof images can be approved and published.
