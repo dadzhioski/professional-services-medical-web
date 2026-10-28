@@ -1,0 +1,8 @@
+{
+  "vulnerability": "CVE-2026-116587",
+  "approvedOn": "2026-10-28",
+  "expiresAt": "2026-11-11T00:00:00Z",
+  "reason": "Owner-approved temporary acceptance of go-jose v3 compiled into Caddy 2.11.7; no patched go-jose v3 release or newer Caddy exists. go-jose v4 is patched to 4.1.6.",
+  "target": "usr/bin/caddy",
+  "package": { "name": "github.com/go-jose/go-jose/v3", "version": "v3.0.5" }
+}

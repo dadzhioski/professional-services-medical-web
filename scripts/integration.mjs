@@ -134,6 +134,7 @@ async function up() {
   assert.equal(caddyLabels["io.professional-services.caddy.version"], "2.11.7");
   assert.equal(caddyLabels["io.professional-services.caddy.go"], "1.26.10");
   assert.equal(caddyLabels["io.professional-services.caddy.x-net"], "0.60.0");
+  assert.equal(caddyLabels["io.professional-services.caddy.go-jose-v4"], "4.1.6");
   const labels = inspect("image", image).Config.Labels;
   assert.equal(labels["org.opencontainers.image.revision"], image.slice(image.lastIndexOf(":") + 1));
   assert.equal(labels["io.professional-services.api-client.version"], clientVersion);

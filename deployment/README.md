@@ -17,7 +17,7 @@ Keep actual configuration outside Git. `.env.production.example` contains synthe
 | API client | Exact `@dadzhioski/professional-services-api-client@0.7.0`; smoke checks the image label against package/lock files |
 | `CADDY_IMAGE` | Full-SHA `professional-services-medical-edge` image; local checks default to current HEAD |
 
-The edge image rebuilds Caddy 2.11.7 with Go 1.26.10 and `golang.org/x/net@v0.60.0` to fix high scanner findings in the upstream binary (Go 1.26.10 fixes CVE-2026-111943 in `crypto/x509`). Compiler and runtime base digests are pinned in `Dockerfile.caddy`; no new Caddy plugins are added. Build it with `make edge-image`. Release context is available in the [upstream releases](https://github.com/caddyserver/caddy/releases/tag/v2.11.7). Local images built with uncommitted changes are development evidence, not publishable releases.
+The edge image rebuilds Caddy 2.11.7 with Go 1.26.10 `golang.org/x/net@v0.60.0` and `github.com/go-jose/go-jose/v4@v4.1.6` to fix high scanner findings in the upstream binary (Go 1.26.10 fixes CVE-2026-111943 in `crypto/x509`). The unfixed go-jose v3 finding has a temporary owner-approved exception that expires 2026-11-11 (see `docs/ci-and-images.md`). Compiler and runtime base digests are pinned in `Dockerfile.caddy`; no new Caddy plugins are added. Build it with `make edge-image`. Release context is available in the [upstream releases](https://github.com/caddyserver/caddy/releases/tag/v2.11.7). Local images built with uncommitted changes are development evidence, not publishable releases.
 
 ## Runtime boundary
 
