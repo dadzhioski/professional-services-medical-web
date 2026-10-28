@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
-import { LanguageLinks } from "@/components/site-shell";
 import { Heading, Notice } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { outcomeMessage } from "@/features/media/form";
@@ -44,8 +43,7 @@ export default async function OnboardingPage({ params, searchParams }: Props) {
   const path = `/${locale}/provider/onboarding`;
   if (account.state !== "authenticated") {
     const loginHref = await googleLoginHref(locale);
-    return <><SiteHeader locale={locale} current="workspace" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
-      <LanguageLinks locale={locale} path={path} />
+    return <><SiteHeader locale={locale} path={path} current="workspace" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
       <Surface className="space-y-6">
         <Heading>{t("onboarding.heading")}</Heading>
         <Notice>{t(`account.${safeNotice ?? account.state}`)}</Notice>
@@ -64,8 +62,7 @@ export default async function OnboardingPage({ params, searchParams }: Props) {
   const failure = workspace.state !== "ready" && workspace.state !== "notOnboarded" ? workspace.state :
     failedRead?.state ?? safeNotice;
   const approvalMessage = outcomeMessage(approvalOutcomes, approval);
-  return <><SiteHeader locale={locale} current="workspace" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
-    <LanguageLinks locale={locale} path={path} />
+  return <><SiteHeader locale={locale} path={path} current="workspace" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     <ProviderNavigation locale={locale} current="onboarding" />
     <Surface className="space-y-6">
       <Heading>{t("onboarding.heading")}</Heading>

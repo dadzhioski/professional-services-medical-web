@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { SiteHeader } from "@/components/site-header";
-import { LanguageLinks } from "@/components/site-shell";
 import { Heading, Notice } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { ChecklistLink, ProviderNavigation, type ProviderPage } from "@/features/provider-onboarding/workspace";
@@ -28,8 +27,7 @@ export async function providerGate(locale: Locale) {
 export function ProviderFrame({ locale, path, current, children }: {
   locale: Locale; path: string; current?: ProviderPage; children: ReactNode;
 }) {
-  return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
-    <LanguageLinks locale={locale} path={path} />
+  return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     {current && <ProviderNavigation locale={locale} current={current} />}
     {children}
   </main></>;

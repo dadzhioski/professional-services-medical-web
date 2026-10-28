@@ -40,10 +40,12 @@ for (const locale of localeCodes) {
     const { slug } = await seed(request);
     await withoutJavaScript(browser, async page => {
       await page.goto(`${origin}/${locale}`);
-      await page.getByRole("banner").getByRole("link", { name: tl("navigation.directory"), exact: true }).click();
+      await expect(page).toHaveURL(`${origin}/${locale}/doctors`);
+      await page.goto(`${origin}/${locale}/provider/onboarding`);
+      await page.getByRole("banner").getByRole("link", { name: tl("app.title"), exact: true }).click();
       await expect(page).toHaveURL(`${origin}/${locale}/doctors`);
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
-      await expect(page.getByRole("banner").getByRole("link", { name: tl("navigation.directory"), exact: true }))
+      await expect(page.getByRole("banner").getByRole("link", { name: tl("app.title"), exact: true }))
         .toHaveAttribute("aria-current", "page");
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(tl("directory.heading"));
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
@@ -56,10 +58,11 @@ for (const locale of localeCodes) {
   });
 }
 
-test("the entry page links to the directory and bare /doctors redirects to the default locale", async ({ page }) => {
+test("the site starts at the directory and bare /doctors redirects to the default locale", async ({ page }) => {
   await page.goto(`${origin}/en`);
-  await page.getByRole("main").getByRole("link", { name: t("home.directoryAction") }).click();
   await expect(page).toHaveURL(`${origin}/en/doctors`);
+  await page.goto(`${origin}/`);
+  await expect(page).toHaveURL(`${origin}/mk/doctors`);
   await page.goto(`${origin}/doctors`);
   await expect(page).toHaveURL(`${origin}/mk/doctors`);
 });

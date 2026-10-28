@@ -1,9 +1,9 @@
-# Rebuild the exact upstream release with the patched compiler/network module.
+# Rebuild the exact upstream release with the patched compiler, network and go-jose v4 modules.
 FROM golang:1.26.10-alpine@sha256:9ce231b28998b32e116927c61aa5c406183061d4f3f2d61b292c88e7f6bdf7ca AS builder
 ENV GOTOOLCHAIN=local CGO_ENABLED=0
 WORKDIR /build
 RUN go mod init medical-web-edge && \
-    go get github.com/caddyserver/caddy/v2@v2.11.7 golang.org/x/net@v0.60.0 && \
+    go get github.com/caddyserver/caddy/v2@v2.11.7 golang.org/x/net@v0.60.0 github.com/go-jose/go-jose/v4@v4.1.6 && \
     go build -mod=mod -trimpath -ldflags="-s -w" -o /caddy github.com/caddyserver/caddy/v2/cmd/caddy
 
 FROM caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
@@ -18,4 +18,4 @@ LABEL org.opencontainers.image.revision=$REVISION \
       org.opencontainers.image.source="https://github.com/dadzhioski/professional-services-medical-web" \
       io.professional-services.caddy.version="2.11.7" \
       io.professional-services.caddy.go="1.26.10" \
-      io.professional-services.caddy.x-net="0.60.0"
+      io.professional-services.caddy.x-net="0.60.0"       io.professional-services.caddy.go-jose-v4="4.1.6"

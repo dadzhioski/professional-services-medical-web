@@ -3,7 +3,8 @@ import axe from "axe-core";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-vi.mock("@/components/site-header", () => ({ SiteHeader: () => <header /> }));
+// The header owns the language links; the page only supplies the path they keep.
+vi.mock("@/components/site-header", () => ({ SiteHeader: ({ path }: { path: string }) => <header data-language-path={path} /> }));
 // Spoofed request authority must never influence canonical output.
 vi.mock("next/headers", () => ({
   headers: async () => new Headers({ host: "evil.test", "x-forwarded-host": "evil.test", "x-forwarded-proto": "http" }),
@@ -51,7 +52,7 @@ for (const locale of localeCodes) {
     expect(html).toContain("Synthetic street 1");
     expect(html).toContain(`src="/api/v1/public/media/${photoMediaId}/content"`);
     expect(html).toContain('referrerPolicy="no-referrer"');
-    expect(html).toContain(`href="/${locale === "mk" ? "en" : "mk"}/doctors/dr-synthetic"`);
+    expect(html).toContain(`data-language-path="/${locale}/doctors/dr-synthetic"`);
     expect(html).toContain(`href="/${locale}/doctors">${t("publicProfile.backToDirectory")}</a>`);
     const data = jsonLd(html);
     expect(data).toMatchObject({ "@type": "Physician", name: "Synthetic Doctor", url: `http://localhost:3000/${locale}/doctors/dr-synthetic` });

@@ -3,7 +3,8 @@ import axe from "axe-core";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-vi.mock("@/components/site-header", () => ({ SiteHeader: () => <header /> }));
+// The header owns the language links; the page only supplies the path they keep.
+vi.mock("@/components/site-header", () => ({ SiteHeader: ({ path }: { path: string }) => <header data-language-path={path} /> }));
 // Spoofed request authority must never influence canonical output.
 vi.mock("next/headers", () => ({
   headers: async () => new Headers({ host: "evil.test", "x-forwarded-host": "evil.test", "x-forwarded-proto": "http" }),
@@ -77,7 +78,7 @@ for (const locale of localeCodes) {
     expect(image.getAttribute("loading")).toBe("lazy");
     expect(image.getAttribute("width")).toBe("64");
     expect(page.querySelector("nav[aria-label] a[rel]")).toBeNull();
-    expect(page.querySelector(`a[href="/${locale === "mk" ? "en" : "mk"}/doctors"]`)).not.toBeNull();
+    expect(page.querySelector("header")?.getAttribute("data-language-path")).toBe(`/${locale}/doctors`);
 
     const url = `http://localhost:3000/${locale}/doctors`;
     const title = t("directory.title");

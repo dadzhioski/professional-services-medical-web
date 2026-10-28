@@ -38,9 +38,11 @@ for (const locale of localeCodes) {
       const response = await page.goto(`http://127.0.0.1:4310/${locale}`);
       expect(response?.status()).toBe(200);
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
-      await expect(page).toHaveTitle(translator(locale)("app.title"));
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText(translator(locale)("home.heading"));
-      for (const target of localeCodes) await expect(page.locator(`a[hreflang="${target}"]`)).toHaveAttribute("href", `/${target}`);
+      await expect(page).toHaveURL(`http://127.0.0.1:4310/${locale}/doctors`);
+      await expect(page).toHaveTitle(translator(locale)("directory.title"));
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(translator(locale)("directory.heading"));
+      const languages = page.getByRole("banner").getByRole("navigation", { name: translator(locale)("navigation.language") });
+      for (const target of localeCodes) await expect(languages.locator(`a[hreflang="${target}"]`)).toHaveAttribute("href", `/${target}/doctors`);
     } finally { await context.close(); }
   });
   for (const variant of variants) {
@@ -83,7 +85,13 @@ test("default redirects, unavailable features, unsupported locales and no shippe
   for (const path of ["/", "/provider", "/provider/onboarding", "/provider/profile", "/provider/services", "/provider/locations", "/provider/credentials", "/provider/publication", "/admin", "/admin/doctors", "/admin/credentials", "/doctors/stable-slug"]) {
     const response = await request.get(path + "?token=private", { maxRedirects: 0 });
     expect(response.status()).toBe(307);
-    expect(response.headers().location).toBe("/mk" + (path === "/" ? "" : path));
+    expect(response.headers().location).toBe("/mk" + (path === "/" ? "/doctors" : path));
+  }
+  // The site starts at the directory with a real redirect, never a 200 meta-refresh page.
+  for (const locale of localeCodes) {
+    const response = await request.get(`/${locale}?token=private`, { maxRedirects: 0 });
+    expect(response.status()).toBe(307);
+    expect(response.headers().location).toBe(`/${locale}/doctors`);
   }
   for (const path of ["/fr", "/fr/doctors/example", "/en/doctors/synthetic-example", "/mk/admin/audit", "/presentation-fixture"]) {
     const response = await request.get(path);

@@ -60,10 +60,12 @@ tests isolated routing/outages/restarts/accessibility, and scans its OS/Go inven
 Both verified images are saved together and published by a package matrix under
 the existing publishing guard. Neither job deploys the images.
 
-The edge image rebuilds Caddy 2.11.7 with Go 1.26.10 and `golang.org/x/net@v0.60.0`
+The edge image rebuilds Caddy 2.11.7 with Go 1.26.10, `golang.org/x/net@v0.60.0` and
+`github.com/go-jose/go-jose/v4@v4.1.6` (CVE-2026-116587)
 because the upstream binary contains four high findings (CVE-2026-78667,
 CVE-2026-78669 and CVE-2026-97031). Compiler and runtime base images are pinned
-by digest in `deployment/Dockerfile.caddy`; no security exception is added.
+by digest in `deployment/Dockerfile.caddy`. The only scan exception is the
+temporary go-jose v3 approval described under security gates.
 Run `make edge-image` before validation and `make edge-container-scan` to check
 the rebuilt artifact. This additional package needs the same reviewed GHCR
 publication permissions as the web package. Builds use the public Go module
@@ -169,8 +171,28 @@ It rejects changed paths/versions, production use, extra advisories in the chain
 critical severity, malformed reports, audit errors, and expired approval. Each
 accepted package, advisory URL, and deadline remain visible in CI output.
 Unrelated high/critical findings always fail. Runtime-image scanning has no
-exception and remains unchanged.
+exception and remains unchanged. The edge-image scan has the separate exception below.
 
 Before expiry, check upstream for a compatible fix, update the dependencies and
 remove this policy when the advisory disappears. Any extension requires renewed
 owner approval; there is no automatic renewal or environment-variable bypass.
+
+### Approved temporary edge-image exception
+
+The repository owner approved this exception in chat on 2026-10-28, answering
+"Bump v4, add exception" to the proposal for CVE-2026-116587 (go-jose denial of
+service when parsing JWKs that contain RSA keys). Approval expires
+**2026-11-11 at 00:00 UTC**. It covers only `github.com/go-jose/go-jose/v3`
+v3.0.5 compiled into `usr/bin/caddy`. Caddy 2.11.7 is the latest release and
+requires go-jose v3, and there is no patched v3 release. The v4 finding from the
+same CVE is fixed by rebuilding with v4.1.6. This is temporary risk acceptance,
+not remediation.
+
+The machine-readable policy is `scripts/edge-container-exception.json`, and
+`make edge-container-scan` applies it. A finding is accepted only if it has
+the same CVE, Go binary target, module and installed version, is HIGH (never
+CRITICAL), and has no fixed version. Once a fix is published, the gate fails
+again. Accepted findings and the deadline are printed in CI output. Every
+other high/critical or secret finding fails, and the web-image scan has no
+exception. Before expiry, check go-jose and Caddy for a fix, rebuild with it,
+and remove the policy. Any extension requires renewed owner approval.

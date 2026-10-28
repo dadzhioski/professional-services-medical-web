@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { SiteHeader } from "@/components/site-header";
-import { LanguageLinks } from "@/components/site-shell";
 import { Heading, Notice } from "@/components/ui/presentation";
 import { DirectoryFilters } from "@/features/public-directory/filters";
 import { directoryHref, parseDirectoryQuery, type SearchParams } from "@/features/public-directory/query";
@@ -61,9 +60,8 @@ function Body({ locale, query, result }: Pick<Awaited<ReturnType<typeof load>>, 
 export default async function DirectoryPage({ params, searchParams }: Props) {
   const { locale, query, result, specialties, cities, countries } = await load((await params).locale, await searchParams);
   const t = translator(locale);
-  return <><SiteHeader locale={locale} current="directory" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
-    {/* Language links drop query parameters, so switching language resets the filters. */}
-    <LanguageLinks locale={locale} path={directoryHref(locale)} />
+  // Language links drop query parameters, so switching language resets the filters.
+  return <><SiteHeader locale={locale} path={directoryHref(locale)} current="directory" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     <Heading>{t("directory.heading")}</Heading>
     <p className="leading-relaxed text-slate-700">{t("directory.intro")}</p>
     {specialties.state === "ready" && cities.state === "ready"
