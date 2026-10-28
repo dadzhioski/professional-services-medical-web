@@ -35,19 +35,22 @@ test.beforeEach(async ({ request, context }) => {
 test.afterEach(async ({ request }) => { await mode(request, "reset"); });
 
 for (const locale of ["mk", "en"] as const) {
-  test(`${locale}: signed-out visitor reaches sign-in from the header and the entry page without JavaScript`, async ({ browser }) => {
+  test(`${locale}: signed-out visitor starts at the directory and reaches sign-in from the header without JavaScript`, async ({ browser }) => {
     const t = translator(locale);
     await withoutJavaScript(browser, async page => {
       await page.goto(`${origin}/${locale}`);
+      await expect(page).toHaveURL(`${origin}/${locale}/doctors`);
       const header = page.getByRole("banner");
       await expect(header.getByRole("link", { name: t("app.title") })).toHaveAttribute("aria-current", "page");
       await expect(header.getByRole("navigation", { name: t("navigation.primary") })).toBeVisible();
+      await expect(header.getByRole("navigation", { name: t("navigation.language") })).toBeVisible();
+      await expect(header.getByRole("link", { name: t("directory.heading"), exact: true })).toHaveCount(0);
       await expect(header.getByRole("button")).toHaveCount(0);
       await header.getByRole("link", { name: t("navigation.doctors") }).click();
       await expect(page).toHaveURL(`${origin}/${locale}/provider/onboarding`);
       await expect(page.getByRole("main").getByRole("link", { name: t("account.login") })).toBeVisible();
-      await page.goto(`${origin}/${locale}`);
-      await page.getByRole("main").getByRole("link", { name: t("home.doctorsAction") }).click();
+      await page.goto(`${origin}/${locale}/doctors`);
+      await page.getByRole("banner").getByRole("link", { name: t("account.signIn"), exact: true }).click();
       await expect(page).toHaveURL(`${origin}/${locale}/provider/onboarding`);
       await expect(page.getByRole("main").getByRole("link", { name: t("account.login") })).toBeVisible();
     });
@@ -57,7 +60,7 @@ for (const locale of ["mk", "en"] as const) {
 test("signed-in header on every localized page, and header sign-out without JavaScript", async ({ browser }) => {
   await withoutJavaScript(browser, async (page, context) => {
     await signIn(page, "en");
-    for (const [path, locale] of [["/mk", "mk"], ["/en", "en"], ["/en/provider/onboarding", "en"], ["/en/provider", "en"]] as const) {
+    for (const [path, locale] of [["/mk", "mk"], ["/en/doctors", "en"], ["/en/provider/onboarding", "en"], ["/en/provider", "en"]] as const) {
       const t = translator(locale);
       const response = await page.goto(`${origin}${path}`);
       expect(response!.headers()["cache-control"]).toContain("no-store");
@@ -65,6 +68,7 @@ test("signed-in header on every localized page, and header sign-out without Java
       const header = page.getByRole("banner");
       await expect(header.getByRole("link", { name: t("navigation.workspace") })).toHaveAttribute("href", `/${locale}/provider`);
       await expect(header.getByRole("button", { name: t("account.logout") })).toBeVisible();
+      await expect(header.getByRole("link", { name: t("account.signIn"), exact: true })).toHaveCount(0);
     }
     const t = translator("en");
     await page.goto(`${origin}/en`);
@@ -73,6 +77,7 @@ test("signed-in header on every localized page, and header sign-out without Java
     expect((await context.cookies()).filter(cookie => cookie.name === "platform-session-local")).toEqual([]);
     await page.goto(`${origin}/en`);
     await expect(page.getByRole("banner").getByRole("link", { name: t("navigation.doctors") })).toBeVisible();
+    await expect(page.getByRole("banner").getByRole("link", { name: t("account.signIn"), exact: true })).toBeVisible();
     await expect(page.getByRole("banner").getByRole("button")).toHaveCount(0);
   });
 });
@@ -85,14 +90,14 @@ test("identity failures render the signed-out header with the page intact", asyn
     const response = await page.goto("/en");
     expect(response!.status()).toBe(200);
     expect(await response!.text()).not.toContain("synthetic-private-error");
-    await expect(page.getByRole("heading", { level: 1, name: t("home.heading") })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: t("directory.heading") })).toBeVisible();
     await expect(page.getByRole("banner").getByRole("link", { name: t("navigation.doctors") })).toBeVisible();
     await expect(page.getByRole("banner").getByRole("button")).toHaveCount(0);
   }
 });
 
 for (const locale of ["mk", "en"] as const) {
-  test(`${locale}: entry page keyboard, 320 px and axe checks`, async ({ page }) => {
+  test(`${locale}: directory entry keyboard, 320 px and axe checks`, async ({ page }) => {
     const t = translator(locale);
     await page.setViewportSize({ width: 320, height: 640 });
     await page.goto(`/${locale}`);

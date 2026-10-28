@@ -1,10 +1,9 @@
-import { notFound } from "next/navigation";
-import Home from "@/components/home";
-import { SiteHeader } from "@/components/site-header";
+import { notFound, redirect } from "next/navigation";
 import { isLocale } from "@/lib/i18n";
 
-export default async function LocalizedHome({ params }: { params: Promise<{ locale: string }> }) {
+// The site starts at the public directory; /[locale] serves no content of its own, so the directory keeps one canonical URL.
+export default async function LocalizedEntry({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  return <><SiteHeader locale={locale} current="home" /><Home locale={locale} /></>;
+  redirect(`/${locale}/doctors`);
 }

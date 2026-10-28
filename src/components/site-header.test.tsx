@@ -8,13 +8,13 @@ const bind = vi.hoisted(() => vi.fn(() => "synthetic-bound-logout"));
 vi.mock("@/features/provider-account/actions", () => ({ logout: { bind } }));
 vi.mock("@/lib/api/identity", () => ({ currentAccount: vi.fn() }));
 import { currentAccount, type IdentityState } from "@/lib/api/identity";
-import { localeCodes, translator, type Locale } from "@/lib/i18n";
+import { localeCodes, locales, translator, type Locale } from "@/lib/i18n";
 import { SiteHeader } from "./site-header";
 
 const authenticated = { state: "authenticated", account: {
   accountId: "synthetic-private-id", emailVerified: true, sessionExpiresAt: new Date("2099-01-01") } } as const;
-const render = async (locale: Locale = "en", current?: "home" | "directory" | "workspace") =>
-  renderToStaticMarkup(await SiteHeader({ locale, current }));
+const render = async (locale: Locale = "en", current?: "directory" | "workspace", path = `/${locale}/doctors/stable-slug?token=private`) =>
+  renderToStaticMarkup(await SiteHeader({ locale, path, current }));
 const documentOf = (html: string) => new DOMParser().parseFromString(html, "text/html");
 
 beforeEach(() => {
@@ -23,15 +23,20 @@ beforeEach(() => {
 });
 
 for (const locale of localeCodes) {
-  test(`${locale} signed-out header links to the directory, then the localized sign-in page`, async () => {
+  test(`${locale} signed-out header: languages, then the directory, the doctor entry and sign-in`, async () => {
     const t = translator(locale);
     vi.mocked(currentAccount).mockResolvedValue({ state: "signedOut" });
     const page = documentOf(await render(locale));
     const header = page.querySelector("header")!;
     const links = [...header.querySelectorAll("a")].map(link => [link.getAttribute("href"), link.textContent]);
-    expect(links).toEqual([[`/${locale}`, t("app.title")], [`/${locale}/doctors`, t("navigation.directory")],
-      [`/${locale}/provider`, t("navigation.doctors")]]);
-    expect(header.querySelector("nav")?.getAttribute("aria-label")).toBe(t("navigation.primary"));
+    expect(links).toEqual([
+      ...localeCodes.map(code => [`/${code}/doctors/stable-slug`, locales[code].name]),
+      [`/${locale}/doctors`, t("app.title")], [`/${locale}/provider`, t("navigation.doctors")],
+      [`/${locale}/provider`, t("account.signIn")]]);
+    expect([...header.querySelectorAll("nav")].map(nav => nav.getAttribute("aria-label")))
+      .toEqual([t("navigation.language"), t("navigation.primary")]);
+    expect(header.querySelector(`nav a[hreflang="${locale}"]`)?.getAttribute("aria-current")).toBe("page");
+    expect(header.innerHTML).not.toContain("token=private");
     expect(header.querySelector("form")).toBeNull();
     expect(header.innerHTML).not.toContain("/api/");
   });
@@ -50,7 +55,8 @@ test("signed-in header shows the workspace and a sign-out form without account d
   const html = await render("en", "workspace");
   const header = documentOf(html).querySelector("header")!;
   expect(currentAccount).toHaveBeenCalledWith("synthetic-session");
-  expect(header.querySelector('nav a[href="/en/doctors"]')?.textContent).toBe(t("navigation.directory"));
+  expect(header.querySelector('a[href="/en/doctors"]')?.textContent).toBe(t("app.title"));
+  expect(header.textContent).not.toContain(t("account.signIn"));
   const workspace = header.querySelector('nav a[href="/en/provider"]')!;
   expect(workspace.textContent).toBe(t("navigation.workspace"));
   expect(workspace.getAttribute("aria-current")).toBe("page");
@@ -73,12 +79,19 @@ test("an identity exception renders the signed-out entry without raw errors", as
   expect(html).not.toMatch(/synthetic-private-error|localhost:8080|<form/);
 });
 
+test("without a path the header has no language links", async () => {
+  vi.mocked(currentAccount).mockResolvedValue({ state: "signedOut" });
+  const header = documentOf(renderToStaticMarkup(await SiteHeader({ locale: "en" }))).querySelector("header")!;
+  expect(header.querySelector("a[hreflang]")).toBeNull();
+  expect(header.querySelectorAll("nav")).toHaveLength(1);
+});
+
 test("current page is marked only on the matching link", async () => {
   vi.mocked(currentAccount).mockResolvedValue({ state: "signedOut" });
-  const home = documentOf(await render("en", "home"));
-  expect(home.querySelector('a[aria-current="page"]')?.getAttribute("href")).toBe("/en");
-  const directory = documentOf(await render("en", "directory"));
-  expect([...directory.querySelectorAll("[aria-current]")].map(link => link.getAttribute("href"))).toEqual(["/en/doctors"]);
-  const other = documentOf(await render("en"));
-  expect(other.querySelector("[aria-current]")).toBeNull();
+  // The active language link is always marked; only the page links are compared here.
+  const marked = async (current?: "directory" | "workspace") => [...documentOf(await render("en", current, "/en/doctors"))
+    .querySelectorAll("[aria-current]:not([hreflang])")].map(link => link.getAttribute("href"));
+  expect(await marked("directory")).toEqual(["/en/doctors"]);
+  expect(await marked("workspace")).toEqual(["/en/provider"]);
+  expect(await marked()).toEqual([]);
 });

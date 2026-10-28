@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
-import { LanguageLinks } from "@/components/site-shell";
 import { Heading, Notice } from "@/components/ui/presentation";
 import { OwnerImage } from "@/features/media/owner-image";
 import { ProfilePresentation } from "@/features/professional-profile/presentation";
@@ -49,8 +48,7 @@ export default async function PublicProfilePage({ params }: Props) {
   if (result.state === "missing") notFound();
   const path = `/${locale}${profilePath(slug)}`;
   if (result.state !== "ready") {
-    return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
-      <LanguageLinks locale={locale} path={path} />
+    return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
       <BackLink locale={locale} />
       <Heading>{t("publicProfile.unavailableTitle")}</Heading>
       <Notice role="alert">{t("publicProfile.unavailable")}</Notice>
@@ -61,8 +59,7 @@ export default async function PublicProfilePage({ params }: Props) {
   const photoPath = publicMediaContentPath(profile.photoMediaId);
   const structured = physicianJsonLd({ name: profile.displayName!, url: canonicalUrl(locale, profilePath(profile.slug!)),
     description: content.description, ...content.structured });
-  return <><SiteHeader locale={locale} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
-    <LanguageLinks locale={locale} path={path} />
+  return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     <BackLink locale={locale} />
     <ProfilePresentation locale={locale} name={profile.displayName!} introduction={profile.biography ?? undefined}
       photo={photoPath && <OwnerImage path={photoPath} alt="" />} specialties={content.specialties}
