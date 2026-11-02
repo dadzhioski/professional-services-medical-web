@@ -108,9 +108,9 @@ test("each saved step updates the checklist on the next request without JavaScri
     await expectCurrent(page, "onboarding.step.service");
 
     await nextStep(page).getByRole("link", { name: new RegExp(`^${t("onboarding.action.open")}`) }).click();
-    const service = page.getByRole("region", { name: t("providerServices.add") });
+    const service = page.getByRole("group", { name: `${t("providerServices.entry")} 1`, exact: true });
     await service.getByLabel(t("providerServices.name")).fill("Checklist consultation");
-    await service.getByRole("button", { name: t("providerServices.create") }).click();
+    await page.getByRole("button", { name: t("providerServices.save") }).click();
     await expect(page.getByText(t("records.saved"))).toBeVisible();
     await backToChecklist(page);
     await expectCurrent(page, "onboarding.step.location");

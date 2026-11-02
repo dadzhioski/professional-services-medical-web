@@ -25,9 +25,8 @@ export function publicContent(profile: PublicProfileResponse, locale: Locale) {
     credentials: credentials.map(({ name, category, issuer, credential }) => lines(`${category}: ${name}`, issuer,
       credential.issuedOn && `${t("credentials.issued")}: ${formatDate(locale, credential.issuedOn)}`,
       credential.expiresOn ? `${t("credentials.expires")}: ${formatDate(locale, credential.expiresOn)}` : t("credentials.noExpiry"))),
-    services: (profile.services ?? []).map(service => lines(
-      service.price ? `${service.name} — ${formatPrice(locale, service.price.amount!, service.price.currency!)}` : service.name,
-      service.description)),
+    services: (profile.services ?? []).map(service => ({ name: service.name!, description: service.description?.trim() || undefined,
+      price: service.price ? formatPrice(locale, service.price.amount!, service.price.currency!) : undefined })),
     locations: locations.map(location => lines(location.label, location.street, location.locality)),
     structured: { addresses: locations.map(({ street, locality, country }) => ({ street, locality, country })),
       credentials: credentials.map(({ name, category, issuer }) => ({ name, category, issuer })) } satisfies
