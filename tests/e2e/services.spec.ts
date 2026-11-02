@@ -39,24 +39,29 @@ async function addLocation(page: Page, locale: Locale = "en", label = "Synthetic
   await form.getByRole("button", { name: tr("providerLocations.create") }).click();
   await expect(page.getByText(tr("records.saved"))).toBeVisible();
 }
-async function addService(page: Page, name: string, price?: string, locale: Locale = "en") {
+// Each price-list row is a fieldset named by its position.
+const entry = (page: Page, number: number, locale: Locale = "en") =>
+  page.getByRole("group", { name: `${translator(locale)("providerServices.entry")} ${number}`, exact: true });
+async function fillEntry(page: Page, number: number, name: string, amount = "", currency?: string, locale: Locale = "en") {
   const tr = translator(locale);
-  await page.goto(`${origin}/${locale}/provider/services`);
-  const form = page.getByRole("region", { name: tr("providerServices.add") });
-  await form.getByLabel(tr("providerServices.name")).fill(name);
-  if (price !== undefined) {
-    await form.getByLabel(tr("providerServices.priceSet"), { exact: true }).check();
-    await form.getByLabel(tr("providerServices.amount")).fill(price);
-    await form.getByLabel(tr("providerServices.currency")).selectOption("MKD");
-  }
-  await form.getByRole("button", { name: tr("providerServices.create") }).click();
-  await expect(page.getByText(tr("records.saved"))).toBeVisible();
+  const row = entry(page, number, locale);
+  await row.getByLabel(tr("providerServices.name")).fill(name);
+  await row.getByLabel(tr("providerServices.amount")).fill(amount);
+  if (currency) await row.getByLabel(tr("providerServices.currency")).selectOption(currency);
+}
+async function saveList(page: Page, locale: Locale = "en") {
+  await page.getByRole("button", { name: translator(locale)("providerServices.save") }).click();
+}
+async function addService(page: Page, name: string, price?: string) {
+  await page.goto(`${origin}/en/provider/services`);
+  await fillEntry(page, 1, name, price ?? "");
+  await saveList(page);
+  await expect(page.getByText(t("records.saved"))).toBeVisible();
 }
 const mode = (request: APIRequestContext, value: string) => request.post(`${fixture}/control/identity/${value}`);
-const item = (page: Page, name: string) => page.getByRole("listitem").filter({ has: page.getByRole("heading", { name, exact: true }) });
 const summaryOf = (page: Page) => page.getByRole("region", { name: t("records.problem") });
-// Hidden inputs carry the server action reference; everything else is supplied by the test.
-const actionFields = (page: Page, region: string) => page.getByRole("region", { name: region }).locator("form input[type=hidden]")
+// Hidden inputs carry the server action reference and row identity; everything else is supplied by the test.
+const actionFields = (page: Page) => page.locator("main form input[type=hidden]")
   .evaluateAll(inputs => Object.fromEntries(inputs.map(input => [(input as HTMLInputElement).name, (input as HTMLInputElement).value])));
 
 test.beforeEach(async ({ request, context }) => {
@@ -66,7 +71,7 @@ test.beforeEach(async ({ request, context }) => {
 test.afterEach(async ({ request }) => { await mode(request, "reset"); });
 
 for (const locale of localeCodes) {
-  test(`${locale}: add, edit and remove a service with a location and a free price without JavaScript`, async ({ browser }) => {
+  test(`${locale}: enter, edit and remove several price-list entries with one save each, without JavaScript`, async ({ browser }) => {
     const context = await browser.newContext({ javaScriptEnabled: false });
     await navigation(context);
     const page = await context.newPage();
@@ -75,123 +80,152 @@ for (const locale of localeCodes) {
       await openWorkspace(page, locale);
       await addLocation(page, locale);
       await page.goto(`${origin}/${locale}/provider/services`);
-      await expect(page.getByText(tr("providerServices.empty"))).toBeVisible();
-      const form = page.getByRole("region", { name: tr("providerServices.add") });
-      await form.getByLabel(tr("providerServices.name")).fill("Synthetic consultation");
-      await form.getByLabel(tr("providerServices.priceSet"), { exact: true }).check();
-      await form.getByLabel(tr("providerServices.amount")).fill("0");
-      await form.getByLabel(tr("providerServices.currency")).selectOption("MKD");
-      await form.getByLabel("Synthetic Clinic, 1 Synthetic Street").check();
-      await form.getByRole("button", { name: tr("providerServices.create") }).click();
+      // The empty list suggests the examination price first.
+      await expect(entry(page, 1, locale).getByLabel(tr("providerServices.name"))).toHaveValue(tr("providerServices.suggestedFirst"));
+      await fillEntry(page, 1, tr("providerServices.suggestedFirst"), "1500", undefined, locale);
+      await fillEntry(page, 2, "Synthetic ultrasound", "120,50", "EUR", locale);
+      await fillEntry(page, 3, "Synthetic free check", "0", undefined, locale);
+      await saveList(page, locale);
       await expect(page.getByText(tr("records.saved"))).toBeVisible();
-      const listed = item(page, "Synthetic consultation");
-      await expect(listed).toContainText(/0[.,]00/);
-      await expect(listed).toContainText("Synthetic Clinic, 1 Synthetic Street");
-      // Editing to "no price" removes the price instead of storing zero.
-      await listed.getByRole("link", { name: new RegExp(tr("records.edit")) }).click();
-      const editor = page.getByRole("region", { name: tr("providerServices.editHeading") });
-      await expect(editor.getByLabel(tr("providerServices.amount"))).toHaveValue("0.00");
-      await editor.getByLabel(tr("providerServices.priceNone"), { exact: true }).check();
-      await editor.getByRole("button", { name: tr("providerServices.save") }).click();
-      await expect(item(page, "Synthetic consultation")).toContainText(tr("providerServices.priceNotPublished"));
+      await expect(entry(page, 1, locale).getByLabel(tr("providerServices.amount"))).toHaveValue("1500.00");
+      await expect(entry(page, 2, locale).getByLabel(tr("providerServices.amount"))).toHaveValue("120.50");
+      await expect(entry(page, 2, locale).getByLabel(tr("providerServices.currency"))).toHaveValue("EUR");
+      await expect(entry(page, 3, locale).getByLabel(tr("providerServices.amount"))).toHaveValue("0.00");
+
+      // One save changes a price, clears another and removes an entry.
+      await entry(page, 1, locale).getByLabel(tr("providerServices.amount")).fill("1600");
+      await entry(page, 3, locale).getByLabel(tr("providerServices.amount")).fill("");
+      await entry(page, 2, locale).getByLabel(tr("providerServices.remove")).check();
+      await saveList(page, locale);
+      await expect(page.getByText(tr("records.saved"))).toBeVisible();
+      await expect(entry(page, 1, locale).getByLabel(tr("providerServices.amount"))).toHaveValue("1600.00");
+      await expect(entry(page, 2, locale).getByLabel(tr("providerServices.name"))).toHaveValue("Synthetic free check");
+      await expect(entry(page, 2, locale).getByLabel(tr("providerServices.amount"))).toHaveValue("");
+      await expect(entry(page, 3, locale).getByLabel(tr("providerServices.name"))).toHaveValue("");
+
+      // More rows without losing unsaved input.
+      await fillEntry(page, 3, "Unsaved", "10", undefined, locale);
+      await page.getByRole("button", { name: tr("providerServices.more") }).click();
+      await expect(entry(page, 3, locale).getByLabel(tr("providerServices.name"))).toHaveValue("Unsaved");
+      await expect(entry(page, 13, locale)).toBeVisible();
+
       const response = await page.goto(`${origin}/${locale}/provider/services`);
       expect(response!.headers()["cache-control"]).toContain("no-store");
       expect(await response!.text()).not.toMatch(privateValues);
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-      await item(page, "Synthetic consultation").getByRole("link", { name: new RegExp(tr("records.remove")) }).click();
-      const confirm = page.getByRole("region", { name: tr("providerServices.removeHeading") });
-      await confirm.getByRole("link", { name: tr("records.cancel") }).click();
-      await expect(item(page, "Synthetic consultation")).toBeVisible();
-      await item(page, "Synthetic consultation").getByRole("link", { name: new RegExp(tr("records.remove")) }).click();
-      await page.getByRole("button", { name: tr("records.removeConfirm") }).click();
-      await expect(page.getByText(tr("records.removed"))).toBeVisible();
-      await expect(page.getByText(tr("providerServices.empty"))).toBeVisible();
+      await expect(entry(page, 3, locale).getByLabel(tr("providerServices.name"))).toHaveValue("");
     } finally { await context.close(); }
   });
 }
 
+test("pasted lines become reviewable rows and are saved only with the list", async ({ page }) => {
+  await openWorkspace(page);
+  await page.goto("/en/provider/services");
+  await fillEntry(page, 1, "First examination", "1200");
+  await page.getByLabel(t("providerServices.pasteLabel")).fill("1. Abdominal ultrasound – 1.500 den\n• ECG: 25,50 EUR\n\nHolter 24 hours");
+  await page.getByRole("button", { name: t("providerServices.pasteAdd") }).click();
+  await expect(page.getByRole("status").filter({ hasText: t("providerServices.imported") })).toBeVisible();
+  await expect(entry(page, 1).getByLabel(t("providerServices.amount"))).toHaveValue("1200");
+  await expect(entry(page, 2).getByLabel(t("providerServices.name"))).toHaveValue("Abdominal ultrasound");
+  await expect(entry(page, 2).getByLabel(t("providerServices.amount"))).toHaveValue("1500");
+  await expect(entry(page, 3).getByLabel(t("providerServices.currency"))).toHaveValue("EUR");
+  await expect(entry(page, 4).getByLabel(t("providerServices.name"))).toHaveValue("Holter 24 hours");
+  await expect(entry(page, 4).getByLabel(t("providerServices.amount"))).toHaveValue("");
+  await expect(page.getByLabel(t("providerServices.pasteLabel"))).toHaveValue("");
+  // Nothing was saved yet.
+  await page.reload();
+  await expect(entry(page, 2).getByLabel(t("providerServices.name"))).toHaveValue("");
+  await page.getByLabel(t("providerServices.pasteLabel")).fill("A 10\nB 20");
+  await page.getByRole("button", { name: t("providerServices.pasteAdd") }).click();
+  // The untouched suggestion is not carried into the imported list.
+  await expect(entry(page, 1).getByLabel(t("providerServices.name"))).toHaveValue("A");
+  await expect(entry(page, 2).getByLabel(t("providerServices.name"))).toHaveValue("B");
+  await saveList(page);
+  await expect(page.getByText(t("records.saved"))).toBeVisible();
+  await expect(entry(page, 1).getByLabel(t("providerServices.name"))).toHaveValue("A");
+  await expect(entry(page, 2).getByLabel(t("providerServices.name"))).toHaveValue("B");
+  await page.getByLabel(t("providerServices.pasteLabel")).fill(" \n ");
+  await page.getByRole("button", { name: t("providerServices.pasteAdd") }).click();
+  await expect(page.getByRole("status").filter({ hasText: t("providerServices.importedNone") })).toBeVisible();
+});
+
 test("invalid amounts are kept and keyboard users reach the field from the summary", async ({ page, request }) => {
   await openWorkspace(page);
   await page.goto("/en/provider/services");
-  const form = page.getByRole("region", { name: t("providerServices.add") });
-  await form.getByLabel(t("providerServices.name")).fill("Synthetic consultation");
-  await form.getByLabel(t("providerServices.priceSet"), { exact: true }).check();
-  await form.getByLabel(t("providerServices.amount")).fill("12.345");
-  await form.getByLabel(t("providerServices.currency")).selectOption("EUR");
-  await form.getByLabel(t("providerServices.amount")).press("Enter");
+  await fillEntry(page, 1, "Synthetic consultation", "12.345", "EUR");
+  await entry(page, 1).getByLabel(t("providerServices.amount")).press("Enter");
   await expect(summaryOf(page)).toBeFocused();
   await expect(summaryOf(page)).toContainText(t("records.invalid"));
   await page.keyboard.press("Tab");
   await page.keyboard.press("Enter");
-  await expect(form.getByLabel(t("providerServices.amount"))).toBeFocused();
-  await expect(form.getByLabel(t("providerServices.amount"))).toHaveAttribute("aria-invalid", "true");
-  await expect(form.getByLabel(t("providerServices.name"))).toHaveValue("Synthetic consultation");
-  // Selects and radios keep the submitted choice after a failed submission, not their first-render default.
-  await expect(form.getByLabel(t("providerServices.currency"))).toHaveValue("EUR");
-  await expect(form.getByLabel(t("providerServices.priceSet"), { exact: true })).toBeChecked();
+  const amount = entry(page, 1).getByLabel(t("providerServices.amount"));
+  await expect(amount).toBeFocused();
+  await expect(amount).toHaveAttribute("aria-invalid", "true");
+  await expect(entry(page, 1).getByLabel(t("providerServices.name"))).toHaveValue("Synthetic consultation");
+  // Selects keep the submitted choice after a failed submission, not their first-render default.
+  await expect(entry(page, 1).getByLabel(t("providerServices.currency"))).toHaveValue("EUR");
   await mode(request, "catalog-reject");
-  await form.getByLabel(t("providerServices.amount")).fill("12.34");
-  await form.getByRole("button", { name: t("providerServices.create") }).click();
-  await expect(summaryOf(page)).toContainText(t("records.rejected"));
-  await expect(form.getByLabel(t("providerServices.amount"))).toHaveValue("12.34");
-  await expect(form.getByLabel(t("providerServices.currency"))).toHaveValue("EUR");
+  await amount.fill("12.34");
+  await saveList(page);
+  await expect(summaryOf(page)).toContainText(t("providerServices.partial"));
+  await expect(entry(page, 1)).toContainText(t("providerServices.rowRejected"));
+  await expect(amount).toHaveValue("12.34");
   await expect(page.getByText(t("records.saved"))).toHaveCount(0);
   expect(await page.content()).not.toMatch(/synthetic-private-error/);
 });
 
-test("a stale service edit is reviewed and never silently overwritten", async ({ page, request }) => {
+test("an entry changed elsewhere is shown and replaced only by saving again", async ({ page, request }) => {
   await openWorkspace(page);
-  await addService(page, "Synthetic consultation");
-  await item(page, "Synthetic consultation").getByRole("link", { name: new RegExp(t("records.edit")) }).click();
-  const editor = page.getByRole("region", { name: t("providerServices.editHeading") });
+  await addService(page, "Synthetic consultation", "100");
   await request.post(`${fixture}/control/catalog/bump`);
-  await editor.getByLabel(t("providerServices.name")).fill("Mine");
-  await editor.getByRole("button", { name: t("providerServices.save") }).click();
-  await expect(summaryOf(page)).toContainText(t("records.conflict"));
-  await expect(page.getByRole("region", { name: t("records.latestHeading") })).toContainText("Edited elsewhere");
-  await expect(editor.getByLabel(t("providerServices.name"))).toHaveValue("Mine");
-  await page.getByRole("button", { name: t("records.overwrite") }).click();
+  await entry(page, 1).getByLabel(t("providerServices.name")).fill("Mine");
+  await saveList(page);
+  await expect(summaryOf(page)).toContainText(t("providerServices.partial"));
+  await expect(entry(page, 1)).toContainText(t("providerServices.rowConflict"));
+  await expect(entry(page, 1)).toContainText("Edited elsewhere");
+  await expect(entry(page, 1).getByLabel(t("providerServices.name"))).toHaveValue("Mine");
+  await saveList(page);
   await expect(page.getByText(t("records.saved"))).toBeVisible();
-  await expect(item(page, "Mine")).toBeVisible();
+  await expect(entry(page, 1).getByLabel(t("providerServices.name"))).toHaveValue("Mine");
 });
 
-test("a location owned by another organization cannot be linked", async ({ browser, request }) => {
+test("forged identifiers are never sent and cross-site submissions are refused", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   await navigation(context);
   try {
     const page = await context.newPage();
     await openWorkspace(page);
     await page.goto("/en/provider/services");
-    const { locationId } = await (await request.post(`${fixture}/control/catalog/foreign`)).json() as { locationId: string };
-    const fields = await actionFields(page, t("providerServices.add"));
+    const fields = await actionFields(page);
+    // An identifier the list does not contain is reported as removed elsewhere, not updated.
     const response = await context.request.post(`${origin}/en/provider/services`, { headers: { Origin: origin },
-      multipart: { ...fields, name: "Forged link", priceMode: "none", locationIds: locationId } });
+      multipart: { ...fields, rows: "1", "serviceId-0": "6d0f1f4e-2b4c-4a51-9a51-1c2d3e4f5a6b", "version-0": "0", "name-0": "Forged",
+        "amount-0": "", "currency-0": "MKD" } });
     const html = await response.text();
-    expect(html).toContain(t("records.rejected"));
+    expect(html).toContain(t("providerServices.rowRemovedElsewhere"));
     expect(html).not.toContain(t("records.saved"));
-    expect(html).not.toMatch(/Foreign clinic|Foreign street/);
     await page.reload();
-    await expect(page.getByText(t("providerServices.empty"))).toBeVisible();
+    await expect(entry(page, 1).getByLabel(t("providerServices.name"))).toHaveValue(t("providerServices.suggestedFirst"));
     // The same submission without the site Origin is refused before reaching the API.
-    const crossSite = await context.request.post(`${origin}/en/provider/services`, { multipart: { ...fields, name: "Cross-site", priceMode: "none" } });
+    const crossSite = await context.request.post(`${origin}/en/provider/services`,
+      { multipart: { ...fields, rows: "1", "name-0": "Cross-site", "amount-0": "", "currency-0": "MKD" } });
     expect(await crossSite.text()).toContain(`${t("account.forbidden")} ${t("records.keptInput")}`);
   } finally { await context.close(); }
 });
 
-test("a failed deletion is reported and the service stays listed", async ({ page, request }) => {
+test("a failed deletion is reported and the entry stays listed", async ({ page, request }) => {
   await openWorkspace(page);
   await addService(page, "Synthetic consultation", "120.50");
-  await expect(item(page, "Synthetic consultation")).toContainText(/120[.,]50/);
-  await item(page, "Synthetic consultation").getByRole("link", { name: new RegExp(t("records.remove")) }).click();
   await mode(request, "delete-fail");
-  await page.getByRole("button", { name: t("records.removeConfirm") }).click();
-  await expect(page.getByRole("alert").filter({ hasText: t("account.unavailable") })).toBeVisible();
-  await expect(page.getByText(t("records.removed"))).toHaveCount(0);
-  await expect(item(page, "Synthetic consultation")).toBeVisible();
+  await entry(page, 1).getByLabel(t("providerServices.remove")).check();
+  await saveList(page);
+  await expect(summaryOf(page)).toContainText(`${t("account.unavailable")} ${t("records.keptInput")}`);
+  await page.reload();
+  await expect(entry(page, 1).getByLabel(t("providerServices.name"))).toHaveValue("Synthetic consultation");
 });
 
-test("an API-reported unpublication after removal is shown", async ({ page, request }) => {
+test("an API-reported unpublication after removing the last entry is shown", async ({ page, request }) => {
   await openWorkspace(page);
   await page.goto("/en/provider/profile");
   await page.getByRole("button", { name: t("profileEditor.create") }).click();
@@ -200,13 +234,13 @@ test("an API-reported unpublication after removal is shown", async ({ page, requ
   await request.post(`${fixture}/control/profile/publish`);
   await page.reload();
   await expect(page.getByText(t("profileEditor.publication.published"))).toBeVisible();
-  await item(page, "Only service").getByRole("link", { name: new RegExp(t("records.remove")) }).click();
-  await page.getByRole("button", { name: t("records.removeConfirm") }).click();
-  await expect(page.getByText(t("records.removed"))).toBeVisible();
+  await entry(page, 1).getByLabel(t("providerServices.remove")).check();
+  await saveList(page);
+  await expect(page.getByText(t("records.saved"))).toBeVisible();
   await expect(page.getByText(t("profileEditor.publication.unpublished"))).toBeVisible();
 });
 
-test("unavailable records hide the editors; anonymous visitors see sign-in only", async ({ page, request, playwright }) => {
+test("an unavailable list hides the editor; anonymous visitors see sign-in only", async ({ page, request, playwright }) => {
   await openWorkspace(page);
   await mode(request, "catalog-down");
   await page.goto("/en/provider/services");
@@ -222,7 +256,7 @@ test("unavailable records hide the editors; anonymous visitors see sign-in only"
   } finally { await anonymous.dispose(); }
 });
 
-test("the services editor is keyboard accessible, responsive and passes axe, including errors", async ({ page }) => {
+test("the price list is keyboard accessible, fits 320 px and passes axe, including errors", async ({ page }) => {
   await openWorkspace(page);
   await addLocation(page);
   await addService(page, "Synthetic consultation", "0");
@@ -230,19 +264,19 @@ test("the services editor is keyboard accessible, responsive and passes axe, inc
     await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
     expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: unknown[] }> } }).axe.run()).violations)).toEqual([]);
   };
+  const fits = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.goto("/en/provider/services");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: t("navigation.skipToContent") })).toBeFocused();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await fits();
   await axe();
-  const form = page.getByRole("region", { name: t("providerServices.add") });
-  await form.getByLabel(t("providerServices.name")).fill("Second");
-  await form.getByLabel(t("providerServices.priceSet"), { exact: true }).check();
-  await form.getByLabel(t("providerServices.amount")).fill("abc");
-  await form.getByRole("button", { name: t("providerServices.create") }).click();
+  await entry(page, 2).getByText(t("providerServices.details"), { exact: true }).first().click();
+  await entry(page, 2).getByRole("textbox", { name: t("providerServices.details") }).fill("Synthetic description");
+  await fillEntry(page, 2, "Second", "abc");
+  await saveList(page);
   await expect(summaryOf(page)).toBeFocused();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await fits();
   await axe();
-  await item(page, "Synthetic consultation").getByRole("link", { name: new RegExp(t("records.remove")) }).click();
-  await axe();
+  await page.setViewportSize({ width: 320, height: 800 });
+  await fits();
 });

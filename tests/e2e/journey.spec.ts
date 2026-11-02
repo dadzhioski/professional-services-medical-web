@@ -84,10 +84,11 @@ async function prepareDoctor(page: Page) {
   await expect(page.getByText(t("records.saved"))).toBeVisible();
 
   await page.goto(`${origin}/en/provider/services`);
-  const service = page.getByRole("region", { name: t("providerServices.add") });
+  // New price-list entries are linked to every practice location.
+  const service = page.getByRole("group", { name: `${t("providerServices.entry")} 1`, exact: true });
   await service.getByLabel(t("providerServices.name")).fill("Journey consultation");
-  await service.getByLabel("Journey Clinic, 1 Journey Street").check();
-  await service.getByRole("button", { name: t("providerServices.create") }).click();
+  await service.getByLabel(t("providerServices.amount")).fill("1500");
+  await page.getByRole("button", { name: t("providerServices.save") }).click();
   await expect(page.getByText(t("records.saved"))).toBeVisible();
 
   await page.goto(`${origin}/en/provider/credentials`);

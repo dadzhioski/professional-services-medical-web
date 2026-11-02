@@ -82,18 +82,17 @@ test("an unknown city reference is rejected by the API without claiming success"
   } finally { await context.close(); }
 });
 
-test("removing a location also unlinks it from services, after confirmation", async ({ page }) => {
+test("removing a linked location keeps the price-list entry, after confirmation", async ({ page }) => {
   await openWorkspace(page);
   await page.goto("/en/provider/locations");
   await fillLocation(page, "Synthetic Clinic");
   await addRegion(page).getByRole("button", { name: t("providerLocations.create") }).click();
   await expect(page.getByText(t("records.saved"))).toBeVisible();
   await page.goto("/en/provider/services");
-  const form = page.getByRole("region", { name: t("providerServices.add") });
-  await form.getByLabel(t("providerServices.name")).fill("Linked service");
-  await form.getByLabel("Synthetic Clinic, 1 Synthetic Street").check();
-  await form.getByRole("button", { name: t("providerServices.create") }).click();
-  await expect(item(page, "Linked service")).toContainText("Synthetic Clinic");
+  const entry = page.getByRole("group", { name: `${t("providerServices.entry")} 1`, exact: true });
+  await entry.getByLabel(t("providerServices.name")).fill("Linked service");
+  await page.getByRole("button", { name: t("providerServices.save") }).click();
+  await expect(page.getByText(t("records.saved"))).toBeVisible();
   await page.goto("/en/provider/locations");
   await item(page, "Synthetic Clinic").getByRole("link", { name: new RegExp(t("records.remove")) }).click();
   const confirm = page.getByRole("region", { name: t("providerLocations.removeHeading") });
@@ -101,7 +100,7 @@ test("removing a location also unlinks it from services, after confirmation", as
   await confirm.getByRole("button", { name: t("records.removeConfirm") }).click();
   await expect(page.getByText(t("records.removed"))).toBeVisible();
   await page.goto("/en/provider/services");
-  await expect(item(page, "Linked service")).toContainText(t("records.empty"));
+  await expect(entry.getByLabel(t("providerServices.name"))).toHaveValue("Linked service");
 });
 
 test("a stale location edit offers the latest version", async ({ page, request }) => {

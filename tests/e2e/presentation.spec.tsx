@@ -23,7 +23,7 @@ function fixture(locale: Locale, variant: typeof variants[number]) {
         <Notice>{t("preview.notice")}</Notice>
         <ProfilePresentation locale={locale} name={long} introduction={empty ? undefined : "Synthetic introduction"}
           specialties={empty ? [] : [long]} credentials={empty ? [" "] : ["Synthetic qualification"]}
-          services={empty ? [] : ["Synthetic service"]} locations={empty ? [] : ["Synthetic location"]}
+          services={empty ? [] : [{ name: "Synthetic service", price: "MKD 1,500.00" }]} locations={empty ? [] : ["Synthetic location"]}
           photo={variant === "complete" ? <svg role="img" aria-label="Synthetic portrait" viewBox="0 0 128 128"><rect width="128" height="128" fill="#ccfbf1" /><circle cx="64" cy="48" r="24" fill="#115e59" /><path d="M16 128a48 48 0 0 1 96 0" fill="#115e59" /></svg> : undefined} />
         {variant === "field-error" && <form><Field id="professional-name" label={t("form.professionalName")} hint={t("form.nameHint")} error={t("form.nameRequired")} required /><Button>{t("form.save")}</Button></form>}
       </main>

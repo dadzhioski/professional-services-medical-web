@@ -131,9 +131,9 @@ test("a publication the API refuses or that went stale is never shown as publish
   await page.getByRole("link", { name: t("publication.publish") }).click();
   const other = await page.context().newPage();
   await other.goto(`${origin}/en/provider/services`);
-  await other.getByRole("link", { name: new RegExp(`^${t("records.remove")}`) }).first().click();
-  await other.getByRole("button", { name: t("records.removeConfirm") }).click();
-  await expect(other.getByText(t("records.removed"))).toBeVisible();
+  await other.getByLabel(t("providerServices.remove")).first().check();
+  await other.getByRole("button", { name: t("providerServices.save") }).click();
+  await expect(other.getByText(t("records.saved"))).toBeVisible();
   await page.locator("section[aria-labelledby=publication-confirm]").getByRole("button", { name: t("publication.publish") }).click();
   await expect(page.getByText(t("publication.outcome.incomplete"))).toBeVisible();
   await expect(page.getByRole("link", { name: t("publication.missing.service") })).toBeVisible();
