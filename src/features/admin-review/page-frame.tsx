@@ -11,7 +11,7 @@ import { getServerEnvironment } from "@/lib/config/server";
 import { translator, type Locale } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/i18n/en";
 
-export type AdminPage = "doctors" | "credentials";
+export type AdminPage = "doctors";
 
 // Only the account is checked here. Administrator access is never inferred by the web: the review API's own
 // grant check answers it, and an administrator need not have a doctor workspace.
@@ -26,7 +26,7 @@ export async function adminGate(locale: Locale) {
 
 export function AdminNavigation({ locale, current }: { locale: Locale; current: AdminPage }) {
   const t = translator(locale);
-  const links = [["doctors", `/${locale}/admin/doctors`], ["credentials", `/${locale}/admin/credentials`]] as const;
+  const links = [["doctors", `/${locale}/admin/doctors`]] as const;
   return <nav aria-label={t("admin.navigation")}>
     <ul className="flex flex-wrap gap-4">
       {links.map(([key, href]) => <li key={key}><a href={href} aria-current={key === current ? "page" : undefined}

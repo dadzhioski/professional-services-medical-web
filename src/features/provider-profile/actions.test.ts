@@ -4,11 +4,11 @@ const mocks = vi.hoisted(() => ({ getAll: vi.fn(), set: vi.fn(), get: vi.fn(), r
 vi.mock("next/headers", () => ({ cookies: async () => mocks, headers: async () => mocks }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
-vi.mock("@/lib/api/profile", () => ({ createProfile: vi.fn(), saveProfile: vi.fn() }));
+vi.mock("@/lib/api/profile", () => ({ createProfile: vi.fn(), saveProfile: vi.fn(), saveQualifications: vi.fn() }));
 vi.mock("@/lib/api/medical", () => ({ saveSpecialty: vi.fn() }));
 import { saveSpecialty } from "@/lib/api/medical";
-import { createProfile, saveProfile } from "@/lib/api/profile";
-import { createProfileDraft, saveProfileDraft, saveProfileSpecialty } from "./actions";
+import { createProfile, saveProfile, saveQualifications } from "@/lib/api/profile";
+import { createProfileDraft, saveProfileDraft, saveProfileQualifications, saveProfileSpecialty } from "./actions";
 
 const profile = { profileId: "synthetic-private-profile", organizationId: "synthetic-private-org", slug: "dr-0000abcd",
   displayName: "Saved name", biography: "Saved biography", publicationState: "DRAFT", version: 4 };
@@ -125,4 +125,39 @@ test("keeping no specialty without a medical extension does not create one", asy
   expect(await saveProfileSpecialty("en", undefined, form({ specialtyId: "" })))
     .toEqual({ status: "saved", values: { specialtyId: "" }, version: undefined, errors: {} });
   expect(saveSpecialty).not.toHaveBeenCalled();
+});
+
+const typedQualifications = { education: "Synthetic University\r\nMedicine", specialties: "Synthetic cardiology", certificates: "" };
+test("qualifications are sent with CRLF normalized at the shown version and only owner text returns", async () => {
+  vi.mocked(saveQualifications).mockResolvedValue({ state: "saved", profile: { ...profile, education: "Synthetic University\nMedicine",
+    specialties: "Synthetic cardiology", certificates: null, version: 5 } });
+  const state = await saveProfileQualifications("en", undefined, form({ ...typedQualifications, version: "4" }));
+  expect(vi.mocked(saveQualifications).mock.calls[0].slice(3)).toEqual([{ education: "Synthetic University\nMedicine",
+    specialties: "Synthetic cardiology", certificates: "", version: 4 }]);
+  expect(state).toEqual({ status: "saved", version: 5, errors: {},
+    values: { education: "Synthetic University\nMedicine", specialties: "Synthetic cardiology", certificates: "" } });
+  expect(JSON.stringify(state)).not.toContain("synthetic-private");
+  expect(mocks.revalidatePath).toHaveBeenCalledWith("/en/provider/profile");
+});
+test("over-long qualifications are refused before any API call and keep the input", async () => {
+  const state = await saveProfileQualifications("en", undefined, form({ ...typedQualifications, certificates: "x".repeat(4001), version: "4" }));
+  expect(state).toMatchObject({ status: "invalid", errors: { certificates: "tooLong" }, values: { certificates: "x".repeat(4001) } });
+  expect(saveQualifications).not.toHaveBeenCalled();
+});
+test("a stale qualification save returns the latest texts and an explicit overwrite uses the reviewed version", async () => {
+  vi.mocked(saveQualifications).mockResolvedValue({ state: "conflict", latest: { ...profile, education: "Elsewhere", version: 7 } });
+  const state = await saveProfileQualifications("en", undefined, form({ ...typedQualifications, version: "4" }));
+  expect(state).toMatchObject({ status: "conflict", version: 4, latest: { education: "Elsewhere", specialties: "", certificates: "", version: 7 } });
+  await saveProfileQualifications("en", undefined, form({ ...typedQualifications, version: "4", overwriteVersion: "7" }));
+  expect(vi.mocked(saveQualifications).mock.calls[1][3]).toMatchObject({ version: 7 });
+});
+test.each(["expired", "forbidden", "unavailable", "invalid"] as const)("qualification failure %s keeps the input", async state => {
+  vi.mocked(saveQualifications).mockResolvedValue({ state });
+  expect(await saveProfileQualifications("en", undefined, form({ ...typedQualifications, version: "4" })))
+    .toMatchObject({ status: state, values: { education: "Synthetic University\nMedicine" } });
+});
+test("a tampered locale or missing version never saves qualifications", async () => {
+  expect(await saveProfileQualifications("xx", undefined, form({ ...typedQualifications, version: "4" }))).toMatchObject({ status: "forbidden" });
+  expect(await saveProfileQualifications("en", undefined, form(typedQualifications))).toMatchObject({ status: "invalid" });
+  expect(saveQualifications).not.toHaveBeenCalled();
 });

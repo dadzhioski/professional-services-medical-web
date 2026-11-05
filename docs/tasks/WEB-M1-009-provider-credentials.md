@@ -1,6 +1,6 @@
 # WEB-M1-009: Add structured credential editing and submission
 
-- **Status:** IMPLEMENTED LOCALLY (2026-10-26) against pinned client 0.7.0, which contains the API-M1-008 owner credential lifecycle (create/get/list/update/delete/submit, `state`, `revision`, `version`, `rejectionReason`), so the earlier capability block is resolved. Live API and non-production checks pending.
+- **Status:** SUPERSEDED by [WEB-M1-016](WEB-M1-016-simplified-qualifications-on-profile.md) (2026-11-05): the credentials page and per-credential review were removed. Earlier status: IMPLEMENTED LOCALLY (2026-10-26) against pinned client 0.7.0, which contains the API-M1-008 owner credential lifecycle (create/get/list/update/delete/submit, `state`, `revision`, `version`, `rejectionReason`), so the earlier capability block is resolved. Live API and non-production checks pending.
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-006, WEB-M1-008; WEB-M1-004 credential capability
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)

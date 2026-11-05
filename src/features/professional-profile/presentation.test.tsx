@@ -9,9 +9,14 @@ test("profile sections render supplied content safely in every language", () => 
   for (const locale of localeCodes) {
     const html = renderToStaticMarkup(<ProfilePresentation locale={locale} name="Synthetic professional"
       introduction={'<script>alert("synthetic")</script>'} specialties={["Synthetic specialty"]}
-      credentials={["Synthetic qualification"]} services={[{ name: "Synthetic service" }]} locations={["Synthetic location"]} />);
-    expect(html).toContain(translator(locale)("profile.credentials"));
-    expect(html).toContain("Synthetic qualification");
+      qualifications={{ education: "Synthetic university\n<b>Medicine</b>", specialties: "Synthetic cardiology", certificates: "  " }}
+      services={[{ name: "Synthetic service" }]} locations={["Synthetic location"]} />);
+    expect(html).toContain(translator(locale)("profile.education"));
+    expect(html).toContain("Synthetic university\n&lt;b&gt;Medicine&lt;/b&gt;");
+    expect(html).toContain("Synthetic specialty");
+    expect(html).toContain("Synthetic cardiology");
+    // Blank text is not shown as an empty section.
+    expect(html).not.toContain(translator(locale)("profile.certificates"));
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
   }

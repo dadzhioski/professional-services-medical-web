@@ -8,7 +8,7 @@ import { approvalKey } from "./workspace";
 
 type FormAction = (form: FormData) => Promise<void>;
 const names = { workspace: "onboarding.step.workspace", profile: "onboarding.step.profile", service: "onboarding.step.service",
-  location: "onboarding.step.location", credentials: "onboarding.step.credentials", photo: "onboarding.step.photo",
+  location: "onboarding.step.location", photo: "onboarding.step.photo",
   review: "onboarding.step.review", publish: "onboarding.step.publication" } as const satisfies Record<StepId, TranslationKey>;
 const linkClass = "inline-block min-h-11 py-2.5 font-semibold text-blue-800 underline underline-offset-4";
 

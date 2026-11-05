@@ -15,7 +15,9 @@ const doctorName = "Dr. Journey Synthetic";
 // Synthetic images only: a 1x1 PNG and a PDF the upload must refuse.
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
 const photoFile = { name: "photo.png", mimeType: "image/png", buffer: png };
-const evidenceFile = { name: "diploma.png", mimeType: "image/png", buffer: png };
+const proofFile = { name: "diploma.png", mimeType: "image/png", buffer: png };
+// Pasted from a CV: CRLF line breaks and surrounding whitespace, which the API normalizes.
+const education = "Journey University of Medicine\r\nJourney residency  ";
 const pdfFile = { name: "record.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7 synthetic") };
 
 // Stand in for the existing Caddy /api/* routing, only in the browser fixture.
@@ -47,16 +49,7 @@ async function onboard(page: Page) {
   await page.getByRole("button", { name: t("profileEditor.create") }).click();
   await expect(page.getByLabel(t("profileEditor.displayName"))).toBeVisible();
 }
-async function createCredential(page: Page, title: string) {
-  const form = page.getByRole("region", { name: t("credentials.add") });
-  await form.getByLabel(t("credential.type")).selectOption("LICENSE");
-  await form.getByLabel(t("credentials.title")).fill(title);
-  await form.getByLabel(t("credentials.issuer")).fill("Synthetic medical chamber");
-  await form.getByLabel(t("credentials.issuedOn")).fill("2019-06-01");
-  await form.getByRole("button", { name: t("credentials.create") }).click();
-  return page.getByRole("article", { name: title });
-}
-// Every owner-provided part through its own editor, then one credential with evidence submitted for review.
+// Every owner-provided part through its own editor, including the qualification text and one optional private proof.
 async function prepareDoctor(page: Page) {
   await onboard(page);
   await page.getByLabel(t("profileEditor.displayName")).fill(doctorName);
@@ -91,17 +84,16 @@ async function prepareDoctor(page: Page) {
   await page.getByRole("button", { name: t("providerServices.save") }).click();
   await expect(page.getByText(t("records.saved"))).toBeVisible();
 
-  await page.goto(`${origin}/en/provider/credentials`);
-  const card = await createCredential(page, "Journey licence");
-  await card.getByLabel(`${t("media.file")}: Journey licence`).setInputFiles(evidenceFile);
-  await card.getByRole("button", { name: t("evidence.add") }).click();
-  await expect(page.getByText(t("evidence.saved"))).toBeVisible();
-  const evidence = (await card.getByRole("img", { name: `${t("evidence.image")} 1` }).getAttribute("src"))!;
-  await card.getByRole("button", { name: `${t("credentials.submit")}: Journey licence` }).click();
-  await expect(page.getByText(t("credentials.submitted"))).toBeVisible();
-  // A draft that is never submitted must never appear publicly.
-  await createCredential(page, "Journey unsubmitted diploma");
-  await expect(page.getByRole("article", { name: "Journey unsubmitted diploma" })).toBeVisible();
+  await page.goto(`${origin}/en/provider/profile`);
+  const qualifications = page.locator("#qualifications");
+  await qualifications.getByLabel(t("qualifications.education"), { exact: true }).fill(education);
+  await qualifications.getByLabel(t("qualifications.specialties"), { exact: true }).fill("Journey interventional cardiology");
+  await qualifications.getByRole("button", { name: t("qualifications.save") }).click();
+  await expect(qualifications.getByText(t("profileEditor.saved"))).toBeVisible();
+  await page.getByLabel(t("proof.file")).setInputFiles(proofFile);
+  await page.locator("#proofs").getByRole("button", { name: t("proof.add") }).click();
+  await expect(page.getByText(t("proof.saved"))).toBeVisible();
+  const evidence = (await page.getByRole("img", { name: `${t("proof.image")} 1` }).getAttribute("src"))!;
   return { evidence };
 }
 async function administrator(browser: Browser, request: APIRequestContext) {
@@ -119,14 +111,12 @@ async function openDoctor(page: Page, state = "PENDING") {
   await page.getByRole("link", { name: new RegExp(`^${t("review.open")}`) }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: t("review.doctor.heading") })).toBeVisible();
 }
+// One doctor approval covers the qualification text and the optional proof; there is no separate credential review.
 async function approveAll(page: Page) {
-  await page.goto(`${origin}/en/admin/credentials`);
-  await page.getByRole("link", { name: new RegExp(`^${t("review.open")}\\s*: Journey licence`) }).click();
-  const image = page.getByRole("img", { name: `${t("evidence.image")} 1` });
-  expect(await image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBe(1);
-  await decide(page, "approve");
-  await expect(page.getByText(t("review.outcome.approved"))).toBeVisible();
   await openDoctor(page);
+  await expect(page.getByText("Journey University of Medicine")).toBeVisible();
+  const image = page.getByRole("img", { name: `${t("proof.image")} 1` });
+  expect(await image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBe(1);
   await decide(page, "approve");
   await expect(page.getByText(t("review.outcome.approved"))).toBeVisible();
 }
@@ -147,7 +137,6 @@ function expectPublicOnly(html: string, evidence: string) {
   expect(html).not.toMatch(privateValues);
   expect(html).not.toContain(evidence);
   expect(html).not.toContain(evidence.split("/")[4]);
-  expect(html).not.toContain("Journey unsubmitted diploma");
   expect(html).not.toContain("/api/v1/media/");
 }
 async function listed(page: Page) {
@@ -189,7 +178,8 @@ test("a doctor goes from sign-in to an anonymous, JavaScript-free public profile
       await expect(visitor.page.locator("html")).toHaveAttribute("lang", locale);
       await expect(visitor.page.getByRole("heading", { level: 1 })).toHaveText(doctorName);
       await expect(visitor.page.getByText("Synthetic journey biography")).toBeVisible();
-      await expect(visitor.page.getByText(`${translator(locale)("credential.type.license")}: Journey licence`)).toBeVisible();
+      await expect(visitor.page.getByText(/Journey University of Medicine\s+Journey residency/)).toBeVisible();
+      await expect(visitor.page.getByText("Journey interventional cardiology")).toBeVisible();
       await expect(visitor.page.getByText("Journey consultation")).toBeVisible();
       await expect(visitor.page.getByText("1 Journey Street")).toBeVisible();
       expect(await photoLoaded(visitor.page)).toBe(true);
@@ -199,7 +189,7 @@ test("a doctor goes from sign-in to an anonymous, JavaScript-free public profile
       expectPublicOnly(await visitor.page.content(), evidence);
     }
     const photo = (await visitor.page.locator("main img").getAttribute("src"))!;
-    // Evidence is never delivered through the public media route.
+    // Proofs are never delivered through the public media route.
     expect((await visitor.context.request.get(fixture + `/api/v1/public/media/${evidence.split("/")[4]}/content`)).status()).toBe(404);
 
     await visitor.page.goto(`${origin}/en/doctors`);
@@ -253,7 +243,9 @@ test("other accounts, expired sessions, CSRF failures, stale publication and out
     await onboard(other.page);
     await expect(other.page.getByLabel(t("profileEditor.displayName"))).toHaveValue("");
     await other.page.goto(`${origin}/en/provider/credentials`);
-    await expect(other.page.getByText("Journey licence")).toHaveCount(0);
+    await expect(other.page).toHaveURL(`${origin}/en/provider/profile#qualifications`);
+    await expect(other.page.getByText("Journey University")).toHaveCount(0);
+    await expect(other.page.getByText(t("proof.none"))).toBeVisible();
     expect((await other.context.request.get(fixture + evidence)).status()).toBe(404);
     for (const path of ["/en/admin/doctors", "/en/admin/credentials"]) {
       await other.page.goto(origin + path);
@@ -287,7 +279,7 @@ test("other accounts, expired sessions, CSRF failures, stale publication and out
     await expect(page.getByText(t("account.expired")).first()).toBeVisible();
     const html = await response!.text();
     expect(html).not.toMatch(privateValues);
-    expect(html).not.toContain("Journey licence");
+    expect(html).not.toContain("Journey University");
   }
   await mode(request, "up");
 

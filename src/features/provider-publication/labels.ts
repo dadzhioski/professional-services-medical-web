@@ -1,17 +1,19 @@
 import type { TranslationKey } from "@/lib/i18n/en";
 
-// Each missing part names what is needed and where the owner can provide it.
+// Each missing part names what is needed and where the owner can provide it; `anchor` points into that page.
 const missingParts = {
   DISPLAY_NAME: { key: "publication.missing.displayName", page: "profile" },
   BIOGRAPHY: { key: "publication.missing.biography", page: "profile" },
   SPECIALTY: { key: "publication.missing.specialty", page: "profile" },
+  EDUCATION: { key: "publication.missing.education", page: "profile", anchor: "qualifications" },
+  SPECIALTIES: { key: "publication.missing.specialties", page: "profile", anchor: "qualifications" },
   SERVICE: { key: "publication.missing.service", page: "services" },
   PRACTICE_LOCATION: { key: "publication.missing.location", page: "locations" },
-  APPROVED_CREDENTIAL: { key: "publication.missing.credential", page: "credentials" },
-} as const satisfies Record<string, { key: TranslationKey; page: string }>;
+} as const satisfies Record<string, { key: TranslationKey; page: string; anchor?: string }>;
 
-// Unknown parts are still shown as missing, never dropped.
-export function missingPart(part: string): { key: TranslationKey; page?: string } {
+// Unknown parts, including the deprecated APPROVED_CREDENTIAL the API no longer returns, are still shown as missing,
+// never dropped.
+export function missingPart(part: string): { key: TranslationKey; page?: string; anchor?: string } {
   return Object.hasOwn(missingParts, part) ? missingParts[part as keyof typeof missingParts] : { key: "publication.missing.unknown" };
 }
 

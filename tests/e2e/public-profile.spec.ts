@@ -16,7 +16,7 @@ async function edge(context: BrowserContext) {
   });
 }
 const control = (request: APIRequestContext, path: string) => request.post(`${fixture}/control/${path}`);
-let seeded: { slug: string; photoMediaId: string };
+let seeded: { slug: string; photoMediaId: string; proofMediaId: string };
 const photoPath = () => `/api/v1/public/media/${seeded.photoMediaId}/content`;
 const jsonLd = async (page: Page) => JSON.parse(await page.locator('script[type="application/ld+json"]').textContent() ?? "null");
 const photoLoaded = (page: Page) => page.locator("main img").evaluate(image => (image as HTMLImageElement).complete &&
@@ -41,10 +41,11 @@ for (const locale of localeCodes) {
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText("Dr. Synthetic Public");
       await expect(page.getByText('Synthetic public biography <script>alert("x")</script>')).toBeVisible();
-      for (const key of ["profile.specialties", "profile.credentials", "profile.services", "profile.locations"] as const) {
+      for (const key of ["profile.specialties", "profile.education", "profile.certificates", "profile.services", "profile.locations"] as const) {
         await expect(page.getByRole("heading", { level: 2, name: t(key) })).toBeVisible();
       }
-      await expect(page.getByText(`${t("credential.type.license")}: Synthetic licence`)).toBeVisible();
+      await expect(page.getByText(/Synthetic University\s+Medicine <b>degree<\/b>/)).toBeVisible();
+      await expect(page.getByText("Synthetic interventional cardiology")).toBeVisible();
       await expect(page.getByText("Synthetic street 1")).toBeVisible();
       expect(await photoLoaded(page)).toBe(true);
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `${origin}/${locale}/doctors/${seeded.slug}`);
@@ -56,6 +57,8 @@ for (const locale of localeCodes) {
         url: `${origin}/${locale}/doctors/${seeded.slug}` });
       const html = await page.content();
       expect(html).not.toMatch(privateValues);
+      // The doctor's private proof never reaches public HTML, metadata or structured data.
+      expect(html).not.toContain(seeded.proofMediaId);
       expect(html).not.toContain("<script>alert");
     } finally { await context.close(); }
   });

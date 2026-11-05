@@ -7,8 +7,6 @@ const organizations = new Map();
 const profiles = new Map();
 // mediaId -> { organizationId, purpose, bytes, contentType, attached }
 const media = new Map();
-// organizationId -> credentials
-const credentials = new Map();
 // A 1x1 transparent PNG.
 const syntheticPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
 const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -80,8 +78,8 @@ function missingParts(organizationId) {
   const profile = profiles.get(organizationId);
   const owns = store => [...store.values()].some(record => record.organizationId === organizationId);
   return [[!profile?.displayName, "DISPLAY_NAME"], [!profile?.biography, "BIOGRAPHY"], [!medical.get(organizationId)?.specialtyId, "SPECIALTY"],
-    [!owns(services), "SERVICE"], [!owns(locations), "PRACTICE_LOCATION"],
-    [!(credentials.get(organizationId) ?? []).some(item => item.state === "APPROVED"), "APPROVED_CREDENTIAL"]]
+    [!profile?.education, "EDUCATION"], [!profile?.specialties, "SPECIALTIES"], [!owns(services), "SERVICE"],
+    [!owns(locations), "PRACTICE_LOCATION"]]
     .filter(([missing]) => missing).map(([, part]) => part);
 }
 // An edit that removes a required part unpublishes the profile, as in the API; it must be published again explicitly.
@@ -191,7 +189,7 @@ const server = createServer((req, res) => {
     identityMode = url.pathname.split("/").at(-1);
     if (identityMode === "reset") {
       sessions.clear(); organizations.clear(); profiles.clear(); services.clear(); locations.clear(); medical.clear();
-      media.clear(); credentials.clear(); administrators.clear(); reuseAccount = false; identityMode = "up";
+      media.clear(); administrators.clear(); reuseAccount = false; identityMode = "up";
     }
     if (identityMode === "same-account") { reuseAccount = true; identityMode = "up"; }
     res.writeHead(204).end(); return;
@@ -204,11 +202,10 @@ const server = createServer((req, res) => {
   if (req.method === "POST" && url.pathname === "/control/review/bump") {
     // Simulates another administrator's decision or an owner change after the review page was loaded.
     for (const organization of organizations.values()) organization.approvalRevision += 1;
-    for (const list of credentials.values()) for (const credential of list) credential.revision += 1;
     res.writeHead(204).end(); return;
   }
   if (req.method === "POST" && url.pathname === "/control/profile/complete") {
-    // Fills every owner-provided part except the approved credential, for publication checks.
+    // Fills every owner-provided part except the qualification texts, for publication checks.
     for (const { organizationId } of organizations.values()) {
       const profile = profiles.get(organizationId);
       if (profile) Object.assign(profile, { displayName: "Dr. Synthetic", biography: "Synthetic biography" });
@@ -228,30 +225,15 @@ const server = createServer((req, res) => {
     for (const profile of profiles.values()) Object.assign(profile, { displayName: "Edited elsewhere", version: profile.version + 1 });
     res.writeHead(204).end(); return;
   }
-  if (req.method === "POST" && url.pathname === "/control/credentials/seed") {
-    // Seeds one approved credential per workspace, for evidence checks that do not go through review.
-    for (const { organizationId } of organizations.values()) {
-      if (!credentials.has(organizationId)) credentials.set(organizationId, [{ credentialId: randomUUID(), version: 0, revision: 1,
-        state: "APPROVED", type: "LICENSE", title: "Synthetic licence", issuer: "Synthetic medical board", issuedOn: "2020-01-15",
-        expiresOn: null, evidenceMediaIds: [] }]);
+  if (req.method === "POST" && url.pathname === "/control/qualifications/seed") {
+    // Fills the required qualification texts directly, for checks that do not go through the editor.
+    for (const profile of profiles.values()) {
+      Object.assign(profile, { education: "Synthetic University\nMedicine", specialties: "Synthetic cardiology", version: profile.version + 1 });
     }
-    res.writeHead(204).end(); return;
-  }
-  if (req.method === "POST" && url.pathname === "/control/credentials/review") {
-    // Simulates an administrator decision on every submitted credential; the reviewer is never exposed.
-    const reason = url.searchParams.get("reject");
-    for (const list of credentials.values()) for (const credential of list) {
-      if (credential.state === "SUBMITTED") Object.assign(credential, reason ? { state: "REJECTED", rejectionReason: reason } :
-        { state: "APPROVED" }, { version: credential.version + 1 });
-    }
-    res.writeHead(204).end(); return;
-  }
-  if (req.method === "POST" && url.pathname === "/control/credentials/bump") {
-    for (const list of credentials.values()) for (const credential of list) credential.version += 1;
     res.writeHead(204).end(); return;
   }
   if (req.method === "POST" && url.pathname === "/control/media/foreign") {
-    // Evidence owned by another organization, for cross-tenant denial checks.
+    // A proof image owned by another organization, for cross-tenant denial checks.
     const mediaId = randomUUID();
     media.set(mediaId, { organizationId: "synthetic-private-org-foreign", purpose: "CREDENTIAL_EVIDENCE", bytes: syntheticPng,
       contentType: "image/png", attached: true });
@@ -290,10 +272,14 @@ const server = createServer((req, res) => {
       suspended: false, registeredAt: new Date().toISOString() });
     const photoMediaId = randomUUID();
     media.set(photoMediaId, { organizationId, purpose: "PROFILE_PHOTO", bytes: syntheticPng, contentType: "image/png", attached: true });
+    // A private proof that must never be projected.
+    const proofMediaId = randomUUID();
+    media.set(proofMediaId, { organizationId, purpose: "CREDENTIAL_EVIDENCE", bytes: syntheticPng, contentType: "image/png", attached: true });
     const slug = `dr-public-${sequence.toString(16).padStart(6, "0")}`;
     profiles.set(organizationId, { profileId: `synthetic-private-profile-${organizationId}`, organizationId, slug,
       displayName: url.searchParams.get("name") ?? "Dr. Synthetic Public", biography: 'Synthetic public biography <script>alert("x")</script>',
-      publicationState: "PUBLISHED", photoMediaId, version: 3 });
+      publicationState: "PUBLISHED", photoMediaId, version: 3, education: "Synthetic University\nMedicine <b>degree</b>",
+      specialties: "Synthetic interventional cardiology", certificates: "Synthetic course", evidenceMediaIds: [proofMediaId] });
     medical.set(organizationId, { medicalProfileId: randomUUID(), organizationId, licenseNumber: "synthetic-private-licence",
       registrationBody: "synthetic-private-registration", specialtyId: specialty.id, version: 1 });
     const location = { locationId: randomUUID(), organizationId, label: "Synthetic clinic", displayAddress: "Synthetic street 1",
@@ -302,11 +288,7 @@ const server = createServer((req, res) => {
     const service = { serviceId: randomUUID(), organizationId, name: "Synthetic consultation", description: "Synthetic description",
       locationIds: [location.locationId], price: { amount: "25.00", currency: "EUR" }, version: 0 };
     services.set(service.serviceId, service);
-    credentials.set(organizationId, [{ credentialId: randomUUID(), version: 1, revision: 1, state: "APPROVED", type: "LICENSE",
-      title: "Synthetic licence", issuer: "Synthetic medical board", issuedOn: "2020-01-15", expiresOn: null,
-      evidenceMediaIds: [] }, { credentialId: randomUUID(), version: 0, revision: 1, state: "DRAFT", type: "OTHER",
-      title: "synthetic-private-draft", issuer: "Synthetic", issuedOn: "2021-01-15", expiresOn: null, evidenceMediaIds: [] }]);
-    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ slug, photoMediaId })); return;
+    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ slug, photoMediaId, proofMediaId })); return;
   }
   if (req.method === "POST" && ["/control/public/unpublish", "/control/public/suspend"].includes(url.pathname)) {
     // Stands in for the owner's unpublish and the administrator's suspension of every published doctor.
@@ -361,16 +343,18 @@ const server = createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
       slug: profile.slug, displayName: profile.displayName, biography: profile.biography, photoMediaId: profile.photoMediaId,
       specialty: reference.specialties.find(item => item.id === medical.get(key)?.specialtyId),
-      credentials: (credentials.get(key) ?? []).filter(item => item.state === "APPROVED")
-        .map(({ type, title, issuer, issuedOn, expiresOn }) => ({ type, title, issuer, issuedOn, expiresOn })),
+      education: profile.education ?? null, specialties: profile.specialties ?? null, certificates: profile.certificates ?? null,
+      // Deprecated and always empty from client 0.8.0 on.
+      credentials: [],
       services: owned(services).map(({ name, description, price }) => ({ name, description, price })),
       locations: owned(locations).map(({ label, displayAddress, countryCode, cityId }) => ({ label, displayAddress, countryCode, city: city(cityId) })),
     }));
     return;
   }
   if (url.pathname.startsWith("/api/auth/") || ["/api/v1/account", "/api/v1/me", "/api/v1/onboarding", "/api/v1/profile",
-    "/api/v1/profile/photo", "/api/v1/profile/publication", "/api/v1/approval/resubmission"].includes(url.pathname) ||
-    catalogPaths.test(url.pathname) || /^\/api\/v1\/(media|credentials|admin)(\/|$)/.test(url.pathname)) {
+    "/api/v1/profile/photo", "/api/v1/profile/publication", "/api/v1/profile/qualifications", "/api/v1/profile/evidence",
+    "/api/v1/approval/resubmission"].includes(url.pathname) || catalogPaths.test(url.pathname) ||
+    /^\/api\/v1\/(media|admin)(\/|$)/.test(url.pathname)) {
     res.setHeader("Cache-Control", "no-store");
     const session = /(?:^|; )platform-session-local=([^;]+)/.exec(req.headers.cookie ?? "")?.[1];
     const state = sessions.get(session);
@@ -409,10 +393,6 @@ const server = createServer((req, res) => {
       if (!administrators.has(state.account)) { fail(403); return; }
       const review = organization => ({ organizationId: organization.organizationId, approvalState: organization.approvalState,
         registeredAt: organization.registeredAt, revision: organization.approvalRevision, suspended: !!organization.suspended });
-      const submitted = () => [...credentials.entries()].flatMap(([organizationId, list]) => list
-        .filter(item => item.state === "SUBMITTED").map(item => ({ ...item, organizationId })));
-      const anyCredential = id => [...credentials.entries()].flatMap(([organizationId, list]) => list
-        .map(item => ({ item, organizationId }))).find(({ item }) => item.credentialId === id);
       if (url.pathname === "/api/v1/admin/doctors" && req.method === "GET") {
         const approvalState = url.searchParams.get("approvalState") ?? "PENDING";
         if (!["PENDING", "APPROVED", "REJECTED"].includes(approvalState)) { fail(400); return; }
@@ -445,26 +425,6 @@ const server = createServer((req, res) => {
           if (action === "reinstate") organization.suspended = false;
           organization.approvalRevision += 1;
           json(review(organization));
-        });
-        return;
-      }
-      if (url.pathname === "/api/v1/admin/credentials" && req.method === "GET") { json(submitted()); return; }
-      const reviewMatch = /^\/api\/v1\/admin\/credentials\/([^/]+)(?:\/(approve|reject))?$/.exec(url.pathname);
-      if (reviewMatch) {
-        const found = anyCredential(reviewMatch[1]);
-        if (!found) { fail(404); return; }
-        const { item: credential, organizationId } = found;
-        const view = () => ({ ...credential, rejectionReason: undefined, organizationId,
-          submittedAt: credential.submittedAt ?? null });
-        if (!reviewMatch[2]) { if (req.method === "GET") json(view()); else fail(405); return; }
-        if (req.method !== "POST") { fail(405); return; }
-        readJson(req, res, fail, input => {
-          if (!Number.isInteger(input.revision) || (reviewMatch[2] === "reject" && !text(input.reason, 1000, true))) { fail(400); return; }
-          if (input.revision !== credential.revision || credential.state !== "SUBMITTED") { fail(409); return; }
-          Object.assign(credential, reviewMatch[2] === "approve" ? { state: "APPROVED" } :
-            { state: "REJECTED", rejectionReason: input.reason.trim() }, { version: credential.version + 1 });
-          enforceCompleteness(organizationId);
-          json(view());
         });
         return;
       }
@@ -502,7 +462,8 @@ const server = createServer((req, res) => {
       if (req.method === "GET") { if (profiles.has(key)) json(profiles.get(key)); else fail(404); return; }
       if (req.method === "POST") {
         if (!profiles.has(key)) profiles.set(key, { profileId: `synthetic-private-profile-${key}`, organizationId: key,
-          slug: `dr-${(++sequence).toString(16).padStart(8, "0")}`, displayName: null, biography: null, publicationState: "DRAFT", photoMediaId: null, version: 0 });
+          slug: `dr-${(++sequence).toString(16).padStart(8, "0")}`, displayName: null, biography: null, publicationState: "DRAFT", photoMediaId: null,
+          education: null, specialties: null, certificates: null, evidenceMediaIds: [], version: 0 });
         json(profiles.get(key)); return;
       }
       if (req.method === "PATCH") {
@@ -631,80 +592,46 @@ const server = createServer((req, res) => {
         return;
       }
     }
-    const owned = credentials.get(key) ?? [];
-    // Bounds and date rules from the credential contract.
-    const invalidCredential = input => {
-      const evidence = input.evidenceMediaIds ?? [];
-      const text = value => typeof value === "string" && value.trim() && value.length <= 200;
-      const date = value => /^\d{4}-\d{2}-\d{2}$/.test(value ?? "");
-      return !["EDUCATION", "SPECIALIZATION", "LICENSE", "CERTIFICATION", "OTHER"].includes(input.type) || !text(input.title) ||
-        !text(input.issuer) || !date(input.issuedOn) || input.issuedOn > new Date().toISOString().slice(0, 10) ||
-        (input.expiresOn != null && (!date(input.expiresOn) || input.expiresOn < input.issuedOn)) ||
-        !Array.isArray(evidence) || evidence.length > 5 || new Set(evidence).size !== evidence.length;
-    };
-    if (url.pathname === "/api/v1/credentials" && req.method === "GET") { json(owned); return; }
-    if (url.pathname === "/api/v1/credentials" && req.method === "POST") {
+    if (url.pathname === "/api/v1/profile/qualifications" && req.method === "PUT") {
+      const profile = profiles.get(key);
+      if (!profile) { fail(404); return; }
       readJson(req, res, fail, input => {
-        const evidence = input.evidenceMediaIds ?? [];
-        if (invalidCredential(input) || owned.length >= 20) { fail(400); return; }
-        if (!evidence.every(id => usable(id, "CREDENTIAL_EVIDENCE"))) { fail(422); return; }
-        for (const id of evidence) media.get(id).attached = true;
-        const credential = { credentialId: randomUUID(), version: 0, revision: 1, state: "DRAFT", type: input.type, title: input.title,
-          issuer: input.issuer, issuedOn: input.issuedOn, expiresOn: input.expiresOn ?? null, evidenceMediaIds: evidence };
-        credentials.set(key, [...owned, credential]);
-        res.writeHead(201, { "Content-Type": "application/json" }).end(JSON.stringify(credential));
+        // Line endings are normalized, surrounding whitespace removed and blank text stored as null, as in the API.
+        const normalize = value => typeof value === "string" ? value.replace(/\r\n?/g, "\n").trim() || null : value ?? null;
+        const fields = { education: normalize(input.education), specialties: normalize(input.specialties), certificates: normalize(input.certificates) };
+        if (!Number.isInteger(input.version)) { fail(400); return; }
+        if (Object.values(fields).some(value => value !== null && (typeof value !== "string" || value.length > 4000))) { fail(422); return; }
+        if (input.version !== profile.version) { fail(409); return; }
+        // Re-sending the current values returns the profile unchanged.
+        if (Object.entries(fields).every(([field, value]) => (profile[field] ?? null) === value)) { json(profile); return; }
+        Object.assign(profile, fields, { version: profile.version + 1 });
+        // An approved doctor's change returns the doctor to review and unpublishes the profile in the same request.
+        if (organization.approvalState === "APPROVED") {
+          Object.assign(organization, { approvalState: "PENDING", approvalRevision: organization.approvalRevision + 1 });
+          if (profile.publicationState === "PUBLISHED") profile.publicationState = "UNPUBLISHED";
+        }
+        enforceCompleteness(key);
+        json(profile);
       });
       return;
     }
-    const credentialMatch = /^\/api\/v1\/credentials\/([^/]+)(\/submit)?$/.exec(url.pathname);
-    if (credentialMatch) {
-      const credential = owned.find(item => item.credentialId === credentialMatch[1]);
-      if (!credential) { fail(404); return; }
-      if (credentialMatch[2]) {
-        if (req.method !== "POST") { fail(405); return; }
-        readJson(req, res, fail, input => {
-          if (!Number.isInteger(input.version)) { fail(400); return; }
-          if (input.version !== credential.version || !["DRAFT", "REJECTED"].includes(credential.state)) { fail(409); return; }
-          if (!credential.evidenceMediaIds.length) { fail(422); return; }
-          Object.assign(credential, { state: "SUBMITTED", rejectionReason: undefined, submittedAt: new Date().toISOString(), version: credential.version + 1 });
-          json(credential);
-        });
-        return;
-      }
-      if (req.method === "GET") { json(credential); return; }
-      if (req.method === "DELETE") {
-        if (!/^\d+$/.test(url.searchParams.get("version") ?? "")) { fail(400); return; }
-        if (Number(url.searchParams.get("version")) !== credential.version) { fail(409); return; }
-        for (const id of credential.evidenceMediaIds) media.delete(id);
-        owned.splice(owned.indexOf(credential), 1);
-        enforceCompleteness(key);
-        res.writeHead(204).end(); return;
-      }
-      if (req.method === "PUT") {
-        readJson(req, res, fail, input => {
-          const evidence = input.evidenceMediaIds ?? [];
-          if (!Number.isInteger(input.version) || invalidCredential(input)) { fail(400); return; }
-          if (input.version !== credential.version) { fail(409); return; }
-          const fields = { type: input.type, title: input.title, issuer: input.issuer, issuedOn: input.issuedOn,
-            expiresOn: input.expiresOn ?? null, evidenceMediaIds: evidence };
-          // Re-sending the current values returns the credential unchanged.
-          if (JSON.stringify(fields) === JSON.stringify({ type: credential.type, title: credential.title, issuer: credential.issuer,
-            issuedOn: credential.issuedOn, expiresOn: credential.expiresOn, evidenceMediaIds: credential.evidenceMediaIds })) {
-            json(credential); return;
-          }
-          const added = evidence.filter(id => !credential.evidenceMediaIds.includes(id));
-          if (!added.every(id => usable(id, "CREDENTIAL_EVIDENCE"))) { fail(422); return; }
-          // Removed evidence is deleted, as in the API.
-          for (const id of credential.evidenceMediaIds) if (!evidence.includes(id)) media.delete(id);
-          for (const id of added) media.get(id).attached = true;
-          // Any change starts a new draft revision and clears the previous review.
-          Object.assign(credential, { ...fields, state: "DRAFT", rejectionReason: undefined, revision: credential.revision + 1,
-            version: credential.version + 1 });
-          enforceCompleteness(key);
-          json(credential);
-        });
-        return;
-      }
+    if (url.pathname === "/api/v1/profile/evidence" && req.method === "PUT") {
+      const profile = profiles.get(key);
+      if (!profile) { fail(404); return; }
+      readJson(req, res, fail, input => {
+        const ids = input.mediaIds;
+        if (!Number.isInteger(input.version) || !Array.isArray(ids) || ids.length > 5 || new Set(ids).size !== ids.length) { fail(400); return; }
+        if (input.version !== profile.version) { fail(409); return; }
+        const current = profile.evidenceMediaIds ?? [];
+        if (JSON.stringify(ids) === JSON.stringify(current)) { json(profile); return; }
+        // Unusable images all get one identical 422; proofs never affect approval or publication.
+        if (!ids.filter(id => !current.includes(id)).every(id => usable(id, "CREDENTIAL_EVIDENCE"))) { fail(422); return; }
+        for (const id of current) if (!ids.includes(id)) media.delete(id);
+        for (const id of ids) media.get(id).attached = true;
+        Object.assign(profile, { evidenceMediaIds: ids, version: profile.version + 1 });
+        json(profile);
+      });
+      return;
     }
     fail(404); return;
   }

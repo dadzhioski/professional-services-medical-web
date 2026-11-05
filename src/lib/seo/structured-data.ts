@@ -2,17 +2,13 @@
 export type PhysicianData = {
   name: string; url: string; description: string;
   addresses: readonly { street: string; locality?: string; country?: string }[];
-  credentials: readonly { name: string; category: string; issuer?: string }[];
 };
 
-export function physicianJsonLd({ name, url, description, addresses, credentials }: PhysicianData) {
+export function physicianJsonLd({ name, url, description, addresses }: PhysicianData) {
   return {
     "@context": "https://schema.org", "@type": "Physician", name, url, description,
     ...(addresses.length ? { address: addresses.map(({ street, locality, country }) => ({ "@type": "PostalAddress",
       streetAddress: street, ...(locality ? { addressLocality: locality } : {}), ...(country ? { addressCountry: country } : {}) })) } : {}),
-    ...(credentials.length ? { hasCredential: credentials.map(({ name: title, category, issuer }) => ({
-      "@type": "EducationalOccupationalCredential", name: title, credentialCategory: category,
-      ...(issuer ? { recognizedBy: { "@type": "Organization", name: issuer } } : {}) })) } : {}),
   };
 }
 

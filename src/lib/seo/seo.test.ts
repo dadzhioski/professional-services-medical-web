@@ -34,15 +34,12 @@ test("serialized structured data cannot close the script element or open comment
 });
 test("structured data has only supplied public fields and omits empty groups", () => {
   const minimal = physicianJsonLd({ name: "Synthetic Doctor", url: "https://medical.example.test/en/doctors/x", description: "Synthetic",
-    addresses: [], credentials: [] });
+    addresses: [] });
   expect(minimal).toEqual({ "@context": "https://schema.org", "@type": "Physician", name: "Synthetic Doctor",
     url: "https://medical.example.test/en/doctors/x", description: "Synthetic" });
-  const full = physicianJsonLd({ ...minimal, addresses: [{ street: "Synthetic street 1", locality: "Skopje", country: "MK" }],
-    credentials: [{ name: "Synthetic licence", category: "Licence", issuer: "Synthetic board" }] });
+  const full = physicianJsonLd({ ...minimal, addresses: [{ street: "Synthetic street 1", locality: "Skopje", country: "MK" }] });
   expect(full.address).toEqual([{ "@type": "PostalAddress", streetAddress: "Synthetic street 1", addressLocality: "Skopje", addressCountry: "MK" }]);
-  expect(full.hasCredential).toEqual([{ "@type": "EducationalOccupationalCredential", name: "Synthetic licence", credentialCategory: "Licence",
-    recognizedBy: { "@type": "Organization", name: "Synthetic board" } }]);
-  expect(JSON.stringify(full)).not.toMatch(/rating|review|email|telephone|image|identifier/i);
+  expect(JSON.stringify(full)).not.toMatch(/rating|review|email|telephone|image|identifier|credential/i);
 });
 test("meta descriptions collapse whitespace and shorten at a word boundary", () => {
   expect(metaDescription("  Synthetic\n\n biography  ")).toBe("Synthetic biography");

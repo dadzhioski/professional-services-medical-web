@@ -1,13 +1,13 @@
 import { expect, test } from "vitest";
-import { evidenceOutcomes, formVersion, outcomeMessage, photoOutcomes, selectedImage } from "./form";
+import { proofOutcomes, formVersion, outcomeMessage, photoOutcomes, selectedImage } from "./form";
 
 test("outcome messages come only from the allow-list", () => {
   expect(outcomeMessage(photoOutcomes, "saved")).toEqual({ key: "photo.saved", success: true });
   expect(outcomeMessage(photoOutcomes, "tooLarge")).toEqual({ key: "media.tooLarge", success: false });
-  expect(outcomeMessage(evidenceOutcomes, "missing")).toEqual({ key: "evidence.missingCredential", success: false });
+  expect(outcomeMessage(proofOutcomes, "missing")).toEqual({ key: "proof.missing", success: false });
   expect(outcomeMessage(photoOutcomes, "full")).toBeUndefined();
   for (const value of [undefined, "", "constructor", "__proto__", "toString", "<script>", ["saved"]]) {
-    expect(outcomeMessage(evidenceOutcomes, value)).toBeUndefined();
+    expect(outcomeMessage(proofOutcomes, value)).toBeUndefined();
   }
 });
 

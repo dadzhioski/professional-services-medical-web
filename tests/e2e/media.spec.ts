@@ -53,18 +53,14 @@ const sourceOf = async (page: Page, image = photo(page)) => (await image.getAttr
 // Owner delivery goes through the same-origin /api/* route; the request context reaches it like the edge does.
 const deliver = (request: APIRequestContext, src: string) => request.get(fixture + src);
 
-async function openCredentials(page: Page, request: APIRequestContext) {
-  await openDraft(page);
-  await control(request, "credentials/seed");
-  await page.goto(`${origin}/en/provider/credentials`);
-  await expect(page.getByRole("heading", { name: "Synthetic licence" })).toBeVisible();
+// Optional private proofs live on the profile page next to the qualification text.
+const proofInput = (page: Page) => page.getByLabel(t("proof.file"));
+async function addProof(page: Page, image = pngFile) {
+  await proofInput(page).setInputFiles(image);
+  await page.locator("#proofs").getByRole("button", { name: t("proof.add") }).click();
 }
-const evidenceInput = (page: Page) => page.getByLabel(`${t("media.file")}: Synthetic licence`);
-async function addEvidence(page: Page, image = pngFile) {
-  await evidenceInput(page).setInputFiles(image);
-  await page.getByRole("button", { name: t("evidence.add") }).click();
-}
-const evidenceImages = (page: Page) => page.getByRole("img", { name: new RegExp(`^${t("evidence.image")} \\d$`) });
+const proofImages = (page: Page) => page.getByRole("img", { name: new RegExp(`^${t("proof.image")} \\d$`) });
+const removeProof = (page: Page, index: number) => page.getByRole("button", { name: `${t("proof.remove")}: ${t("proof.image")} ${index}` });
 
 test.beforeEach(async ({ request, context }) => {
   await mode(request, "reset");
@@ -163,7 +159,7 @@ test("a stale photo change is a conflict, and the editor follows the new version
   await expect(page.getByRole("region", { name: t("profileEditor.previewHeading") }).locator("img")).toHaveAttribute("src", await sourceOf(page));
 });
 
-test("photo and evidence changes require the site Origin", async ({ browser, request }) => {
+test("photo and proof changes require the site Origin", async ({ browser }) => {
   // Without JavaScript the forms carry the hidden action fields a cross-site page could replay.
   const context = await browser.newContext({ javaScriptEnabled: false });
   await navigation(context);
@@ -179,25 +175,21 @@ test("photo and evidence changes require the site Origin", async ({ browser, req
     await page.reload();
     await expect(page.getByText(t("photo.none"))).toBeVisible();
 
-    await control(request, "credentials/seed");
-    await page.goto(`${origin}/en/provider/credentials`);
-    const evidenceFields = await hidden(page, "article form >> nth=0");
-    const forged = await context.request.post(`${origin}/en/provider/credentials`, { multipart: { ...evidenceFields, evidence: image } });
-    expect(forged.url()).toContain("evidence=forbidden");
+    const proofFields = await hidden(page, "#proofs form >> nth=0");
+    const forged = await context.request.post(`${origin}/en/provider/profile`, { multipart: { ...proofFields, proof: image } });
+    expect(forged.url()).toContain("proof=forbidden");
     await page.reload();
-    await expect(page.getByText(t("evidence.noEvidence"))).toBeVisible();
+    await expect(page.getByText(t("proof.none"))).toBeVisible();
   } finally { await context.close(); }
 });
 
-test("evidence is private, limited to the owner and removed on request", async ({ page, request, browser, playwright }) => {
-  await openCredentials(page, request);
-  await expect(page.getByText(t("evidence.noEvidence"))).toBeVisible();
-  await expect(page.getByText(t("credential.state.approved"), { exact: true })).toBeVisible();
-  await addEvidence(page);
-  await expect(page.getByText(t("evidence.saved"))).toBeVisible();
-  // Changing evidence starts a new draft revision.
-  await expect(page.getByText(t("credential.state.draft"), { exact: true })).toBeVisible();
-  const src = await sourceOf(page, evidenceImages(page).first());
+test("proofs are optional, private, limited to the owner and removed on request", async ({ page, request, browser, playwright }) => {
+  await openDraft(page);
+  await expect(page.getByText(t("proof.none"))).toBeVisible();
+  await expect(page.getByText(t("proof.privacy"))).toBeVisible();
+  await addProof(page);
+  await expect(page.getByText(t("proof.saved"))).toBeVisible();
+  const src = await sourceOf(page, proofImages(page).first());
   const owner = await deliver(page.context().request, src);
   expect(owner.status()).toBe(200);
   expect(owner.headers()["cache-control"]).toBe("no-store");
@@ -205,7 +197,7 @@ test("evidence is private, limited to the owner and removed on request", async (
   const anonymous = await playwright.request.newContext();
   try {
     expect((await deliver(anonymous, src)).status()).toBe(401);
-    for (const path of ["/en/provider/credentials", "/mk/provider/credentials"]) {
+    for (const path of ["/en/provider/profile", "/mk/provider/profile"]) {
       expect(await (await anonymous.get(`${origin}${path}`)).text()).not.toContain(src);
     }
   } finally { await anonymous.dispose(); }
@@ -216,44 +208,43 @@ test("evidence is private, limited to the owner and removed on request", async (
     const otherPage = await other.newPage();
     await openDraft(otherPage);
     expect((await deliver(other.request, src)).status()).toBe(404);
-    await otherPage.goto(`${origin}/en/provider/credentials`);
-    await expect(otherPage.getByText(t("evidence.none"))).toBeVisible();
+    await expect(otherPage.getByText(t("proof.none"))).toBeVisible();
   } finally { await other.close(); }
 
   const { mediaId } = await (await control(request, "media/foreign")).json();
   expect((await deliver(page.context().request, `/api/v1/media/${mediaId}/content`)).status()).toBe(404);
 
-  await page.getByRole("button", { name: `${t("evidence.remove")}: ${t("evidence.image")} 1, Synthetic licence` }).click();
-  await expect(page.getByText(t("evidence.removed"))).toBeVisible();
-  await expect(evidenceImages(page)).toHaveCount(0);
-  // Released evidence is deleted at once rather than waiting for cleanup.
+  await removeProof(page, 1).click();
+  await expect(page.getByText(t("proof.removed"))).toBeVisible();
+  await expect(proofImages(page)).toHaveCount(0);
+  // A released proof is deleted at once rather than waiting for cleanup.
   expect((await deliver(page.context().request, src)).status()).toBe(404);
 });
 
-test("evidence respects the image limit, stale credentials and rejected uploads", async ({ page, request }) => {
-  await openCredentials(page, request);
-  await addEvidence(page, corruptFile);
+test("proofs respect the image limit, a stale profile and rejected uploads", async ({ page, request }) => {
+  await openDraft(page);
+  await addProof(page, corruptFile);
   await expect(page.getByText(t("media.invalid"))).toBeVisible();
-  await expect(evidenceImages(page)).toHaveCount(0);
+  await expect(proofImages(page)).toHaveCount(0);
   for (let count = 1; count <= 5; count++) {
-    await addEvidence(page, count % 2 ? pngFile : jpegFile);
-    await expect(evidenceImages(page)).toHaveCount(count);
+    await addProof(page, count % 2 ? pngFile : jpegFile);
+    await expect(proofImages(page)).toHaveCount(count);
   }
-  await expect(page.getByText(t("evidence.full"))).toBeVisible();
-  await expect(evidenceInput(page)).toHaveCount(0);
-  await control(request, "credentials/bump");
-  await page.getByRole("button", { name: `${t("evidence.remove")}: ${t("evidence.image")} 5, Synthetic licence` }).click();
-  await expect(page.getByText(t("evidence.conflict"))).toBeVisible();
-  await expect(evidenceImages(page)).toHaveCount(5);
+  await expect(page.getByText(t("proof.full"))).toBeVisible();
+  await expect(proofInput(page)).toHaveCount(0);
+  await control(request, "profile/bump");
+  await removeProof(page, 5).click();
+  await expect(page.getByText(t("proof.conflict"))).toBeVisible();
+  await expect(proofImages(page)).toHaveCount(5);
   await mode(request, "media-reject");
-  await page.getByRole("button", { name: `${t("evidence.remove")}: ${t("evidence.image")} 5, Synthetic licence` }).click();
-  await expect(page.getByText(t("evidence.removed"))).toBeVisible();
-  await addEvidence(page);
+  await removeProof(page, 5).click();
+  await expect(page.getByText(t("proof.removed"))).toBeVisible();
+  await addProof(page);
   await expect(page.getByText(t("media.invalid"))).toBeVisible();
-  await expect(evidenceImages(page)).toHaveCount(4);
+  await expect(proofImages(page)).toHaveCount(4);
 });
 
-test("photo and evidence controls are keyboard accessible and pass axe", async ({ page, request }) => {
+test("photo and proof controls are keyboard accessible and pass axe", async ({ page }) => {
   const axe = async () => {
     await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
     expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: unknown[] }> } }).axe.run()).violations)).toEqual([]);
@@ -267,10 +258,8 @@ test("photo and evidence controls are keyboard accessible and pass axe", async (
   await page.getByLabel(t("media.file")).focus();
   await page.keyboard.press("Tab");
   await expect(page.locator("#photo").getByRole("button", { name: t("photo.replace") })).toBeFocused();
-  await control(request, "credentials/seed");
-  await page.goto(`${origin}/en/provider/credentials`);
-  await addEvidence(page);
-  await expect(page.getByText(t("evidence.saved"))).toBeVisible();
+  await addProof(page);
+  await expect(page.getByText(t("proof.saved"))).toBeVisible();
   await axe();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

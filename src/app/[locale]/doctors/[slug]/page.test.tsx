@@ -22,7 +22,8 @@ const reference = (code: string) => ({ id: `ref-${code}`, code, labels: { mk: `m
 const published: PublicProfileResponse = {
   slug: "dr-synthetic", displayName: "Synthetic Doctor", biography: "Synthetic biography\nsecond line", photoMediaId,
   specialty: reference("cardiology"),
-  credentials: [{ type: "LICENSE", title: "Synthetic licence", issuer: "Synthetic board", issuedOn: new Date(2020, 0, 15), expiresOn: null }],
+  education: "Synthetic University\nMedicine", specialties: "Synthetic interventional cardiology", certificates: "Synthetic course",
+  credentials: [],
   services: [{ name: "Synthetic consultation", description: "Synthetic description", price: { amount: "25.00", currency: "EUR" } },
     { name: "Synthetic follow-up", description: null }],
   locations: [{ label: "Synthetic clinic", displayAddress: "Synthetic street 1", countryCode: "MK", city: reference("skopje") }],
@@ -43,12 +44,14 @@ for (const locale of localeCodes) {
     expect(readPublicProfile).toHaveBeenCalledWith("dr-synthetic");
     expect(html).toContain("<h1");
     expect(html).toContain("Synthetic Doctor");
-    for (const key of ["profile.introduction", "profile.specialties", "profile.credentials", "profile.services", "profile.locations"] as const) {
+    for (const key of ["profile.introduction", "profile.specialties", "profile.education", "profile.certificates", "profile.services",
+      "profile.locations"] as const) {
       expect(html).toContain(t(key));
     }
     expect(html).toContain(locale === "sq" ? "cardiology" : `${locale}-cardiology`);
-    expect(html).toContain(`${t("credential.type.license")}: Synthetic licence`);
-    expect(html).toContain(t("credentials.noExpiry"));
+    expect(html).toContain("Synthetic University\nMedicine");
+    expect(html).toContain("Synthetic interventional cardiology");
+    expect(html).toContain("Synthetic course");
     expect(html).toContain("Synthetic street 1");
     expect(html).toContain(`src="/api/v1/public/media/${photoMediaId}/content"`);
     expect(html).toContain('referrerPolicy="no-referrer"');
@@ -56,7 +59,7 @@ for (const locale of localeCodes) {
     expect(html).toContain(`href="/${locale}/doctors">${t("publicProfile.backToDirectory")}</a>`);
     const data = jsonLd(html);
     expect(data).toMatchObject({ "@type": "Physician", name: "Synthetic Doctor", url: `http://localhost:3000/${locale}/doctors/dr-synthetic` });
-    expect(JSON.stringify(data)).not.toMatch(/media|image|rating|evil/);
+    expect(JSON.stringify(data)).not.toMatch(/media|image|rating|evil|credential/i);
 
     const title = `Synthetic Doctor – ${locale === "sq" ? "cardiology" : `${locale}-cardiology`}`;
     const url = `http://localhost:3000/${locale}/doctors/dr-synthetic`;
@@ -76,14 +79,15 @@ test("optional data can be absent without empty sections, photo or structured gr
   const html = await render$();
   const t = translator("en");
   expect(html).not.toContain("<img");
-  expect(html).not.toContain(t("profile.credentials"));
+  expect(html).not.toContain(t("profile.education"));
+  expect(html).not.toContain(t("profile.certificates"));
   expect(html).not.toContain(t("profile.introduction"));
   expect(Object.keys(jsonLd(html))).toEqual(["@context", "@type", "name", "url", "description"]);
   expect((await generateMetadata(params())).description).toBe(`Synthetic Doctor. ${t("publicProfile.descriptionFallback")}`);
 });
 test("malicious supplied text stays inert in HTML, metadata and structured data", async () => {
   const hostile = '</script><script>alert("x")</script><!--';
-  ready({ ...published, displayName: hostile, biography: hostile,
+  ready({ ...published, displayName: hostile, biography: hostile, education: hostile, certificates: '<img src=x onerror="alert(1)">',
     services: [{ name: hostile, description: '<img src=x onerror="alert(1)">' }], photoMediaId: "javascript:alert(1)" });
   const html = await render$();
   expect(html).not.toContain("<script>alert");

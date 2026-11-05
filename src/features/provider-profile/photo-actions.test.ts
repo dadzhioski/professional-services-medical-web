@@ -4,9 +4,9 @@ const mocks = vi.hoisted(() => ({ getAll: vi.fn(), set: vi.fn(), get: vi.fn(),
   redirect: vi.fn((url: string) => { throw new Error(`redirect:${url}`); }) }));
 vi.mock("next/headers", () => ({ cookies: async () => mocks, headers: async () => mocks }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
-vi.mock("@/lib/api/profile", () => ({ replacePhoto: vi.fn(), removePhoto: vi.fn() }));
-import { removePhoto, replacePhoto } from "@/lib/api/profile";
-import { changeProfilePhoto, removeProfilePhoto } from "./photo-actions";
+vi.mock("@/lib/api/profile", () => ({ replacePhoto: vi.fn(), removePhoto: vi.fn(), addProof: vi.fn(), removeProof: vi.fn() }));
+import { addProof, removePhoto, removeProof, replacePhoto } from "@/lib/api/profile";
+import { addProfileProof, changeProfilePhoto, removeProfilePhoto, removeProfileProof } from "./photo-actions";
 
 const image = new File([new Uint8Array(8)], "photo.png", { type: "image/png" });
 const form = (entries: Record<string, string | File>) => {
@@ -58,4 +58,26 @@ test("unsupported locales do nothing", async () => {
   expect(await target(removeProfilePhoto("constructor", form({ version: "4" })))).toBeUndefined();
   expect(replacePhoto).not.toHaveBeenCalled();
   expect(removePhoto).not.toHaveBeenCalled();
+});
+
+const proofPage = (state: string) => `/en/provider/profile?proof=${state}#proofs`;
+test("adding a proof passes the version and file and returns to the proof section", async () => {
+  vi.mocked(addProof).mockResolvedValue({ state: "saved" });
+  expect(await target(addProfileProof("en", form({ version: "4", proof: image })))).toBe(proofPage("saved"));
+  expect(vi.mocked(addProof).mock.calls[0].slice(3)).toEqual([4, image]);
+});
+test.each([[{ version: "4" }, "noFile"], [{ proof: image }, "invalid"]] as const)("an incomplete proof form %# is refused locally", async (entries, state) => {
+  expect(await target(addProfileProof("en", form(entries)))).toBe(proofPage(state));
+  expect(addProof).not.toHaveBeenCalled();
+});
+test("removing a proof passes the chosen ID for the API list check", async () => {
+  vi.mocked(removeProof).mockResolvedValue({ state: "missing" });
+  expect(await target(removeProfileProof("en", form({ version: "4", mediaId: "../private" })))).toBe(proofPage("missing"));
+  expect(vi.mocked(removeProof).mock.calls[0].slice(3)).toEqual([4, "../private"]);
+});
+test("tampered locales never change proofs", async () => {
+  expect(await target(addProfileProof("xx", form({ version: "4", proof: image })))).toBeUndefined();
+  expect(await target(removeProfileProof("xx", form({ version: "4", mediaId: "x" })))).toBeUndefined();
+  expect(addProof).not.toHaveBeenCalled();
+  expect(removeProof).not.toHaveBeenCalled();
 });

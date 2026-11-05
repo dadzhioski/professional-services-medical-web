@@ -9,7 +9,7 @@ afterEach(() => vi.unstubAllGlobals());
 const reference = { id: "ref-1", code: "cardiology", labels: { mk: "Кардиологија", en: "Cardiology", bg: "Кардиология" } };
 const published = {
   slug: "dr-synthetic", displayName: "Synthetic Doctor", biography: "Synthetic biography", photoMediaId: null, specialty: reference,
-  credentials: [{ type: "LICENSE", title: "Synthetic licence", issuer: "Synthetic board", issuedOn: "2020-01-15", expiresOn: null }],
+  education: "Synthetic University\nMedicine", specialties: "Synthetic cardiology", certificates: null, credentials: [],
   services: [{ name: "Synthetic consultation", description: null, price: { amount: "25.00", currency: "EUR" } }],
   locations: [{ label: null, displayAddress: "Synthetic street 1", countryCode: "MK", city: { ...reference, code: "skopje" } }],
 };
@@ -18,7 +18,7 @@ test("reads the published profile anonymously with no cookie, caching or redirec
   fetchMock.mockResolvedValueOnce(Response.json(published));
   const result = await readPublicProfile("dr-synthetic");
   expect(result.state).toBe("ready");
-  expect(result.state === "ready" && result.profile.credentials?.[0].issuedOn).toEqual(new Date(2020, 0, 15));
+  expect(result.state === "ready" && result.profile.education).toBe("Synthetic University\nMedicine");
   const [url, init] = fetchMock.mock.calls[0];
   expect(url).toBe("http://localhost:8080/api/v1/public/profiles/dr-synthetic");
   expect(init).toMatchObject({ method: "GET", cache: "no-store", credentials: "omit", redirect: "error" });
@@ -51,8 +51,7 @@ test.each([
 test.each([
   {}, { ...published, displayName: " " }, { ...published, slug: undefined }, { ...published, biography: 1 },
   { ...published, photoMediaId: 5 }, { ...published, specialty: { ...reference, id: "" } },
-  { ...published, credentials: [{ ...published.credentials[0], title: "" }] },
-  { ...published, credentials: [{ ...published.credentials[0], issuedOn: "not-a-date" }] },
+  { ...published, education: 1 }, { ...published, specialties: ["Synthetic"] }, { ...published, certificates: {} },
   { ...published, services: [{ name: "Synthetic", price: { amount: "1e3", currency: "EUR" } }] },
   { ...published, locations: [{ ...published.locations[0], countryCode: "Macedonia" }] },
   { ...published, locations: [null] },

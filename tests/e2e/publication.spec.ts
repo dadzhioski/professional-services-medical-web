@@ -25,7 +25,7 @@ async function signIn(page: Page, locale: Locale = "en") {
   await page.getByRole("link", { name: translator(locale)("account.login") }).click();
   await expect(page.getByText(translator(locale)("account.authenticated"))).toBeVisible();
 }
-// A doctor whose profile has every owner-provided part except an approved credential.
+// A doctor whose profile has every owner-provided part except the education and specialties text.
 async function doctor(page: Page, request: APIRequestContext, locale: Locale = "en") {
   const tr = translator(locale);
   await signIn(page, locale);
@@ -69,7 +69,9 @@ test("an unapproved or incomplete profile cannot be published and names what is 
   await doctor(page, request);
   await openPublication(page);
   await expect(page.getByText(t("publication.needsApproval"))).toBeVisible();
-  await expect(page.getByRole("link", { name: t("publication.missing.credential") })).toHaveAttribute("href", "/en/provider/credentials");
+  for (const part of ["publication.missing.education", "publication.missing.specialties"] as const) {
+    await expect(page.getByRole("link", { name: t(part) })).toHaveAttribute("href", "/en/provider/profile#qualifications");
+  }
   await expect(page.getByRole("link", { name: t("publication.publish") })).toHaveCount(0);
   // A forged confirmation step is not rendered for an ineligible profile.
   await page.goto(`${origin}/en/provider/publication?confirm=publish`);
@@ -84,7 +86,7 @@ for (const locale of localeCodes) {
     try {
       const page = await context.newPage();
       await doctor(page, request, locale);
-      await control(request, "credentials/seed");
+      await control(request, "qualifications/seed");
       await approve(browser, request);
       await openPublication(page, locale);
       await expect(page.getByText(tr("publication.complete"))).toBeVisible();
@@ -101,7 +103,7 @@ for (const locale of localeCodes) {
 
 test("completeness loss after an edit unpublishes and needs an explicit republish", async ({ page, browser, request }) => {
   await doctor(page, request);
-  await control(request, "credentials/seed");
+  await control(request, "qualifications/seed");
   await approve(browser, request);
   await openPublication(page);
   await confirm(page, "publish");
@@ -118,7 +120,7 @@ test("completeness loss after an edit unpublishes and needs an explicit republis
 
 test("a publication the API refuses or that went stale is never shown as published", async ({ page, browser, request }) => {
   await doctor(page, request);
-  await control(request, "credentials/seed");
+  await control(request, "qualifications/seed");
   await approve(browser, request);
   await openPublication(page);
   await page.getByRole("link", { name: t("publication.publish") }).click();
@@ -141,7 +143,7 @@ test("a publication the API refuses or that went stale is never shown as publish
 
 test("the publication page is responsive, never indexed and passes axe", async ({ page, browser, request }) => {
   await doctor(page, request);
-  await control(request, "credentials/seed");
+  await control(request, "qualifications/seed");
   await approve(browser, request);
   await openPublication(page);
   await page.getByRole("link", { name: t("publication.publish") }).click();

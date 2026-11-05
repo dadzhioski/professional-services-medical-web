@@ -1,21 +1,17 @@
 import { expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import type { Credential } from "@/lib/api/credentials";
 import type { PublicationResult } from "@/lib/api/profile";
 import type { IdentityState } from "@/lib/api/session-transport";
 import { onboardingProgress, type ProgressReads, type Step } from "./progress";
 
-const allParts = ["DISPLAY_NAME", "BIOGRAPHY", "SPECIALTY", "SERVICE", "PRACTICE_LOCATION", "APPROVED_CREDENTIAL"];
+const allParts = ["DISPLAY_NAME", "BIOGRAPHY", "SPECIALTY", "EDUCATION", "SPECIALTIES", "SERVICE", "PRACTICE_LOCATION"];
 const context = (approvalState = "PENDING", suspended = false) =>
   ({ state: "ready", context: { organizationId: "synthetic-org", approvalState, approvalRevision: 2, suspended } }) as const;
 const publication = (missing: string[], extra: Partial<{ approved: boolean; suspended: boolean; publicationState: "DRAFT" | "PUBLISHED" | "UNPUBLISHED" }> = {}) =>
   ({ state: "ready", publication: { approved: false, suspended: false, publicationState: "DRAFT", version: 3, missing, ...extra } }) as Extract<PublicationResult, { state: "ready" }>;
 const profile = (photoMediaId?: string) => ({ state: "ready", profile: { slug: "synthetic", version: 3, photoMediaId } }) as const;
-const credential = (state: string) => ({ credentialId: "c", version: 1, title: "t", issuer: "i", type: "LICENSE", state,
-  issuedOn: new Date("2020-01-01"), evidenceMediaIds: [] }) as unknown as Credential;
-const credentials = (...states: string[]) => ({ state: "ready", credentials: states.map(credential) }) as const;
 const reads = (overrides: Partial<ProgressReads> = {}): ProgressReads =>
-  ({ context: context(), publication: publication(allParts), profile: profile(), credentials: credentials(), ...overrides });
+  ({ context: context(), publication: publication(allParts), profile: profile(), ...overrides });
 
 const states = (steps: Step[]) => Object.fromEntries(steps.map(step => [step.id, step.state]));
 const step = (steps: Step[], id: Step["id"]) => steps.find(item => item.id === id)!;
@@ -23,8 +19,8 @@ const currents = (steps: Step[]) => steps.filter(item => item.state === "current
 
 test("before onboarding only the workspace step is current and nothing links anywhere", () => {
   const steps = onboardingProgress({ context: { state: "notOnboarded" } });
-  expect(steps.map(item => item.id)).toEqual(["workspace", "profile", "service", "location", "credentials", "photo", "review", "publish"]);
-  expect(states(steps)).toEqual({ workspace: "current", profile: "todo", service: "todo", location: "todo", credentials: "todo",
+  expect(steps.map(item => item.id)).toEqual(["workspace", "profile", "service", "location", "photo", "review", "publish"]);
+  expect(states(steps)).toEqual({ workspace: "current", profile: "todo", service: "todo", location: "todo",
     photo: "todo", review: "todo", publish: "todo" });
   expect(steps.every(item => !item.page)).toBe(true);
 });
@@ -36,32 +32,30 @@ test.each<IdentityState>(["signedOut", "expired", "forbidden", "unavailable"])("
 
 test("without a profile the editor steps are to do and the profile step is current", () => {
   const steps = onboardingProgress(reads({ publication: { state: "missing" }, profile: { state: "missing" } }));
-  expect(states(steps)).toEqual({ workspace: "done", profile: "current", service: "todo", location: "todo", credentials: "todo",
+  expect(states(steps)).toEqual({ workspace: "done", profile: "current", service: "todo", location: "todo",
     photo: "optional", review: "todo", publish: "blocked" });
   expect(step(steps, "publish").reason).toBe("onboarding.reason.completeAbove");
-  expect(step(steps, "credentials").details).toEqual(["onboarding.credential.add"]);
 });
 
 test("profile step lists its missing parts and each part keeps only its own step open", () => {
   const steps = onboardingProgress(reads());
-  expect(step(steps, "profile").details).toEqual(["publication.missing.displayName", "publication.missing.biography", "publication.missing.specialty"]);
+  expect(step(steps, "profile").details).toEqual(["publication.missing.displayName", "publication.missing.biography", "publication.missing.specialty",
+    "publication.missing.education", "publication.missing.specialties"]);
   expect(step(steps, "profile").page).toBe("profile");
-  for (const [part, id] of [["DISPLAY_NAME", "profile"], ["BIOGRAPHY", "profile"], ["SPECIALTY", "profile"], ["SERVICE", "service"],
-    ["PRACTICE_LOCATION", "location"], ["APPROVED_CREDENTIAL", "credentials"]] as const) {
-    const only = onboardingProgress(reads({ publication: publication([part]), credentials: credentials("DRAFT") }));
+  for (const [part, id] of [["DISPLAY_NAME", "profile"], ["BIOGRAPHY", "profile"], ["SPECIALTY", "profile"], ["EDUCATION", "profile"],
+    ["SPECIALTIES", "profile"], ["SERVICE", "service"], ["PRACTICE_LOCATION", "location"]] as const) {
+    const only = onboardingProgress(reads({ publication: publication([part]) }));
     expect(step(only, id).state).toBe("current");
-    for (const other of ["profile", "service", "location", "credentials"] as const) {
+    for (const other of ["profile", "service", "location"] as const) {
       if (other !== id) expect(step(only, other).state).toBe("done");
     }
     expect(currents(only)).toBe(1);
   }
 });
 
-test.each([[[], "onboarding.credential.add"], [["DRAFT"], "onboarding.credential.submit"], [["DRAFT", "SUBMITTED"], "onboarding.credential.waiting"],
-  [["REJECTED"], "onboarding.credential.rejected"], [["REJECTED", "DRAFT"], "onboarding.credential.submit"],
-  [["FUTURE"], "onboarding.credential.unknown"], [["APPROVED"], "onboarding.credential.unknown"]] as const)("credentials %j explain %s", (list, key) => {
-  const steps = onboardingProgress(reads({ publication: publication(["APPROVED_CREDENTIAL"]), credentials: credentials(...list) }));
-  expect(step(steps, "credentials")).toMatchObject({ state: "current", details: [key] });
+test("the deprecated credential requirement is an unknown part, never done", () => {
+  const steps = onboardingProgress(reads({ context: context("APPROVED"), publication: publication(["APPROVED_CREDENTIAL"], { approved: true }) }));
+  expect(step(steps, "publish")).toMatchObject({ state: "blocked", details: ["publication.missing.unknown"] });
 });
 
 test("photo is optional, done when set and never current", () => {
@@ -115,7 +109,7 @@ test("approved but incomplete keeps publication blocked behind the open step", (
 
 test("unknown missing parts are never done and keep publication blocked", () => {
   const steps = onboardingProgress(reads({ context: context("APPROVED"), publication: publication(["FUTURE_PART"], { approved: true }) }));
-  expect(states(steps)).toMatchObject({ profile: "done", service: "done", location: "done", credentials: "done", review: "done", publish: "blocked" });
+  expect(states(steps)).toMatchObject({ profile: "done", service: "done", location: "done", review: "done", publish: "blocked" });
   expect(step(steps, "publish")).toMatchObject({ reason: "onboarding.reason.unavailable", details: ["publication.missing.unknown"] });
   const mixed = onboardingProgress(reads({ context: context("APPROVED"), publication: publication(["FUTURE_PART", "SERVICE"], { approved: true }) }));
   expect(step(mixed, "publish").reason).toBe("onboarding.reason.completeAbove");
@@ -133,17 +127,13 @@ test("suspension blocks review and publication without offering them", () => {
 
 test.each<IdentityState>(["expired", "forbidden", "unavailable"])("publication %s marks its steps unavailable, never done", state => {
   const steps = onboardingProgress(reads({ publication: { state } }));
-  for (const id of ["profile", "service", "location", "credentials", "publish"] as const) {
+  for (const id of ["profile", "service", "location", "publish"] as const) {
     expect(step(steps, id)).toMatchObject({ state: "blocked", reason: "onboarding.reason.unavailable" });
   }
   expect(currents(steps)).toBe(0);
 });
 
-test("credential and profile read failures affect only their steps", () => {
-  const credentialFailure = onboardingProgress(reads({ publication: publication([]), credentials: { state: "unavailable" } }));
-  expect(step(credentialFailure, "credentials")).toMatchObject({ state: "blocked", reason: "onboarding.reason.unavailable" });
-  expect(step(credentialFailure, "location").state).toBe("done");
-  expect(currents(credentialFailure)).toBe(0);
+test("a profile read failure affects only the photo step", () => {
   const profileFailure = onboardingProgress(reads({ publication: publication([]), profile: { state: "unavailable" } }));
   expect(step(profileFailure, "photo")).toMatchObject({ state: "blocked", reason: "onboarding.reason.unavailable" });
   expect(step(profileFailure, "review").state).toBe("current");

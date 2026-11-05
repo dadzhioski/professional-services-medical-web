@@ -1,10 +1,10 @@
 # WEB-M1-016: Replace credential records with free-text qualifications on the profile page
 
-- **Status:** BLOCKED (2026-10-27) on [API-M1-014](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-014-simplified-qualifications.md) and an approved client upgrade; see "Required API contract". Owner decisions are recorded below. Drafted from owner feedback that credential entry is too heavy: doctors want to paste their education, specialties and certificates from a CV without date pickers, and proof images should not be needed to publish.
+- **Status:** IMPLEMENTED LOCALLY (2026-11-05) against pinned client 0.9.0, approved by the owner on 2026-11-05 ("new api client is released 0.9.0"); live API and non-production checks pending. Earlier BLOCKED (2026-10-27) on [API-M1-014](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-014-simplified-qualifications.md), now resolved. Owner decisions are recorded below. Drafted from owner feedback that credential entry is too heavy: doctors want to paste their education, specialties and certificates from a CV without date pickers, and proof images should not be needed to publish.
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-006 (profile editor), WEB-M1-008 (photo and private evidence), WEB-M1-009 (credentials, superseded by this task), WEB-M1-010 (approval and publication), WEB-M1-011 (public profile), WEB-M1-014 (directory), WEB-M1-015 (onboarding checklist); API-M1-014; an explicitly approved client upgrade (WEB-M1-004 process)
 - **Related ADRs:** WEB-ADR-0001; [WEB-ADR-0002](../adr/WEB-ADR-0002-exact-api-client-version.md) (exact client version); [WEB-ADR-0005](../adr/WEB-ADR-0005-independent-release-compatibility.md) (API deploys additive changes before the web release); [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (private evidence never appears in public output)
-- **Cross-repository dependency:** [API-M1-014](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-014-simplified-qualifications.md) (created 2026-10-27; planned, with open owner decisions A–C on contract compatibility, edits after approval and migration of published profiles), amending [API-M1-005](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-005-professional-profile-drafts.md), [API-M1-007](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-007-media-and-private-evidence.md), [API-M1-008](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-008-credential-review.md), [API-M1-009](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-009-approval-and-publication.md) and [API-M1-010](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-010-public-profiles-and-directory.md). Pinned client 0.7.0 cannot support this task: `CredentialRequest.issuedOn` is a required date, credentials are typed records (`EDUCATION | SPECIALIZATION | LICENSE | CERTIFICATION | OTHER`), `submitCredential` requires at least one evidence image, and `PublicationResponse.missing` contains `APPROVED_CREDENTIAL`, so publishing needs an approved credential.
+- **Cross-repository dependency:** [API-M1-014](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-014-simplified-qualifications.md) (implemented; owner answers A: compatible change with deprecated fields, B: a text change by an approved doctor returns the doctor to review and unpublishes, C: migration never unpublishes) and [API-ADR-0010](../../../../professional-services-platform-api/professional-services-platform-api/docs/adr/API-ADR-0010-publication-requirement-values.md) (new `missing` values approved). Delivered in client 0.9.0 (0.8.0 plus the API-M1-011 corrections). Before it, pinned client 0.7.0 required dated, typed credential records with evidence and an approved credential to publish.
 - **Risk:** High
 
 ## Goal
@@ -83,15 +83,24 @@ The web must not invent these DTOs; it starts only once a published client conta
 
 - [x] (owner) Decisions 1–6 recorded in this task.
 - [x] Linked API task created: API-M1-014 (2026-10-27).
-- [ ] A client version containing API-M1-014 is published and the upgrade is approved.
-- [ ] Qualifications are entered as three free-text sections on the profile page, with no date or duration inputs.
-- [ ] Education and Specialties are required to publish; Certificates is optional.
-- [ ] A profile without any proof images can be approved and published.
-- [ ] The proof section is labelled optional and says proofs are not publicly visible; no proof data appears in public output.
-- [ ] The credentials page and the separate credential review are gone, with redirects in place.
-- [ ] Keyboard, axe, mobile/desktop and 320 px checks pass.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] A client version containing API-M1-014 is published and the upgrade is approved (0.9.0; owner instruction 2026-11-05 to continue on the released 0.9.0, recorded in WEB-M1-004).
+- [x] Qualifications are entered as three free-text sections on the profile page, with no date or duration inputs.
+- [x] Education and Specialties are required to publish; Certificates is optional.
+- [x] A profile without any proof images can be approved and published.
+- [x] The proof section is labelled optional and says proofs are not publicly visible; no proof data appears in public output.
+- [x] The credentials page and the separate credential review are gone, with redirects in place.
+- [x] Keyboard, axe, mobile/desktop and 320 px checks pass.
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
+
+Implementation record (2026-11-05):
+- Client pinned to 0.9.0. `/[locale]/provider/credentials` redirects to `/[locale]/provider/profile#qualifications`; `/[locale]/admin/credentials/*` redirects to `/[locale]/admin/doctors`. `src/features/provider-credentials`, `src/lib/api/credentials.ts` and the credential review wrappers and pages are removed, as are the onboarding credentials step and unused `credential*`/`evidence.*` keys.
+- The profile page has a Qualifications section (three `<textarea>` fields through the existing `ProfileEditor`, generalized to take its fields) saved with `updateProfileQualifications`, and a "Proof (optional)" section using `replaceProfileEvidence`. The proof list is reread at the shown version, so the browser never supplies it. All forms on the page share the profile version: an editor sends the newer of its own and the re-rendered version (except after a conflict), so saving one form never discards typed text in the other.
+- API decision B is shown before saving: an approved doctor is warned that a text change returns the account to review and takes the profile offline. The web predicts nothing; the page rereads the API.
+- `EDUCATION` and `SPECIALTIES` link to the qualifications section; the deprecated `APPROVED_CREDENTIAL` and any other unknown part is shown as an unknown missing part, never as done. The public profile shows the three texts as escaped pre-line text; JSON-LD no longer has `hasCredential`. The administrator doctor review shows the texts and proofs (admin media route only).
+- Separate review pass done; its findings (policy test pin, input loss from remounts, proof 404 message, upgrade record, section anchor, trimmed length check, redirect tests) are fixed.
+
+Local evidence (2026-11-05): Passed: lint on `src tests scripts next.config.ts`, typecheck, 923 unit tests, 48 policy tests, API-client policy (0.9.0), production build, 262 desktop/mobile browser scenarios and `git diff --check`. Not executed: live API, Google sign-in and non-production VPS checks.
 
 ## Verification
 

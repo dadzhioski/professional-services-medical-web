@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { PublicApi, ResponseError, type PublicCredential, type PublicPracticeLocation, type PublicProfileResponse,
+import { PublicApi, ResponseError, type PublicPracticeLocation, type PublicProfileResponse,
   type PublicReference, type PublicService } from "@dadzhioski/professional-services-api-client";
 import { amountPattern } from "@/lib/price";
 import { identifier, optionalText } from "./owned-records";
@@ -9,15 +9,11 @@ import { sessionConfiguration } from "./session-transport";
 export type PublicProfileResult = { state: "ready"; profile: PublicProfileResponse } | { state: "missing" } | { state: "unavailable" };
 
 export const text = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
-const date = (value: unknown): value is Date => value instanceof Date && !Number.isNaN(value.getTime());
 const list = <T>(value: unknown, valid: (item: T) => boolean) =>
   value === undefined || (Array.isArray(value) && value.every(item => !!item && valid(item)));
 export const reference = (value: PublicReference | undefined) => value === undefined ||
   (!!value && identifier(value.id) && identifier(value.code) &&
     (value.labels === undefined || (!!value.labels && Object.values(value.labels).every(optionalText))));
-const credential = (value: PublicCredential) => text(value.title) && optionalText(value.issuer) &&
-  typeof value.type === "string" && (value.issuedOn === undefined || date(value.issuedOn)) &&
-  (value.expiresOn === undefined || value.expiresOn === null || date(value.expiresOn));
 const service = (value: PublicService) => text(value.name) && optionalText(value.description) &&
   (value.price === undefined || value.price === null ||
     (typeof value.price.amount === "string" && amountPattern.test(value.price.amount) && typeof value.price.currency === "string"));
@@ -25,9 +21,11 @@ const location = (value: PublicPracticeLocation) => text(value.displayAddress) &
   (value.countryCode === undefined || (typeof value.countryCode === "string" && /^[A-Z]{2}$/.test(value.countryCode))) &&
   reference(value.city);
 
+// The deprecated credential list is ignored: the API always sends it empty and it is never rendered.
 function valid(profile: PublicProfileResponse | undefined, slug: string): profile is PublicProfileResponse {
   return !!profile && profile.slug === slug && text(profile.displayName) && optionalText(profile.biography) &&
-    optionalText(profile.photoMediaId) && reference(profile.specialty) && list(profile.credentials, credential) &&
+    optionalText(profile.photoMediaId) && reference(profile.specialty) && optionalText(profile.education) &&
+    optionalText(profile.specialties) && optionalText(profile.certificates) &&
     list(profile.services, service) && list(profile.locations, location);
 }
 

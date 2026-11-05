@@ -11,7 +11,6 @@ import { onboardingProgress } from "@/features/provider-onboarding/progress";
 import { ProviderNavigation } from "@/features/provider-onboarding/workspace";
 import { resubmitApplication } from "@/features/provider-publication/actions";
 import { approvalOutcomes } from "@/features/provider-publication/labels";
-import { readCredentials } from "@/lib/api/credentials";
 import { currentAccount, googleLoginHref } from "@/lib/api/identity";
 import { currentContext } from "@/lib/api/organization";
 import { readProfile, readPublication } from "@/lib/api/profile";
@@ -53,11 +52,11 @@ export default async function OnboardingPage({ params, searchParams }: Props) {
   }
   // Progress comes only from the API, read in parallel with the visitor's own session and never cached.
   // Record reads are ignored until the context confirms a workspace.
-  const [workspace, publication, profile, credentials] = await Promise.all([currentContext(session), readPublication(session),
-    readProfile(session), readCredentials(session)]);
+  const [workspace, publication, profile] = await Promise.all([currentContext(session), readPublication(session),
+    readProfile(session)]);
   const ready = workspace.state === "ready";
-  const steps = onboardingProgress(ready ? { context: workspace, publication, profile, credentials } : { context: workspace });
-  const failedRead = ready ? [publication, profile, credentials].find(read => read.state !== "ready" && read.state !== "missing") : undefined;
+  const steps = onboardingProgress(ready ? { context: workspace, publication, profile } : { context: workspace });
+  const failedRead = ready ? [publication, profile].find(read => read.state !== "ready" && read.state !== "missing") : undefined;
   // API failures win over the notice of the last action (workspace creation or sign-out), which wins over the signed-in state.
   const failure = workspace.state !== "ready" && workspace.state !== "notOnboarded" ? workspace.state :
     failedRead?.state ?? safeNotice;

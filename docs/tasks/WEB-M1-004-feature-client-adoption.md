@@ -51,8 +51,11 @@ Make the exact published feature contract available before dependent web integra
 | API-M1-008 | `CredentialsApi` create/get/list/update/delete/submit with `evidenceMediaIds`; `CredentialReviewApi` list/get/approve/reject (0.6.0) | WEB-M1-008 (evidence), WEB-M1-009, WEB-M1-010 |
 | API-M1-009 | `DoctorReviewApi` list/get/approve/reject/suspend/reinstate; `ProfileApi` getProfilePublication/publish/unpublish; required `ContextResponse.approvalRevision` (0.6.0) | WEB-M1-010 |
 | API-M1-010 | `PublicApi`: getPublicProfile, listPublicDoctors (0.7.0) | WEB-M1-011 |
+| API-M1-014 | `ProfileApi`: updateProfileQualifications, replaceProfileEvidence; `ProfileResponse` education/specialties/certificates/evidenceMediaIds; `PublicProfileResponse` texts; `PublicationResponse.missing` EDUCATION/SPECIALTIES (APPROVED_CREDENTIAL deprecated, API-ADR-0010) (0.8.0, carried by 0.9.0) | WEB-M1-016 |
 
 Upgrade record (2026-10-25, WEB-M1-008): pinned `0.7.0`, integrity `sha512-CmfMv4LL3hOIWh9uqHPXf5ykOrsNmVOICHWbnKhWfYNyHCi07Fs1OEN4RDQSPTA8ka2OSq70xeQ/5PU7pUD5uA==`. 0.6.0 was prepared but never reached the registry; the owner directed 0.7.0, which carries the 0.5.0/0.6.0 changes. The only breaking type change for existing code is the required `ContextResponse.approvalRevision`; runtime wrappers do not read it, and synthetic test fixtures were updated.
+
+Upgrade record (2026-11-05, WEB-M1-016): pinned `0.9.0` on the owner's instruction that it is released; integrity `sha512-s7374jgecGvyNc0SyR++PJ1j6a+M7LSIc0Q3G0qSYAngSQu6x3EH1TIqBv9dDy3sAm2vUgAGA3g6DqAthqo3mQ==` (matches `npm view`). 0.9.0 is 0.8.0 (API-M1-014) plus the API-M1-011 documentation and status corrections; existing code compiled unchanged. Credential and credential-review methods remain in the client as deprecated and are no longer called. Compatibility: the browser fixture implements the 0.9.0 routes; no live API was exercised. Release order: the API image with 0.9.0 behavior deploys before this web release.
 
 ## Acceptance criteria
 

@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Heading, Notice } from "@/components/ui/presentation";
+import { Heading } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { decideDoctorAction } from "@/features/admin-review/actions";
 import { isDoctorDecision, type DoctorDecisionKind } from "@/features/admin-review/outcomes";
 import { AdminFrame, adminGate, ReviewFailure } from "@/features/admin-review/page-frame";
 import { decisionLinkClass, formatInstant, linkClass, ReviewOutcome } from "@/features/admin-review/review-parts";
-import { credentialTypeKey } from "@/features/provider-credentials/labels";
+import { OwnerImage } from "@/features/media/owner-image";
 import { approvalKey } from "@/features/provider-onboarding/workspace";
 import { publicationKey } from "@/features/provider-profile/fields";
 import { DecisionConfirmation } from "@/features/provider-records/decision-confirmation";
-import { doctorForReview, submittedCredentials } from "@/lib/api/review";
+import { adminMediaContentPath } from "@/lib/api/media";
+import { doctorForReview } from "@/lib/api/review";
 import { isLocale, translator } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export default async function DoctorReviewPage({ params, searchParams }: Props) 
   if (gate.state !== "authenticated") {
     return <ReviewFailure locale={locale} path={path} heading="review.doctor.heading" state={gate.state} loginHref={gate.loginHref} />;
   }
-  const [result, credentials] = await Promise.all([doctorForReview(gate.session, organizationId), submittedCredentials(gate.session)]);
+  const result = await doctorForReview(gate.session, organizationId);
   if (result.state === "notFound") notFound();
   if (result.state !== "ready") {
     return <ReviewFailure locale={locale} path={path} heading="review.doctor.heading" state={result.state} loginHref={gate.loginHref} />;
@@ -50,7 +51,12 @@ export default async function DoctorReviewPage({ params, searchParams }: Props) 
   const available: Record<DoctorDecisionKind, boolean> = { approve: doctor.approvalState === "PENDING",
     reject: doctor.approvalState === "PENDING", suspend: !doctor.suspended, reinstate: doctor.suspended };
   const deciding = isDoctorDecision(query.decide) && available[query.decide] ? query.decide : undefined;
-  const pending = credentials.state === "ready" ? credentials.credentials.filter(item => item.organizationId === doctor.organizationId) : undefined;
+  // Proofs load through the API's audited administrator media route only.
+  const proofs = (profile?.evidenceMediaIds ?? []).flatMap(mediaId => {
+    const contentPath = adminMediaContentPath(mediaId);
+    return contentPath ? [{ mediaId, path: contentPath }] : [];
+  });
+  const qualifications = ["education", "specialties", "certificates"] as const;
   const decisionLink = (decision: DoctorDecisionKind) => available[decision] &&
     <a className={decisionLinkClass} href={`${path}?decide=${decision}#decision`}>{t(`review.action.${decision}`)}</a>;
   return <AdminFrame locale={locale} path={path} current="doctors">
@@ -79,6 +85,22 @@ export default async function DoctorReviewPage({ params, searchParams }: Props) 
         {profile ? <p className="whitespace-pre-line">{profile.biography || t("review.notProvided")}</p> : <p>{t("review.noProfile")}</p>}
       </section>
     </Surface>
+    {profile && <Surface>
+      <section aria-labelledby="doctor-qualifications" className="space-y-4 [overflow-wrap:anywhere]">
+        <h2 id="doctor-qualifications" className="text-xl font-semibold text-teal-950">{t("qualifications.heading")}</h2>
+        {qualifications.map(field => <div key={field} className="space-y-1">
+          <h3 className="font-semibold">{t(`qualifications.${field}`)}</h3>
+          <p className="whitespace-pre-line">{profile[field]?.trim() || t("review.notProvided")}</p>
+        </div>)}
+        <h3 className="font-semibold">{t("proof.heading")}</h3>
+        <p>{t("review.proofNote")}</p>
+        {proofs.length ? <ul className="flex flex-wrap gap-4">
+          {proofs.map(({ mediaId, path: contentPath }, index) => <li key={mediaId} className="w-40">
+            <OwnerImage path={contentPath} alt={`${t("proof.image")} ${index + 1}`} className="rounded-lg border border-slate-300" />
+          </li>)}
+        </ul> : <p>{t("proof.none")}</p>}
+      </section>
+    </Surface>}
     <Surface>
       <section aria-labelledby="approval-decision" className="space-y-4">
         <h2 id="approval-decision" className="text-xl font-semibold text-teal-950">{t("review.approval")}</h2>
@@ -92,16 +114,6 @@ export default async function DoctorReviewPage({ params, searchParams }: Props) 
         <h2 id="suspension" className="text-xl font-semibold text-teal-950">{t("review.suspension")}</h2>
         <p>{t(doctor.suspended ? "review.confirm.reinstateNote" : "review.confirm.suspendNote")}</p>
         <p className="flex flex-wrap gap-4">{decisionLink("suspend")}{decisionLink("reinstate")}</p>
-      </section>
-    </Surface>
-    <Surface>
-      <section aria-labelledby="doctor-credentials" className="space-y-4">
-        <h2 id="doctor-credentials" className="text-xl font-semibold text-teal-950">{t("review.doctorCredentials")}</h2>
-        {!pending ? <Notice role="alert">{t("account.unavailable")}</Notice> : pending.length ? <ul className="space-y-2">
-          {pending.map(credential => <li key={credential.credentialId} className="[overflow-wrap:anywhere]">
-            <a className={linkClass} href={`/${locale}/admin/credentials/${encodeURIComponent(credential.credentialId)}`}>
-              {credential.title}</a> ({t(credentialTypeKey(credential.type))})</li>)}
-        </ul> : <p>{t("review.credentials.none")}</p>}
       </section>
     </Surface>
   </AdminFrame>;

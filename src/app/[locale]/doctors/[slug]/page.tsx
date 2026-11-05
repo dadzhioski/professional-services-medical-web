@@ -63,7 +63,7 @@ export default async function PublicProfilePage({ params }: Props) {
     <BackLink locale={locale} />
     <ProfilePresentation locale={locale} name={profile.displayName!} introduction={profile.biography ?? undefined}
       photo={photoPath && <OwnerImage path={photoPath} alt="" />} specialties={content.specialties}
-      credentials={content.credentials} services={content.services} locations={content.locations} />
+      qualifications={content.qualifications} services={content.services} locations={content.locations} />
     {/* Escaped serialization keeps supplied text inert inside the script element. */}
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(structured) }} />
   </main></>;

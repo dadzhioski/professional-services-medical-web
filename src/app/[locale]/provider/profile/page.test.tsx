@@ -4,8 +4,10 @@ vi.mock("server-only", () => ({}));
 // SiteHeader is async and covered by its own tests; the stub proves each page renders it.
 vi.mock("@/components/site-header", () => ({ SiteHeader: ({ current }: { current?: string }) => <header data-current={current ?? "none"} /> }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => [{ name: "platform-session-local", value: "synthetic" }] }) }));
-vi.mock("@/features/provider-profile/actions", () => ({ createProfileDraft: vi.fn(), saveProfileDraft: vi.fn(), saveProfileSpecialty: vi.fn() }));
-vi.mock("@/features/provider-profile/photo-actions", () => ({ changeProfilePhoto: vi.fn(), removeProfilePhoto: vi.fn() }));
+vi.mock("@/features/provider-profile/actions", () => ({ createProfileDraft: vi.fn(), saveProfileDraft: vi.fn(), saveProfileSpecialty: vi.fn(),
+  saveProfileQualifications: vi.fn() }));
+vi.mock("@/features/provider-profile/photo-actions", () => ({ changeProfilePhoto: vi.fn(), removeProfilePhoto: vi.fn(),
+  addProfileProof: vi.fn(), removeProfileProof: vi.fn() }));
 vi.mock("@/lib/api/identity", () => ({ currentAccount: vi.fn(), googleLoginHref: async (locale: string) => `/api/auth/login?returnTo=%2F${locale}%2Fprovider` }));
 vi.mock("@/lib/api/organization", () => ({ currentContext: vi.fn() }));
 vi.mock("@/lib/api/profile", () => ({ readProfile: vi.fn() }));
@@ -24,8 +26,8 @@ const authenticated = { state: "authenticated", account: {
 const ready = { state: "ready", context: { organizationId: "synthetic-private-org", approvalState: "PENDING", approvalRevision: 1, suspended: false } } as const;
 const profile = { profileId: "synthetic-private-profile", organizationId: "synthetic-private-org", slug: "dr-0000abcd",
   displayName: "Synthetic Doctor", biography: '<script>alert("synthetic")</script>', publicationState: "DRAFT", version: 2 };
-const render = async (locale = "en", notice?: string, photo?: string) =>
-  renderToStaticMarkup(await Page({ params: Promise.resolve({ locale }), searchParams: Promise.resolve({ notice, photo }) }));
+const render = async (locale = "en", notice?: string, photo?: string, proof?: string) =>
+  renderToStaticMarkup(await Page({ params: Promise.resolve({ locale }), searchParams: Promise.resolve({ notice, photo, proof }) }));
 const privateValues = /synthetic-private|synthetic-session|localhost:8080|@/;
 const specialties = [{ id: "spec-1", code: "cardiology", labels: { mk: "Кардиологија", en: "Cardiology", bg: "Кардиология" } },
   { id: "spec-2", code: "dermatology", labels: { en: "Dermatology" } }];
@@ -198,3 +200,67 @@ test("photo failures are announced and unknown outcomes ignored", async () => {
   const html = await render("en", undefined, "<b>raw-private-error</b>");
   expect(html).not.toContain("raw-private-error");
 });
+
+const proofId = "4d2c8e1a-9b3f-4a6e-8c7d-5f1e2a3b4c5d";
+const signedInWith = (extra: object, context: { state: "ready"; context: Omit<typeof ready.context, "approvalState"> & { approvalState: string } } = ready) => {
+  vi.mocked(currentAccount).mockResolvedValue(authenticated);
+  vi.mocked(currentContext).mockResolvedValue(context);
+  vi.mocked(readProfile).mockResolvedValue({ state: "ready", profile: { ...profile, ...extra } });
+};
+for (const locale of localeCodes) {
+  test(`${locale} renders three plain-text qualification fields without date inputs and an optional private proof section`, async () => {
+    const t = translator(locale);
+    signedInWith({ education: "Synthetic University\n<b>Medicine</b>", specialties: "Synthetic cardiology", certificates: null });
+    const html = await render(locale);
+    expect(html).toContain('id="qualifications"');
+    expect(html).toContain(t("qualifications.heading"));
+    for (const name of ["education", "specialties", "certificates"] as const) {
+      expect(html).toMatch(new RegExp(`<label[^>]*for="qualifications-${name}"[^>]*>${t(`qualifications.${name}`)}</label>`));
+      expect(html).toMatch(new RegExp(`<textarea[^>]*name="${name}"[^>]*maxLength="4000"`));
+      expect(html).toContain(t(`qualifications.${name}Hint`));
+    }
+    expect(html).toContain("Synthetic University\n&lt;b&gt;Medicine&lt;/b&gt;</textarea>");
+    expect(html).not.toMatch(/type="date"|type="month"|name="issuedOn"|name="expiresOn"/);
+    expect(html).toContain(t("proof.heading"));
+    expect(html).toContain(t("proof.privacy"));
+    expect(html).toContain(t("proof.none"));
+    expect(html).toMatch(/<input[^>]*name="proof"[^>]*type="file"|<input[^>]*type="file"[^>]*name="proof"/);
+    expect(html).not.toContain(t("qualifications.reviewNote"));
+  });
+}
+test("the private preview shows the saved qualification text", async () => {
+  signedInWith({ education: "Synthetic University", specialties: "Synthetic cardiology", certificates: "Synthetic course" });
+  const html = await render();
+  const t = translator("en");
+  const preview = html.slice(html.indexOf('id="profile-preview"'));
+  for (const text of ["Synthetic University", "Synthetic cardiology", "Synthetic course", t("profile.education"), t("profile.certificates")]) {
+    expect(preview).toContain(text);
+  }
+});
+test("an approved doctor is warned that changing qualifications returns the account to review", async () => {
+  signedInWith({}, { ...ready, context: { ...ready.context, approvalState: "APPROVED" } });
+  expect(await render()).toContain(translator("en")("qualifications.reviewNote"));
+});
+test("proof images load from the owner route with labelled remove controls and the shown version", async () => {
+  signedInWith({ evidenceMediaIds: [proofId] });
+  const t = translator("en");
+  const html = await render();
+  expect(html).toContain(`src="/api/v1/media/${proofId}/content"`);
+  expect(html).toContain(`alt="${t("proof.image")} 1"`);
+  expect(html).toContain(`aria-label="${t("proof.remove")}: ${t("proof.image")} 1"`);
+  expect(html).toContain(`<input type="hidden" name="mediaId" value="${proofId}"/>`);
+  expect(html).toContain('<input type="hidden" name="version" value="2"/>');
+  expect(html).not.toContain(t("proof.none"));
+});
+test("five proofs hide the upload and say the limit is reached", async () => {
+  signedInWith({ evidenceMediaIds: Array.from({ length: 5 }, (_, index) => `4d2c8e1a-9b3f-4a6e-8c7d-5f1e2a3b4c5${index}`) });
+  const html = await render();
+  expect(html).toContain(translator("en")("proof.full"));
+  expect(html).not.toContain('name="proof"');
+});
+test.each([["saved", "status", "proof.saved"], ["full", "alert", "proof.full"], ["conflict", "alert", "proof.conflict"]] as const)(
+  "proof outcome %s is announced as %s and unknown outcomes are ignored", async (outcome, role, key) => {
+    signedInWith({});
+    expect(await render("en", undefined, undefined, outcome)).toMatch(new RegExp(`role="${role}"[^>]*>${translator("en")(key)}`));
+    expect(await render("en", undefined, undefined, "raw-private-error")).not.toContain("raw-private-error");
+  });

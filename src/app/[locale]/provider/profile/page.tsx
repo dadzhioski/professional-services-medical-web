@@ -8,10 +8,11 @@ import { OwnerImage } from "@/features/media/owner-image";
 import { ProfilePresentation } from "@/features/professional-profile/presentation";
 import { SubmitButton } from "@/features/provider-onboarding/submit-button";
 import { checklistPath, ProviderNavigation } from "@/features/provider-onboarding/workspace";
-import { createProfileDraft, saveProfileDraft, saveProfileSpecialty } from "@/features/provider-profile/actions";
-import { editorMessageKeys, publicationKey, type EditorMessages } from "@/features/provider-profile/fields";
+import { createProfileDraft, saveProfileDraft, saveProfileQualifications, saveProfileSpecialty } from "@/features/provider-profile/actions";
+import { editorMessageKeys, profileLimits, publicationKey, qualificationLimits, type EditorMessages } from "@/features/provider-profile/fields";
 import { PhotoSection } from "@/features/provider-profile/photo-section";
 import { ProfileEditor } from "@/features/provider-profile/profile-editor";
+import { ProofSection } from "@/features/provider-profile/proof-section";
 import { specialtyMessageKeys, type SpecialtyMessages } from "@/features/provider-profile/specialty";
 import { SpecialtyEditor } from "@/features/provider-profile/specialty-editor";
 import { recordMessageKeys, type RecordMessages } from "@/features/provider-records/form";
@@ -27,7 +28,7 @@ import { isLocale, translator } from "@/lib/i18n";
 import { referenceLabel } from "@/lib/i18n/reference";
 
 export const dynamic = "force-dynamic";
-type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ notice?: string; photo?: string }> };
+type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ notice?: string; photo?: string; proof?: string }> };
 const linkClass = "inline-block min-h-11 rounded-lg bg-teal-800 px-5 py-3 font-semibold text-white underline hover:bg-teal-900";
 
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
@@ -44,7 +45,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const name = sessionCookieName(getServerEnvironment().publicOrigin);
   const session = incomingSession((await cookies()).getAll(), name);
   const account = await currentAccount(session);
-  const { notice, photo } = await searchParams;
+  const { notice, photo, proof } = await searchParams;
   const safeNotice = notice === "forbidden" || notice === "unavailable" || notice === "expired" ? notice : undefined;
   const path = `/${locale}/provider/profile`;
   const loginHref = await googleLoginHref(locale);
@@ -78,6 +79,13 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const photoPath = profile?.state === "ready" ? mediaContentPath(profile.profile.photoMediaId) : null;
   const messages = Object.fromEntries(editorMessageKeys.map(key => [key, t(key)])) as EditorMessages;
   const savedLink = { href: checklistPath(locale), label: t("onboarding.backToChecklist") };
+  const current = profile?.state === "ready" ? profile.profile : undefined;
+  const profileFields = [
+    { name: "displayName", label: t("profileEditor.displayName"), hint: t("profileEditor.displayNameHint"), maxLength: profileLimits.displayName },
+    { name: "biography", label: t("profileEditor.biography"), hint: t("profileEditor.biographyHint"), maxLength: profileLimits.biography, rows: 8 },
+  ] as const;
+  const qualificationFields = (["education", "specialties", "certificates"] as const).map(name => ({ name,
+    label: t(`qualifications.${name}`), hint: t(`qualifications.${name}Hint`), maxLength: qualificationLimits[name], rows: 8 }));
   return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
     <ProviderNavigation locale={locale} current="profile" />
     <Surface className="space-y-6">
@@ -103,8 +111,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         <p>{t("profileEditor.publicNote")}</p>
         <p>{t("profileEditor.contactNote")}</p>
         <p>{t("profileEditor.privacy")}</p>
-        {/* Photo changes also bump the profile version; remounting on a photo change hands the editor that version. */}
-        <ProfileEditor key={profile.profile.photoMediaId ?? "no-photo"} action={saveProfileDraft.bind(null, locale)} messages={messages} loginHref={loginHref} reloadHref={path} savedLink={savedLink}
+        <ProfileEditor action={saveProfileDraft.bind(null, locale)} fields={profileFields} saveLabel={t("profileEditor.save")}
+          messages={messages} loginHref={loginHref} reloadHref={path} savedLink={savedLink}
           initial={{ status: "idle", errors: {}, version: profile.profile.version!,
             values: { displayName: profile.profile.displayName ?? "", biography: profile.profile.biography ?? "" } }} />
       </>}
@@ -119,6 +127,22 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           <Notice role="alert">{t(`account.${specialtyFailure ?? "unavailable"}`)}</Notice>}
       </section>
     </Surface>}
+    {current && workspace.state === "ready" && <Surface>
+      <section id="qualifications" aria-labelledby="qualifications-heading" className="space-y-4">
+        <h2 id="qualifications-heading" className="text-xl font-semibold text-teal-950">{t("qualifications.heading")}</h2>
+        <p>{t("qualifications.description")}</p>
+        <p>{t("profileEditor.privacy")}</p>
+        {/* The API returns an approved doctor to review when this text changes; the page only warns about it. */}
+        {workspace.context.approvalState === "APPROVED" && <Notice>{t("qualifications.reviewNote")}</Notice>}
+        <ProfileEditor action={saveProfileQualifications.bind(null, locale)} fields={qualificationFields} idPrefix="qualifications"
+          saveLabel={t("qualifications.save")} messages={messages} loginHref={loginHref} reloadHref={`${path}#qualifications`} savedLink={savedLink}
+          initial={{ status: "idle", errors: {}, version: current.version!, values: { education: current.education ?? "",
+            specialties: current.specialties ?? "", certificates: current.certificates ?? "" } }} />
+      </section>
+    </Surface>}
+    {current && <Surface>
+      <ProofSection locale={locale} version={current.version!} proofMediaIds={current.evidenceMediaIds ?? []} outcome={proof} />
+    </Surface>}
     {profile?.state === "ready" && <Surface>
       <PhotoSection locale={locale} version={profile.profile.version!} photoMediaId={profile.profile.photoMediaId} outcome={photo} />
     </Surface>}
@@ -127,7 +151,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         <h2 id="profile-preview" className="text-xl font-semibold text-teal-950">{t("profileEditor.previewHeading")}</h2>
         <p>{t("profileEditor.previewNote")}</p>
         <ProfilePresentation locale={locale} nested name={profile.profile.displayName?.trim() ? profile.profile.displayName : t("profileEditor.unnamed")}
-          introduction={profile.profile.biography} photo={photoPath && <OwnerImage path={photoPath} alt="" />} />
+          introduction={profile.profile.biography} photo={photoPath && <OwnerImage path={photoPath} alt="" />}
+          qualifications={{ education: profile.profile.education, specialties: profile.profile.specialties,
+            certificates: profile.profile.certificates }} />
       </section>
     </Surface>}
   </main></>;

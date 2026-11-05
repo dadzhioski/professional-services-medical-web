@@ -1,6 +1,6 @@
 import "server-only";
-import { CredentialReviewApi, CredentialReviewResponseStateEnum, DoctorReviewApi, DoctorReviewResponseApprovalStateEnum,
-  ResponseError, type Configuration, type CredentialReviewResponse, type DoctorReviewResponse, type ProfileResponse } from "@dadzhioski/professional-services-api-client";
+import { DoctorReviewApi, DoctorReviewResponseApprovalStateEnum, ResponseError, type Configuration, type DoctorReviewResponse,
+  type ProfileResponse } from "@dadzhioski/professional-services-api-client";
 import { isUuid } from "./media";
 import { csrfHeader, csrfMutation, failure, sessionConfiguration, type ApplySession, type IdentityState } from "./session-transport";
 
@@ -10,10 +10,6 @@ export const approvalStates: readonly ApprovalState[] = Object.values(DoctorRevi
 export type DoctorsResult = { state: "ready"; doctors: DoctorReviewResponse[] } | { state: IdentityState };
 export type DoctorResult = { state: "ready"; doctor: DoctorReviewResponse; profile?: ProfileResponse } | { state: "notFound" } |
   { state: IdentityState };
-export type ReviewCredential = CredentialReviewResponse & Required<Pick<CredentialReviewResponse, "credentialId" | "organizationId" |
-  "revision" | "state" | "type" | "title" | "issuer" | "issuedOn" | "evidenceMediaIds">>;
-export type CredentialsResult = { state: "ready"; credentials: ReviewCredential[] } | { state: IdentityState };
-export type CredentialResult = { state: "ready"; credential: ReviewCredential } | { state: "notFound" } | { state: IdentityState };
 export type DoctorDecision = "approve" | "suspend" | "reinstate";
 export type DecisionResult = { state: "decided" | "conflict" | "missing" | "invalid" | IdentityState };
 
@@ -26,24 +22,16 @@ function validDoctor(doctor: DoctorReviewResponse | null | undefined): doctor is
     typeof doctor.suspended === "boolean" && approvalStates.includes(doctor.approvalState) && validDate(doctor.registeredAt);
 }
 
+// Qualification texts and proof IDs are part of the approval decision; proof IDs must be UUIDs before any image path is built.
 function validProfile(profile: ProfileResponse | null | undefined): profile is ProfileResponse {
-  return !!profile && optionalText(profile.displayName) && optionalText(profile.biography) && optionalText(profile.publicationState);
+  if (!profile) return false;
+  const proofs = profile.evidenceMediaIds ?? [];
+  if (!Array.isArray(proofs) || !proofs.every(isUuid)) return false;
+  profile.evidenceMediaIds = proofs;
+  return optionalText(profile.displayName) && optionalText(profile.biography) && optionalText(profile.publicationState) &&
+    optionalText(profile.education) && optionalText(profile.specialties) && optionalText(profile.certificates);
 }
 
-const credentialStates: readonly string[] = Object.values(CredentialReviewResponseStateEnum);
-
-// Every field the reviewer sees is required; evidence identifiers must be UUIDs before any image path is built.
-function validCredential(credential: CredentialReviewResponse | null | undefined): credential is ReviewCredential {
-  if (!credential || !isUuid(credential.credentialId) || !isUuid(credential.organizationId) ||
-      !Number.isSafeInteger(credential.revision)) return false;
-  const evidence = credential.evidenceMediaIds ?? [];
-  if (!Array.isArray(evidence) || !evidence.every(isUuid)) return false;
-  credential.evidenceMediaIds = evidence;
-  return typeof credential.state === "string" && credentialStates.includes(credential.state) && typeof credential.type === "string" &&
-    typeof credential.title === "string" && typeof credential.issuer === "string" && validDate(credential.issuedOn) &&
-    (credential.expiresOn === undefined || credential.expiresOn === null || validDate(credential.expiresOn)) &&
-    (credential.submittedAt === undefined || credential.submittedAt === null || validDate(credential.submittedAt));
-}
 
 export async function doctorsForReview(session: string | undefined, approvalState: ApprovalState): Promise<DoctorsResult> {
   if (!session) return { state: "signedOut" };
@@ -72,25 +60,6 @@ export async function doctorForReview(session: string | undefined, organizationI
   }
 }
 
-export async function submittedCredentials(session?: string): Promise<CredentialsResult> {
-  if (!session) return { state: "signedOut" };
-  try {
-    const credentials = await new CredentialReviewApi(sessionConfiguration(session)).listSubmittedCredentials();
-    return Array.isArray(credentials) && credentials.every(validCredential) ? { state: "ready", credentials } : { state: "unavailable" };
-  } catch (error) { return { state: failure(error, session) }; }
-}
-
-export async function credentialForReview(session: string | undefined, credentialId: string): Promise<CredentialResult> {
-  if (!session) return { state: "signedOut" };
-  if (!isUuid(credentialId)) return { state: "notFound" };
-  try {
-    const credential = await new CredentialReviewApi(sessionConfiguration(session)).getCredentialForReview({ credentialId });
-    return validCredential(credential) ? { state: "ready", credential } : { state: "unavailable" };
-  } catch (error) {
-    if (status(error) === 400 || status(error) === 404) return { state: "notFound" };
-    return { state: failure(error, session) };
-  }
-}
 
 // Each decision carries the revision the administrator reviewed. A 409 is never retried: the page reloads for a new review.
 async function decide<T>(origin: string | null, session: string | undefined, apply: ApplySession, id: string,
@@ -124,16 +93,4 @@ export function rejectDoctor(origin: string | null, session: string | undefined,
   revision: number, reason: string): Promise<DecisionResult> {
   return decide(origin, session, apply, organizationId, (configuration, token) => new DoctorReviewApi(configuration).rejectDoctor(
     { organizationId, rejectDoctorRequest: { reason, revision } }, csrfHeader(token)), validDoctor);
-}
-
-export function approveCredential(origin: string | null, session: string | undefined, apply: ApplySession, credentialId: string,
-  revision: number): Promise<DecisionResult> {
-  return decide(origin, session, apply, credentialId, (configuration, token) => new CredentialReviewApi(configuration).approveCredential(
-    { credentialId, reviewDecisionRequest: { revision } }, csrfHeader(token)), validCredential);
-}
-
-export function rejectCredential(origin: string | null, session: string | undefined, apply: ApplySession, credentialId: string,
-  revision: number, reason: string): Promise<DecisionResult> {
-  return decide(origin, session, apply, credentialId, (configuration, token) => new CredentialReviewApi(configuration).rejectCredential(
-    { credentialId, rejectCredentialRequest: { reason, revision } }, csrfHeader(token)), validCredential);
 }

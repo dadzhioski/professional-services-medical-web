@@ -11,7 +11,7 @@ export function approvalKey(state: string) {
   return Object.hasOwn(approvalKeys, state) ? approvalKeys[state as keyof typeof approvalKeys] : "workspace.approval.unknown";
 }
 
-export type ProviderPage = "onboarding" | "profile" | "services" | "locations" | "credentials" | "publication";
+export type ProviderPage = "onboarding" | "profile" | "services" | "locations" | "publication";
 
 export const checklistPath = (locale: Locale) => `/${locale}/provider/onboarding`;
 
@@ -19,7 +19,7 @@ export function ProviderNavigation({ locale, current }: { locale: Locale; curren
   const t = translator(locale);
   const links = [["onboarding", checklistPath(locale)],
     ["profile", `/${locale}/provider/profile`], ["services", `/${locale}/provider/services`],
-    ["locations", `/${locale}/provider/locations`], ["credentials", `/${locale}/provider/credentials`],
+    ["locations", `/${locale}/provider/locations`],
     ["publication", `/${locale}/provider/publication`]] as const;
   return <nav aria-label={t("provider.navigation")}>
     <ul className="flex flex-wrap gap-4">

@@ -1,6 +1,4 @@
 import type { PublicProfileResponse } from "@dadzhioski/professional-services-api-client";
-import { formatDate } from "@/features/admin-review/review-parts";
-import { credentialTypeKey } from "@/features/provider-credentials/labels";
 import { translator, type Locale } from "@/lib/i18n";
 import { referenceLabel } from "@/lib/i18n/reference";
 import { formatPrice } from "@/lib/price";
@@ -12,8 +10,6 @@ const lines = (...parts: (string | null | undefined | false)[]) => parts.filter(
 export function publicContent(profile: PublicProfileResponse, locale: Locale) {
   const t = translator(locale);
   const specialty = profile.specialty ? referenceLabel(profile.specialty.labels, profile.specialty.code!, locale) : undefined;
-  const credentials = (profile.credentials ?? []).map(credential => ({ name: credential.title!,
-    category: t(credentialTypeKey(credential.type!)), issuer: credential.issuer?.trim() || undefined, credential }));
   const locations = (profile.locations ?? []).map(location => ({ label: location.label?.trim() || undefined,
     street: location.displayAddress!, country: location.countryCode,
     locality: location.city ? referenceLabel(location.city.labels, location.city.code!, locale) : undefined }));
@@ -22,14 +18,12 @@ export function publicContent(profile: PublicProfileResponse, locale: Locale) {
     title,
     description: metaDescription(profile.biography?.trim() || `${title}. ${t("publicProfile.descriptionFallback")}`),
     specialties: specialty ? [specialty] : [],
-    credentials: credentials.map(({ name, category, issuer, credential }) => lines(`${category}: ${name}`, issuer,
-      credential.issuedOn && `${t("credentials.issued")}: ${formatDate(locale, credential.issuedOn)}`,
-      credential.expiresOn ? `${t("credentials.expires")}: ${formatDate(locale, credential.expiresOn)}` : t("credentials.noExpiry"))),
+    // The deprecated credential list is always empty from 0.9.0 on and is not read.
+    qualifications: { education: profile.education, specialties: profile.specialties, certificates: profile.certificates },
     services: (profile.services ?? []).map(service => ({ name: service.name!, description: service.description?.trim() || undefined,
       price: service.price ? formatPrice(locale, service.price.amount!, service.price.currency!) : undefined })),
     locations: locations.map(location => lines(location.label, location.street, location.locality)),
-    structured: { addresses: locations.map(({ street, locality, country }) => ({ street, locality, country })),
-      credentials: credentials.map(({ name, category, issuer }) => ({ name, category, issuer })) } satisfies
-      Pick<PhysicianData, "addresses" | "credentials">,
+    structured: { addresses: locations.map(({ street, locality, country }) => ({ street, locality, country })) } satisfies
+      Pick<PhysicianData, "addresses">,
   };
 }

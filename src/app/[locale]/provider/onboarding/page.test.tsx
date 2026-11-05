@@ -10,9 +10,6 @@ vi.mock("@/features/provider-publication/actions", () => ({ resubmitApplication:
 vi.mock("@/lib/api/identity", () => ({ currentAccount: vi.fn(), googleLoginHref: async (locale: string) => `/api/auth/login?returnTo=%2F${locale}%2Fprovider` }));
 vi.mock("@/lib/api/organization", () => ({ currentContext: vi.fn() }));
 vi.mock("@/lib/api/profile", () => ({ readProfile: vi.fn(), readPublication: vi.fn() }));
-vi.mock("@/lib/api/credentials", () => ({ readCredentials: vi.fn() }));
-import type { Credential } from "@/lib/api/credentials";
-import { readCredentials } from "@/lib/api/credentials";
 import { currentAccount, type IdentityState } from "@/lib/api/identity";
 import { currentContext } from "@/lib/api/organization";
 import { readProfile, readPublication, type PublicationResult } from "@/lib/api/profile";
@@ -24,19 +21,16 @@ const authenticated = { state: "authenticated", account: {
   accountId: "synthetic-private-id", emailVerified: true, sessionExpiresAt: new Date("2099-01-01") } } as const;
 const context = (approvalState = "PENDING", extra: { suspended?: boolean; rejectionReason?: string } = {}) =>
   ({ state: "ready", context: { organizationId: "synthetic-private-org", approvalState, approvalRevision: 6, suspended: false, ...extra } }) as const;
-const allParts = ["DISPLAY_NAME", "BIOGRAPHY", "SPECIALTY", "SERVICE", "PRACTICE_LOCATION", "APPROVED_CREDENTIAL"];
+const allParts = ["DISPLAY_NAME", "BIOGRAPHY", "SPECIALTY", "EDUCATION", "SPECIALTIES", "SERVICE", "PRACTICE_LOCATION"];
 const publication = (missing: string[], extra: { approved?: boolean; suspended?: boolean; publicationState?: string } = {}) =>
   ({ state: "ready", publication: { approved: false, suspended: false, publicationState: "DRAFT", version: 3, missing, ...extra } }) as unknown as PublicationResult;
-const credentials = (...states: string[]) => ({ state: "ready", credentials: states.map(state => ({ credentialId: "c", version: 1,
-  title: "Synthetic private licence", issuer: "i", type: "LICENSE", state, issuedOn: new Date("2020-01-01"), evidenceMediaIds: [] }) as unknown as Credential) }) as const;
 
 function signedIn(reads: { context?: Awaited<ReturnType<typeof currentContext>>; publication?: PublicationResult;
-  profile?: Awaited<ReturnType<typeof readProfile>>; credentials?: Awaited<ReturnType<typeof readCredentials>> } = {}) {
+  profile?: Awaited<ReturnType<typeof readProfile>> } = {}) {
   vi.mocked(currentAccount).mockResolvedValue(authenticated);
   vi.mocked(currentContext).mockResolvedValue(reads.context ?? context());
   vi.mocked(readPublication).mockResolvedValue(reads.publication ?? publication(allParts));
   vi.mocked(readProfile).mockResolvedValue(reads.profile ?? { state: "ready", profile: { slug: "synthetic-slug", version: 3 } });
-  vi.mocked(readCredentials).mockResolvedValue(reads.credentials ?? credentials());
 }
 const render = async (locale = "en", query: { notice?: string; approval?: string } = {}) =>
   renderToStaticMarkup(await Page({ params: Promise.resolve({ locale }), searchParams: Promise.resolve(query) }));
@@ -59,8 +53,7 @@ for (const locale of localeCodes) {
     signedIn({ context: { state: "notOnboarded" } });
     const html = await render(locale);
     expect(html).toContain(tl("onboarding.heading"));
-    for (const key of ["onboarding.step.workspace", "onboarding.step.profile", "onboarding.step.service", "onboarding.step.location",
-      "onboarding.step.credentials", "onboarding.step.photo", "onboarding.step.review", "onboarding.step.publication"] as const) {
+    for (const key of ["onboarding.step.workspace", "onboarding.step.profile", "onboarding.step.service", "onboarding.step.location", "onboarding.step.photo", "onboarding.step.review", "onboarding.step.publication"] as const) {
       expect(html).toContain(tl(key));
     }
     expect(html).toContain(tl("onboarding.privacy"));
@@ -80,11 +73,11 @@ test("reads run in parallel with the session and the page is never cached", asyn
   signedIn();
   await render();
   expect(dynamic).toBe("force-dynamic");
-  for (const read of [currentContext, readPublication, readProfile, readCredentials]) expect(read).toHaveBeenCalledWith("synthetic");
+  for (const read of [currentContext, readPublication, readProfile]) expect(read).toHaveBeenCalledWith("synthetic");
 });
 
 test("a partially complete checklist marks done steps, one current step and why later steps wait", async () => {
-  signedIn({ publication: publication(["BIOGRAPHY", "PRACTICE_LOCATION", "APPROVED_CREDENTIAL"]), credentials: credentials("DRAFT") });
+  signedIn({ publication: publication(["BIOGRAPHY", "EDUCATION", "PRACTICE_LOCATION"]) });
   const html = await render();
   expect(html).toContain(t("account.authenticated"));
   expect(item(html, "onboarding.step.workspace").textContent).toContain(t("workspace.ready"));
@@ -93,16 +86,15 @@ test("a partially complete checklist marks done steps, one current step and why 
   expect(profile.getAttribute("aria-current")).toBe("step");
   expect(profile.textContent).toContain(t("onboarding.state.current"));
   expect(next(html).textContent).toContain(t("publication.missing.biography"));
+  expect(next(html).textContent).toContain(t("publication.missing.education"));
   expect(next(html).textContent).not.toContain(t("publication.missing.displayName"));
   expect(next(html).querySelector('a[href="/en/provider/profile"]')?.textContent).toBe(`${t("onboarding.action.open")}: ${t("onboarding.step.profile")}`);
   expect(item(html, "onboarding.step.service").querySelector('a[href="/en/provider/services"]')?.textContent).toContain(t("onboarding.action.edit"));
   expect(item(html, "onboarding.step.location").textContent).toContain(t("onboarding.state.todo"));
-  expect(item(html, "onboarding.step.credentials").textContent).toContain(t("onboarding.credential.submit"));
   expect(item(html, "onboarding.step.photo").textContent).toContain(t("onboarding.state.optional"));
   expect(item(html, "onboarding.step.publication").textContent).toContain(t("onboarding.reason.completeAbove"));
   expect(item(html, "onboarding.step.publication").querySelector("a")).toBeNull();
   expect(show(html).querySelectorAll('[aria-current="step"]')).toHaveLength(1);
-  expect(html).not.toContain("Synthetic private licence");
   await axeClean(html);
 });
 
@@ -200,15 +192,13 @@ test("suspended shows the notice and offers neither resubmission nor publication
   expect(show(html).querySelector('section a[href="/en/provider/publication"]')).toBeNull();
 });
 
-test.each<["publication" | "profile" | "credentials", IdentityState]>([["publication", "unavailable"], ["profile", "expired"],
-  ["credentials", "forbidden"]])("a failed %s read (%s) alerts and never shows the affected steps as done", async (read, state) => {
+test.each<["publication" | "profile", IdentityState]>([["publication", "unavailable"], ["profile", "expired"]])("a failed %s read (%s) alerts and never shows the affected steps as done", async (read, state) => {
   signedIn({ publication: publication([]), [read]: { state } });
   const html = await render();
   expect(show(html).querySelector('[role="alert"]')?.textContent).toBe(t(`account.${state}`));
   expect(html).not.toContain(t("account.authenticated"));
   const affected = read === "publication" ? ["onboarding.step.profile", "onboarding.step.service", "onboarding.step.location",
-    "onboarding.step.credentials", "onboarding.step.publication"] as const : read === "profile" ? ["onboarding.step.photo"] as const :
-    ["onboarding.step.credentials"] as const;
+    "onboarding.step.publication"] as const : ["onboarding.step.photo"] as const;
   for (const key of affected) {
     expect(item(html, key).textContent).toContain(t("onboarding.reason.unavailable"));
     expect(item(html, key).textContent).not.toContain(t("onboarding.state.done"));
@@ -222,7 +212,7 @@ test.each<IdentityState>(["expired", "forbidden", "unavailable"])("context %s hi
   expect(show(html).querySelector('[role="alert"]')?.textContent).toBe(t(`account.${state}`));
   expect(html).not.toContain(t("onboarding.create"));
   expect(html).not.toContain(t("onboarding.state.done"));
-  expect(html.match(new RegExp(t("onboarding.reason.unavailable"), "g"))).toHaveLength(8);
+  expect(html.match(new RegExp(t("onboarding.reason.unavailable"), "g"))).toHaveLength(7);
 });
 
 test("a failed create or sign-out attempt shows the safe notice; create stays available to retry", async () => {
@@ -256,7 +246,7 @@ test.each<IdentityState>(["signedOut", "expired", "forbidden", "unavailable"])("
   expect(html).toContain("/api/auth/login?returnTo=%2Fen%2Fprovider");
   expect(html).not.toContain("raw-private-error");
   expect(html).not.toContain(`aria-label="${t("provider.navigation")}"`);
-  for (const read of [currentContext, readPublication, readProfile, readCredentials]) expect(read).not.toHaveBeenCalled();
+  for (const read of [currentContext, readPublication, readProfile]) expect(read).not.toHaveBeenCalled();
 });
 test("sign-out notices reach the signed-out view", async () => {
   vi.mocked(currentAccount).mockResolvedValue({ state: "signedOut" });

@@ -129,7 +129,7 @@ test("a stale decision is refused and the refreshed revision must be reviewed ag
 test("suspension unpublishes and blocks edits; reinstatement does not republish", async ({ page, browser, request }) => {
   await doctor(page);
   await control(request, "profile/complete");
-  await control(request, "credentials/seed");
+  await control(request, "qualifications/seed");
   const admin = await administrator(browser, request);
   try {
     await openDoctor(admin.page);
@@ -162,46 +162,41 @@ test("suspension unpublishes and blocks edits; reinstatement does not republish"
   } finally { await admin.context.close(); }
 });
 
-test("credential review shows private evidence to the administrator and returns decisions to the owner", async ({ page, browser, request }) => {
+test("one doctor approval covers the qualification text and optional proofs; a later text change returns to review", async ({ page, browser, request }) => {
   await doctor(page);
+  // The old credential links land on the doctor queue and the qualifications section.
   await page.goto(`${origin}/en/provider/credentials`);
-  const form = page.getByRole("region", { name: t("credentials.add") });
-  await form.getByLabel(t("credential.type")).selectOption("LICENSE");
-  await form.getByLabel(t("credentials.title")).fill("Synthetic licence");
-  await form.getByLabel(t("credentials.issuer")).fill("Synthetic medical chamber");
-  await form.getByLabel(t("credentials.issuedOn")).fill("2019-06-01");
-  await form.getByRole("button", { name: t("credentials.create") }).click();
-  const card = page.getByRole("article", { name: "Synthetic licence" });
-  await card.getByLabel(`${t("media.file")}: Synthetic licence`).setInputFiles(png);
-  await card.getByRole("button", { name: t("evidence.add") }).click();
-  await card.getByRole("button", { name: `${t("credentials.submit")}: Synthetic licence` }).click();
-  await expect(page.getByText(t("credentials.submitted"))).toBeVisible();
+  await expect(page).toHaveURL(`${origin}/en/provider/profile#qualifications`);
+  const section = page.locator("#qualifications");
+  await section.getByLabel(t("qualifications.education"), { exact: true }).fill("Synthetic University\nMedicine");
+  await section.getByLabel(t("qualifications.specialties"), { exact: true }).fill("Synthetic cardiology");
+  await section.getByRole("button", { name: t("qualifications.save") }).click();
+  await expect(section.getByText(t("profileEditor.saved"))).toBeVisible();
+  await page.getByLabel(t("proof.file")).setInputFiles(png);
+  await page.locator("#proofs").getByRole("button", { name: t("proof.add") }).click();
+  await expect(page.getByText(t("proof.saved"))).toBeVisible();
 
   const admin = await administrator(browser, request);
   try {
-    await admin.page.goto(`${origin}/en/admin/credentials`);
-    await admin.page.getByRole("link", { name: new RegExp(`^${t("review.open")}\\s*: Synthetic licence`) }).click();
-    const image = admin.page.getByRole("img", { name: `${t("evidence.image")} 1` });
+    await admin.page.goto(`${origin}/en/admin/credentials/00000000-0000-4000-8000-000000000000`);
+    await expect(admin.page).toHaveURL(`${origin}/en/admin/doctors`);
+    await openDoctor(admin.page);
+    const review = admin.page.locator("section[aria-labelledby=doctor-qualifications]");
+    await expect(review.getByText("Synthetic University")).toBeVisible();
+    await expect(review.getByText("Synthetic cardiology")).toBeVisible();
+    const image = review.getByRole("img", { name: `${t("proof.image")} 1` });
     await expect(image).toHaveAttribute("src", /^\/api\/v1\/admin\/media\/[0-9a-f-]{36}\/content$/);
     expect(await image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBe(1);
-    await decide(admin.page, "reject", "Synthetic reason: the scan is unreadable.");
-    await expect(admin.page.getByText(t("review.outcome.rejected"))).toBeVisible();
-    await expect(admin.page.getByText(t("review.credentialDecided"))).toBeVisible();
-
-    await page.reload();
-    await expect(card.getByText(t("credential.state.rejected"), { exact: true })).toBeVisible();
-    await expect(card.getByText("Synthetic reason: the scan is unreadable.")).toBeVisible();
-    await card.getByRole("button", { name: `${t("credentials.submit")}: Synthetic licence` }).click();
-    await expect(page.getByText(t("credentials.submitted"))).toBeVisible();
-
-    await admin.page.reload();
     await decide(admin.page, "approve");
     await expect(admin.page.getByText(t("review.outcome.approved"))).toBeVisible();
-    await page.reload();
-    await expect(card.getByText(t("credential.state.approved"), { exact: true })).toBeVisible();
-    // Doctor approval is a separate decision: the doctor is still pending.
-    await openDoctor(admin.page);
-    await expect(admin.page.getByText(t("workspace.approval.pending"))).toBeVisible();
+
+    await page.goto(`${origin}/en/provider/profile`);
+    await expect(section.getByText(t("qualifications.reviewNote"))).toBeVisible();
+    await section.getByLabel(t("qualifications.certificates"), { exact: true }).fill("Synthetic course");
+    await section.getByRole("button", { name: t("qualifications.save") }).click();
+    await expect(section.getByText(t("profileEditor.saved"))).toBeVisible();
+    await page.goto(`${origin}/en/provider`);
+    await expect(page.getByText(t("workspace.approval.pending"))).toBeVisible();
   } finally { await admin.context.close(); }
 });
 

@@ -5,7 +5,8 @@ WEB-ADR-0005. The client was
 `@dadzhioski/professional-services-api-client@0.2.0`; WEB-M1-004 upgraded it to
 `@dadzhioski/professional-services-api-client@0.3.0`; WEB-M1-008 upgraded it to
 `@dadzhioski/professional-services-api-client@0.4.0` and then to
-`@dadzhioski/professional-services-api-client@0.7.0`.
+`@dadzhioski/professional-services-api-client@0.7.0`; WEB-M1-016 upgraded it to
+`@dadzhioski/professional-services-api-client@0.9.0`.
 
 ## Local verification
 

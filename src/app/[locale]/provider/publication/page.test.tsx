@@ -50,11 +50,14 @@ test("confirming publication sends the version the owner saw", async () => {
 });
 test("missing parts link to where they are corrected, and unknown parts are still shown", async () => {
   // A part added to the contract later is still shown as missing.
-  showing({ missing: ["SERVICE", "APPROVED_CREDENTIAL", "FUTURE_PART" as Publication["missing"][number]] });
+  showing({ missing: ["SERVICE", "EDUCATION", "SPECIALTIES", "APPROVED_CREDENTIAL", "FUTURE_PART" as Publication["missing"][number]] });
   const html = await render({ confirm: "publish" });
   expect(html).toContain(`<a class="inline-block py-2 font-semibold text-blue-800 underline underline-offset-4" href="/en/provider/services">${t("publication.missing.service")}</a>`);
-  expect(html).toContain('href="/en/provider/credentials"');
-  expect(html).toContain(t("publication.missing.unknown"));
+  expect(html).toContain(`href="/en/provider/profile#qualifications">${t("publication.missing.education")}</a>`);
+  expect(html).toContain(`href="/en/provider/profile#qualifications">${t("publication.missing.specialties")}</a>`);
+  expect(html).not.toContain("/provider/credentials");
+  // The deprecated credential requirement and future parts are shown as unknown, never dropped.
+  expect(html.match(new RegExp(t("publication.missing.unknown"), "g"))).toHaveLength(2);
   expect(html).not.toContain("confirm=publish");
   expect(html).not.toContain("<form");
 });

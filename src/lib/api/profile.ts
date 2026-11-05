@@ -1,22 +1,30 @@
 import "server-only";
 import { ProfileApi, PublicationResponsePublicationStateEnum, ResponseError, UploadMediaPurposeEnum, type Configuration, type EditProfileRequest,
-  type ProfileResponse, type PublicationResponse } from "@dadzhioski/professional-services-api-client";
-import { discardImage, uploadImage, uploadBudget, type UploadFailure } from "./media";
+  type ProfileResponse, type PublicationResponse, type QualificationsRequest } from "@dadzhioski/professional-services-api-client";
+import { imageLimits } from "@/features/media/limits";
+import { discardImage, isUuid, uploadImage, uploadBudget, type UploadFailure } from "./media";
 import { csrfHeader, csrfMutation, failure, sessionConfiguration, type ApplySession, type IdentityState } from "./session-transport";
 
 export type ProfileResult = { state: "ready"; profile: ProfileResponse } | { state: "missing" } | { state: IdentityState };
 export type SaveResult = { state: "saved"; profile: ProfileResponse } | { state: "invalid" } |
   { state: "conflict"; latest?: ProfileResponse } | { state: IdentityState };
 export type ProfileDraft = Required<EditProfileRequest>;
+export type QualificationsDraft = { [Field in keyof QualificationsRequest]-?: NonNullable<QualificationsRequest[Field]> };
 export type PhotoResult = { state: "saved" | "removed" | "invalid" | "conflict" | UploadFailure | IdentityState };
+export type ProofResult = { state: "saved" | "removed" | "invalid" | "conflict" | "full" | "missing" | UploadFailure | IdentityState };
 
 const optionalText = (value: unknown) => value === undefined || value === null || typeof value === "string";
 
-// The slug and version drive identity and concurrency; anything else malformed is not shown.
+// The slug and version drive identity and concurrency; anything else malformed is not shown. Proof IDs must be
+// UUIDs before any image path is built; an absent list means no proofs.
 function valid(profile: ProfileResponse | null | undefined): profile is ProfileResponse {
-  return !!profile && typeof profile.slug === "string" && !!profile.slug && Number.isSafeInteger(profile.version) &&
-    optionalText(profile.displayName) && optionalText(profile.biography) && optionalText(profile.publicationState) &&
-    optionalText(profile.photoMediaId);
+  if (!profile || typeof profile.slug !== "string" || !profile.slug || !Number.isSafeInteger(profile.version)) return false;
+  const proofs = profile.evidenceMediaIds ?? [];
+  if (!Array.isArray(proofs) || !proofs.every(isUuid)) return false;
+  profile.evidenceMediaIds = proofs;
+  return optionalText(profile.displayName) && optionalText(profile.biography) && optionalText(profile.publicationState) &&
+    optionalText(profile.photoMediaId) && optionalText(profile.education) && optionalText(profile.specialties) &&
+    optionalText(profile.certificates);
 }
 
 // The API derives the organization from the session; callers never supply profile identifiers.
@@ -71,6 +79,26 @@ export async function saveProfile(origin: string | null, session: string | undef
   return result.ok ? result.value : { state: result.state };
 }
 
+// The API replaces all three texts and clears blank ones. An approved doctor's change returns the doctor to review
+// and unpublishes the profile in the same request; the page rereads both instead of predicting it.
+export async function saveQualifications(origin: string | null, session: string | undefined, apply: ApplySession,
+  draft: QualificationsDraft): Promise<SaveResult> {
+  const result = await csrfMutation(origin, session, apply, async (configuration, token, validSession): Promise<SaveResult> => {
+    try {
+      const profile = await new ProfileApi(configuration).updateProfileQualifications({ qualificationsRequest: draft }, csrfHeader(token));
+      return valid(profile) ? { state: "saved", profile } : { state: "unavailable" };
+    } catch (error) {
+      if (!(error instanceof ResponseError)) return { state: "unavailable" };
+      if (error.response.status === 400 || error.response.status === 422) return { state: "invalid" };
+      if (error.response.status !== 409) throw error;
+    }
+    const latest = await readWith(configuration, validSession);
+    if (latest.state === "ready") return { state: "conflict", latest: latest.profile };
+    return latest.state === "missing" || latest.state === "unavailable" ? { state: "conflict" } : { state: latest.state };
+  });
+  return result.ok ? result.value : { state: result.state };
+}
+
 // Stale, malformed and unusable requests are rejected without changing the profile.
 function photoRejection(error: unknown): PhotoResult | undefined {
   if (!(error instanceof ResponseError)) return { state: "unavailable" };
@@ -107,6 +135,64 @@ export async function removePhoto(origin: string | null, session: string | undef
     try {
       const profile = await new ProfileApi(configuration).detachProfilePhoto({ version }, csrfHeader(token));
       return valid(profile) && !profile.photoMediaId ? { state: "removed" } : { state: "unavailable" };
+    } catch (error) {
+      const rejected = photoRejection(error);
+      if (rejected) return rejected;
+      throw error;
+    }
+  });
+  return result.ok ? result.value : { state: result.state };
+}
+
+// The proof list is reread at the owner's version, so a change never resends images the owner has not seen and the
+// browser never supplies the list. Proofs never affect approval or publication.
+async function currentProofs(configuration: Configuration, version: number): Promise<{ proofs: string[] } | { result: ProofResult }> {
+  let profile: ProfileResponse;
+  try { profile = await new ProfileApi(configuration).getProfile(); } catch (error) {
+    // A missing profile is not a missing proof image; it reads as unavailable.
+    if (error instanceof ResponseError && error.response.status === 404) return { result: { state: "unavailable" } };
+    throw error;
+  }
+  if (!valid(profile)) return { result: { state: "unavailable" } };
+  return profile.version === version ? { proofs: profile.evidenceMediaIds! } : { result: { state: "conflict" } };
+}
+
+const replaceProofs = (configuration: Configuration, token: string, mediaIds: string[], version: number) =>
+  new ProfileApi(configuration).replaceProfileEvidence({ profileEvidenceRequest: { mediaIds, version } }, csrfHeader(token));
+
+export async function addProof(origin: string | null, session: string | undefined, apply: ApplySession,
+  version: number, file: Blob): Promise<ProofResult> {
+  const result = await csrfMutation(origin, session, apply, async (configuration, token): Promise<ProofResult> => {
+    const found = await currentProofs(configuration, version);
+    if ("result" in found) return found.result;
+    if (found.proofs.length >= imageLimits.maxEvidence) return { state: "full" };
+    const uploaded = await uploadImage(configuration, token, UploadMediaPurposeEnum.CredentialEvidence, file);
+    if ("failure" in uploaded) return { state: uploaded.failure };
+    try {
+      const profile = await replaceProofs(configuration, token, [...found.proofs, uploaded.mediaId], version);
+      return valid(profile) && profile.evidenceMediaIds!.includes(uploaded.mediaId) ? { state: "saved" } : { state: "unavailable" };
+    } catch (error) {
+      // Never leave an unattached upload behind on purpose; deletion of an attached image is refused upstream.
+      await discardImage(configuration, token, uploaded.mediaId);
+      const rejected = photoRejection(error);
+      if (rejected) return rejected;
+      throw error;
+    }
+  }, uploadBudget);
+  return result.ok ? result.value : { state: result.state };
+}
+
+export async function removeProof(origin: string | null, session: string | undefined, apply: ApplySession,
+  version: number, mediaId: string): Promise<ProofResult> {
+  if (!isUuid(mediaId)) return { state: "missing" };
+  const result = await csrfMutation(origin, session, apply, async (configuration, token): Promise<ProofResult> => {
+    const found = await currentProofs(configuration, version);
+    if ("result" in found) return found.result;
+    if (!found.proofs.includes(mediaId)) return { state: "missing" };
+    try {
+      // The API releases removed images itself.
+      const profile = await replaceProofs(configuration, token, found.proofs.filter(id => id !== mediaId), version);
+      return valid(profile) && !profile.evidenceMediaIds!.includes(mediaId) ? { state: "removed" } : { state: "unavailable" };
     } catch (error) {
       const rejected = photoRejection(error);
       if (rejected) return rejected;

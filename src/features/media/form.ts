@@ -8,13 +8,9 @@ const shared = {
 } as const satisfies Record<string, TranslationKey>;
 
 export const photoOutcomes = { ...shared, saved: "photo.saved", removed: "photo.removed", conflict: "photo.conflict" } as const;
-export const evidenceOutcomes = { ...shared, saved: "evidence.saved", removed: "evidence.removed",
-  conflict: "evidence.conflict", full: "evidence.full", missing: "evidence.missingCredential" } as const;
-export const credentialOutcomes = { created: "credentials.created", saved: "credentials.saved", submitted: "credentials.submitted",
-  removed: "credentials.removed", conflict: "credentials.conflict", evidenceRequired: "credentials.evidenceRequired",
-  missing: "credentials.missing", invalid: "records.invalid", signedOut: "account.signedOut", expired: "account.expired",
-  forbidden: "account.forbidden", unavailable: "account.unavailable" } as const satisfies Record<string, TranslationKey>;
-const successes = ["saved", "removed", "created", "submitted", "approved", "rejected", "suspended", "reinstated", "published",
+export const proofOutcomes = { ...shared, saved: "proof.saved", removed: "proof.removed", conflict: "proof.conflict",
+  full: "proof.full", missing: "proof.missing" } as const;
+const successes = ["saved", "removed", "approved", "rejected", "suspended", "reinstated", "published",
   "unpublished", "resubmitted"];
 
 // Outcomes arrive in the query string, so only allow-listed values become messages.

@@ -4,12 +4,12 @@ import type { ProfileResponse } from "@dadzhioski/professional-services-api-clie
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createProfile, saveProfile } from "@/lib/api/profile";
+import { createProfile, saveProfile, saveQualifications } from "@/lib/api/profile";
 import { incomingSession, sessionCookieName } from "@/lib/api/session-cookie";
 import { getServerEnvironment } from "@/lib/config/server";
 import { isLocale } from "@/lib/i18n";
 import { saveSpecialty } from "@/lib/api/medical";
-import { readProfileForm, type EditorState, type LatestProfile } from "./fields";
+import { readProfileForm, readQualificationsForm, type EditorState, type LatestProfile, type QualificationValues } from "./fields";
 import { readSpecialtyForm, type SpecialtyEditorState } from "./specialty";
 
 async function session() {
@@ -68,5 +68,29 @@ export async function saveProfileDraft(locale: string, _previous: unknown, form:
     return { status: "saved", values: { displayName: saved.displayName, biography: saved.biography }, version: saved.version, errors: {} };
   }
   if (result.state === "conflict") return { ...kept, status: "conflict", latest: result.latest && latestOf(result.latest) };
+  return { ...kept, status: result.state };
+}
+
+const qualificationsOf = (profile: ProfileResponse): QualificationValues & { version: number } => ({
+  education: profile.education ?? "", specialties: profile.specialties ?? "", certificates: profile.certificates ?? "",
+  version: profile.version! });
+
+// Saving the texts may return an approved doctor to review and unpublish the profile; the API decides and the
+// revalidated page shows the result. Submitted values are always returned.
+export async function saveProfileQualifications(locale: string, _previous: unknown,
+  form: FormData): Promise<EditorState<QualificationValues>> {
+  const { values, errors, version, overwriteVersion } = readQualificationsForm(form);
+  const kept = { values, version: version ?? 0, errors };
+  const target = overwriteVersion ?? version;
+  if (!isLocale(locale)) return { ...kept, status: "forbidden" };
+  if (Object.keys(errors).length || target === undefined) return { ...kept, status: "invalid" };
+  const { jar, session: current, origin } = await session();
+  const result = await saveQualifications(origin, current, cookie => jar.set(cookie), { ...values, version: target });
+  if (result.state === "saved") {
+    revalidatePath(`/${locale}/provider/profile`);
+    const { version: savedVersion, ...saved } = qualificationsOf(result.profile);
+    return { status: "saved", values: saved, version: savedVersion, errors: {} };
+  }
+  if (result.state === "conflict") return { ...kept, status: "conflict", latest: result.latest && qualificationsOf(result.latest) };
   return { ...kept, status: result.state };
 }

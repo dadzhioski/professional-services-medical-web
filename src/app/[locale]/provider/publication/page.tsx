@@ -77,8 +77,9 @@ export default async function PublicationPage({ params, searchParams }: Props) {
           <p>{t("publication.missingIntro")}</p>
           <ul className="list-disc space-y-2 pl-6">
             {publication.missing.map(part => {
-              const { key, page } = missingPart(part);
-              return <li key={part}>{page ? <a className={linkClass} href={`/${locale}/provider/${page}`}>{t(key)}</a> : t(key)}</li>;
+              const { key, page, anchor } = missingPart(part);
+              const href = page && `/${locale}/provider/${page}${anchor ? `#${anchor}` : ""}`;
+              return <li key={part}>{href ? <a className={linkClass} href={href}>{t(key)}</a> : t(key)}</li>;
             })}
           </ul>
         </> : <p>{t("publication.complete")}</p>}

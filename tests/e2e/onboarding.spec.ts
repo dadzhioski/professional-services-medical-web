@@ -8,7 +8,6 @@ const fixture = "http://127.0.0.1:4311";
 const origin = "http://127.0.0.1:4310";
 const require = createRequire(resolve("package.json"));
 const privateValues = /synthetic-session|synthetic-csrf|synthetic-private|synthetic-account|127\.0\.0\.1:4311/;
-const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
 const skopje = "0a6b1c2d-0000-4000-8000-000000000001";
 
 // Stand in for the existing Caddy /api/* routing, only in the browser fixture.
@@ -104,6 +103,17 @@ test("each saved step updates the checklist on the next request without JavaScri
     await page.getByRole("button", { name: t("specialtyEditor.save") }).click();
     await expect(page.getByText(t("specialtyEditor.saved"))).toBeVisible();
     await backToChecklist(page);
+    // Education and specialties text are the last profile parts; certificates and proofs are optional.
+    await expectCurrent(page, "onboarding.step.profile");
+    await expect(nextStep(page)).toContainText(t("publication.missing.education"));
+    await expect(nextStep(page)).toContainText(t("publication.missing.specialties"));
+    await nextStep(page).getByRole("link", { name: new RegExp(`^${t("onboarding.action.open")}`) }).click();
+    const qualifications = page.locator("#qualifications");
+    await qualifications.getByLabel(t("qualifications.education"), { exact: true }).fill("Checklist University\nMedicine");
+    await qualifications.getByLabel(t("qualifications.specialties"), { exact: true }).fill("Checklist cardiology");
+    await qualifications.getByRole("button", { name: t("qualifications.save") }).click();
+    await expect(qualifications.getByText(t("profileEditor.saved"))).toBeVisible();
+    await backToChecklist(page);
     await expect(step(page, "onboarding.step.profile")).toContainText(t("onboarding.state.done"));
     await expectCurrent(page, "onboarding.step.service");
 
@@ -124,30 +134,9 @@ test("each saved step updates the checklist on the next request without JavaScri
     await location.getByRole("button", { name: t("providerLocations.create") }).click();
     await expect(page.getByText(t("records.saved"))).toBeVisible();
     await backToChecklist(page);
-    await expectCurrent(page, "onboarding.step.credentials");
-    await expect(nextStep(page)).toContainText(t("onboarding.credential.add"));
-
-    await nextStep(page).getByRole("link", { name: new RegExp(`^${t("onboarding.action.open")}`) }).click();
-    const form = page.getByRole("region", { name: t("credentials.add") });
-    await form.getByLabel(t("credential.type")).selectOption("LICENSE");
-    await form.getByLabel(t("credentials.title")).fill("Checklist licence");
-    await form.getByLabel(t("credentials.issuer")).fill("Synthetic medical chamber");
-    await form.getByLabel(t("credentials.issuedOn")).fill("2019-06-01");
-    await form.getByRole("button", { name: t("credentials.create") }).click();
-    await expect(page.getByText(t("credentials.created"))).toBeVisible();
-    await backToChecklist(page);
-    await expect(nextStep(page)).toContainText(t("onboarding.credential.submit"));
-
-    await page.goto(`${origin}/en/provider/credentials`);
-    const card = page.getByRole("article", { name: "Checklist licence" });
-    await card.getByLabel(`${t("media.file")}: Checklist licence`).setInputFiles({ name: "licence.png", mimeType: "image/png", buffer: png });
-    await card.getByRole("button", { name: t("evidence.add") }).click();
-    await expect(page.getByText(t("evidence.saved"))).toBeVisible();
-    await page.getByRole("article", { name: "Checklist licence" }).getByRole("button", { name: `${t("credentials.submit")}: Checklist licence` }).click();
-    await expect(page.getByText(t("credentials.submitted"))).toBeVisible();
-    await backToChecklist(page);
-    await expectCurrent(page, "onboarding.step.credentials");
-    await expect(nextStep(page)).toContainText(t("onboarding.credential.waiting"));
+    // With every editor step done and no proof added, only the administrator's review is left.
+    await expectCurrent(page, "onboarding.step.review");
+    await expect(nextStep(page)).toContainText(t("onboarding.review.pending"));
     for (const key of ["onboarding.step.workspace", "onboarding.step.profile", "onboarding.step.service", "onboarding.step.location"] as const) {
       await expect(step(page, key)).toContainText(t("onboarding.state.done"));
     }

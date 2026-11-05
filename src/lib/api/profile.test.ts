@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { changePublication, createProfile, readProfile, readPublication, removePhoto, replacePhoto, saveProfile } from "./profile";
+import { addProof, changePublication, createProfile, readProfile, readPublication, removePhoto, removeProof, replacePhoto, saveProfile,
+  saveQualifications } from "./profile";
 import { sessionConfiguration } from "./session-transport";
 
 const fetchMock = vi.fn<typeof fetch>();
 const origin = "http://localhost:3000";
 const profile = { profileId: "synthetic-private-profile", organizationId: "synthetic-private-org", slug: "dr-0000abcd",
-  displayName: "Synthetic Doctor", biography: "Synthetic biography", publicationState: "DRAFT", version: 3 };
+  displayName: "Synthetic Doctor", biography: "Synthetic biography", publicationState: "DRAFT", version: 3, evidenceMediaIds: [] };
 const draft = { displayName: "Synthetic Doctor", biography: "", version: 3 };
 const csrf = (token = "synthetic-csrf") => Response.json({ token, headerName: "X-CSRF-TOKEN" });
 const problem = (status: number) => new Response(JSON.stringify({ detail: "synthetic-private-error" }),
@@ -29,7 +30,7 @@ describe("read profile", () => {
   });
   test("accepts an incomplete draft", async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ slug: "dr-0000abcd", version: 0 }));
-    expect(await readProfile("synthetic-session")).toEqual({ state: "ready", profile: { slug: "dr-0000abcd", version: 0 } });
+    expect(await readProfile("synthetic-session")).toEqual({ state: "ready", profile: { slug: "dr-0000abcd", version: 0, evidenceMediaIds: [] } });
   });
   test.each([[404, "missing"], [401, "expired"], [403, "forbidden"], [500, "unavailable"], [302, "unavailable"]] as const)(
     "maps HTTP %s safely", async (status, state) => {
@@ -240,6 +241,106 @@ describe("profile photo", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json({ ...profile, photoMediaId: photoId }));
     expect(await removePhoto(origin, "synthetic-session", vi.fn(), 3)).toEqual({ state: "unavailable" });
+  });
+});
+
+describe("qualifications", () => {
+  const texts = { education: "Synthetic University\nMedicine", specialties: "Synthetic cardiology", certificates: "", version: 3 };
+  const calls = () => fetchMock.mock.calls.map(([url, init]) => `${init?.method} ${String(url).replace("http://localhost:8080", "")}`);
+  test("rejects a foreign origin before any API call", async () => {
+    expect(await saveQualifications("https://evil.test", "synthetic-session", vi.fn(), texts)).toEqual({ state: "forbidden" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  test("replaces all three texts at the shown version with CSRF and keeps line breaks", async () => {
+    const saved = { ...profile, education: texts.education, specialties: texts.specialties, certificates: null, version: 4 };
+    fetchMock.mockResolvedValueOnce(csrf("fresh-token")).mockResolvedValueOnce(Response.json(saved));
+    expect(await saveQualifications(origin, "synthetic-session", vi.fn(), texts)).toEqual({ state: "saved", profile: saved });
+    expect(calls()).toEqual(["GET /api/auth/csrf", "PUT /api/v1/profile/qualifications"]);
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual(texts);
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("x-csrf-token")).toBe("fresh-token");
+  });
+  test("a stale save returns the latest texts for review and is never retried", async () => {
+    const latest = { ...profile, education: "Edited elsewhere", version: 5 };
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(409)).mockResolvedValueOnce(Response.json(latest));
+    expect(await saveQualifications(origin, "synthetic-session", vi.fn(), texts)).toEqual({ state: "conflict", latest });
+    expect(calls()).toEqual(["GET /api/auth/csrf", "PUT /api/v1/profile/qualifications", "GET /api/v1/profile"]);
+  });
+  test.each([[422, "invalid"], [400, "invalid"], [401, "expired"], [403, "forbidden"], [500, "unavailable"]] as const)(
+    "HTTP %s maps safely", async (status, state) => {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(status));
+      expect(await saveQualifications(origin, "synthetic-session", vi.fn(), texts)).toEqual({ state });
+    });
+  test("a malformed reply is never reported as saved", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(Response.json({ ...profile, education: 7 }));
+    expect(await saveQualifications(origin, "synthetic-session", vi.fn(), texts)).toEqual({ state: "unavailable" });
+  });
+});
+
+describe("profile proofs", () => {
+  const proofId = "0b3f9c2e-6a1d-4c58-9e7f-2d4a8b1c5e60";
+  const kept = "1c4fad3f-7b2e-4d69-8f80-3e5b9c2d6f71";
+  const image = new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], { type: "image/png" });
+  const media = () => Response.json({ mediaId: proofId, state: "READY", purpose: "CREDENTIAL_EVIDENCE", attached: false }, { status: 201 });
+  const current = (evidenceMediaIds: string[], version = 3) => Response.json({ ...profile, evidenceMediaIds, version });
+  const calls = () => fetchMock.mock.calls.map(([url, init]) => `${init?.method} ${String(url).replace("http://localhost:8080", "")}`);
+  const sent = (index: number) => JSON.parse(String(fetchMock.mock.calls[index][1]?.body));
+
+  test("rejects a foreign origin before any read or upload", async () => {
+    expect(await addProof("https://evil.test", "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "forbidden" });
+    expect(await removeProof("https://evil.test", "synthetic-session", vi.fn(), 3, kept)).toEqual({ state: "forbidden" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  test("adding rereads the list at the shown version, uploads as evidence and appends it", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(current([kept])).mockResolvedValueOnce(media())
+      .mockResolvedValueOnce(current([kept, proofId], 4));
+    expect(await addProof(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "saved" });
+    expect(calls()).toEqual(["GET /api/auth/csrf", "GET /api/v1/profile", "POST /api/v1/media?purpose=CREDENTIAL_EVIDENCE",
+      "PUT /api/v1/profile/evidence"]);
+    expect(sent(3)).toEqual({ mediaIds: [kept, proofId], version: 3 });
+  });
+  test("a stale version is refused before any upload", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(current([kept], 5));
+    expect(await addProof(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "conflict" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+  test("a full list is refused before any upload", async () => {
+    const five = Array.from({ length: 5 }, (_, index) => `1c4fad3f-7b2e-4d69-8f80-3e5b9c2d6f7${index}`);
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(current(five));
+    expect(await addProof(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "full" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+  test.each([[409, "conflict"], [422, "invalid"], [401, "expired"], [503, "unavailable"]] as const)(
+    "a failed attach %s discards the new upload", async (status, state) => {
+      fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(current([])).mockResolvedValueOnce(media())
+        .mockResolvedValueOnce(problem(status)).mockResolvedValueOnce(new Response(null, { status: 204 }));
+      expect(await addProof(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state });
+      expect(calls().at(-1)).toBe(`DELETE /api/v1/media/${proofId}`);
+    });
+  test("a reply without the new proof is not success", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(current([])).mockResolvedValueOnce(media())
+      .mockResolvedValueOnce(current([]));
+    expect(await addProof(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "unavailable" });
+  });
+  test("removing sends the API's list without the chosen proof", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(current([kept, proofId])).mockResolvedValueOnce(current([kept], 4));
+    expect(await removeProof(origin, "synthetic-session", vi.fn(), 3, proofId)).toEqual({ state: "removed" });
+    expect(sent(2)).toEqual({ mediaIds: [kept], version: 3 });
+  });
+  test("an unknown or malformed proof ID is missing and never sent", async () => {
+    expect(await removeProof(origin, "synthetic-session", vi.fn(), 3, "../private")).toEqual({ state: "missing" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(current([kept]));
+    expect(await removeProof(origin, "synthetic-session", vi.fn(), 3, proofId)).toEqual({ state: "missing" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+  test("a missing profile is unavailable, not a missing proof", async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(problem(404));
+    expect(await addProof(origin, "synthetic-session", vi.fn(), 3, image)).toEqual({ state: "unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+  test("a profile with malformed proof IDs is unavailable", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ ...profile, evidenceMediaIds: ["https://evil.test/x"] }));
+    expect(await readProfile("synthetic-session")).toEqual({ state: "unavailable" });
   });
 });
 
