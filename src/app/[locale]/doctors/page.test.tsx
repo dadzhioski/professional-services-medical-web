@@ -56,7 +56,9 @@ for (const locale of localeCodes) {
     const page = documentOf(await html$(locale));
     expect(readPublicDirectory).toHaveBeenCalledWith(undefined, undefined, 0);
     expect(page.querySelectorAll("h1")).toHaveLength(1);
-    expect(page.querySelector("h1")?.textContent).toBe(t("directory.heading"));
+    expect(page.querySelector("h1")?.textContent).toBe(`${t("directory.heroTitle")} ${t("directory.heroHighlight")}`);
+    expect(page.querySelector("h1 .text-accent")?.textContent).toBe(t("directory.heroHighlight"));
+    expect(page.body.textContent).toContain(t("directory.heroSubtitle"));
     const form = page.querySelector("form")!;
     expect(form.getAttribute("method")).toBe("get");
     expect(form.getAttribute("action")).toBe(`/${locale}/doctors`);

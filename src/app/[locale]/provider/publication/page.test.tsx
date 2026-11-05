@@ -52,7 +52,7 @@ test("missing parts link to where they are corrected, and unknown parts are stil
   // A part added to the contract later is still shown as missing.
   showing({ missing: ["SERVICE", "APPROVED_CREDENTIAL", "FUTURE_PART" as Publication["missing"][number]] });
   const html = await render({ confirm: "publish" });
-  expect(html).toContain(`<a class="inline-block py-2 font-semibold text-blue-800 underline underline-offset-4" href="/en/provider/services">${t("publication.missing.service")}</a>`);
+  expect(html).toContain(`<a class="inline-block py-2 font-semibold text-primary underline underline-offset-4" href="/en/provider/services">${t("publication.missing.service")}</a>`);
   expect(html).toContain('href="/en/provider/credentials"');
   expect(html).toContain(t("publication.missing.unknown"));
   expect(html).not.toContain("confirm=publish");

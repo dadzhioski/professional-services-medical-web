@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useActionState, useEffect, useRef, useState } from "react";
-import { Field, Notice, TextAreaField } from "@/components/ui/presentation";
+import { Field, Notice, TextAreaField, controlClass } from "@/components/ui/presentation";
 import type { RecordMessages } from "@/features/provider-records/form";
 import { linkClass } from "@/features/provider-records/record-editor";
 import { SubmitButton } from "@/features/provider-onboarding/submit-button";
@@ -9,8 +9,7 @@ import { formatPrice } from "@/lib/price";
 import { serviceLimits, type PriceListState, type PriceListStatus, type PriceRow, type RowField, type ServiceMessages } from "./fields";
 
 type Action = (previous: PriceListState, form: FormData) => Promise<PriceListState>;
-const selectClass = "block min-h-11 w-full rounded-lg border border-slate-500 bg-white px-3 py-2";
-const secondaryClass = "border-2 border-teal-800 !bg-white !text-teal-950 hover:!bg-teal-50";
+const selectClass = controlClass();
 const informational: PriceListStatus[] = ["idle", "imported", "importedNone"];
 const fields: RowField[] = ["name", "amount", "currency", "description"];
 
@@ -71,7 +70,7 @@ export function PriceListEditor({ id, locale, action, initial, messages: m, reco
       <Notice>{m[`providerServices.${status}`]}</Notice>}</div>
     {/* Focus moves here on failure, so no alert role is added to avoid a second announcement. */}
     {message && <section ref={summary} tabIndex={-1} aria-labelledby={`${id}-problem`}
-      className="space-y-3 rounded-lg border-2 border-red-800 bg-red-50 p-4 text-red-950">
+      className="space-y-3 rounded-input border-2 border-danger bg-danger-tint p-4 text-ink">
       <h3 id={`${id}-problem`} className="text-lg font-semibold">{r["records.problem"]}</h3>
       <p>{message}</p>
       {(Object.keys(state.errors).length > 0 || Object.keys(state.outcomes).length > 0) && <ul className="list-disc space-y-1 pl-5">
@@ -87,20 +86,20 @@ export function PriceListEditor({ id, locale, action, initial, messages: m, reco
     </section>}
     <form action={formAction} className="space-y-6">
       <input type="hidden" name="rows" value={rows.length} />
-      <p className="text-sm text-slate-700">{m["providerServices.rowsHint"]}</p>
+      <p className="text-sm text-muted">{m["providerServices.rowsHint"]}</p>
       <ol key={result.key} className="space-y-4">
         {rows.map((row, index) => {
           const outcome = outcomeText(index);
           return <li key={index}>
-            <fieldset className="min-w-0 space-y-4 rounded-lg border border-slate-300 p-4 [overflow-wrap:anywhere]"
+            <fieldset className="min-w-0 space-y-4 rounded-input border border-border p-4 [overflow-wrap:anywhere]"
               aria-describedby={outcome ? `${id}-${index}-outcome` : undefined}>
-              <legend className="px-1 font-semibold text-teal-950">{entry(index)}</legend>
+              <legend className="px-1 font-semibold text-ink">{entry(index)}</legend>
               {index === state.rows.length && row.name && <input type="hidden" name={`suggested-${index}`} value={row.name} />}
               {row.serviceId !== undefined && <>
                 <input type="hidden" name={`serviceId-${index}`} value={row.serviceId} />
                 <input type="hidden" name={`version-${index}`} value={row.version} />
               </>}
-              {outcome && <p id={`${id}-${index}-outcome`} className="font-medium text-red-800">{outcome}</p>}
+              {outcome && <p id={`${id}-${index}-outcome`} className="font-medium text-danger">{outcome}</p>}
               <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem_7rem]">
                 <Field id={fieldId(index, "name")} name={`name-${index}`} label={labels.name} aria-label={named(index, "name")} defaultValue={row.name}
                   maxLength={serviceLimits.name} autoComplete="off" error={error(index, "name")} />
@@ -115,11 +114,11 @@ export function PriceListEditor({ id, locale, action, initial, messages: m, reco
                     {currencies.map(code => <option key={code} value={code}>{code}</option>)}
                   </select>
                   {error(index, "currency") &&
-                    <p id={`${fieldId(index, "currency")}-error`} className="font-medium text-red-800">{error(index, "currency")}</p>}
+                    <p id={`${fieldId(index, "currency")}-error`} className="font-medium text-danger">{error(index, "currency")}</p>}
                 </div>
               </div>
               <details open={!!row.description || !!error(index, "description")} className="space-y-3">
-                <summary className="min-h-11 cursor-pointer py-2 font-semibold text-blue-800">{labels.description}</summary>
+                <summary className="min-h-11 cursor-pointer py-2 font-semibold text-primary">{labels.description}</summary>
                 <TextAreaField id={fieldId(index, "description")} name={`description-${index}`} label={labels.description}
                   aria-label={named(index, "description")} hint={m["providerServices.detailsHint"]} defaultValue={row.description} maxLength={serviceLimits.description}
                   rows={3} error={error(index, "description")} />
@@ -135,14 +134,14 @@ export function PriceListEditor({ id, locale, action, initial, messages: m, reco
       {/* Save comes first so Enter in a row submits the list rather than adding rows. */}
       <div className="flex flex-wrap gap-4">
         <SubmitButton label={m["providerServices.save"]} pendingLabel={r["records.saving"]} />
-        {room > rows.length - state.rows.length && <SubmitButton name="intent" value="more" className={secondaryClass}
+        {room > rows.length - state.rows.length && <SubmitButton name="intent" value="more" variant="secondary"
           label={m["providerServices.more"]} pendingLabel={r["records.saving"]} />}
       </div>
-      <section aria-labelledby={`${id}-paste-heading`} className="space-y-4 border-t border-slate-300 pt-6">
-        <h3 id={`${id}-paste-heading`} className="text-lg font-semibold text-teal-950">{m["providerServices.pasteHeading"]}</h3>
+      <section aria-labelledby={`${id}-paste-heading`} className="space-y-4 border-t border-border pt-6">
+        <h3 id={`${id}-paste-heading`} className="text-lg font-semibold text-ink">{m["providerServices.pasteHeading"]}</h3>
         <TextAreaField key={result.key} id={`${id}-paste`} name="paste" label={m["providerServices.pasteLabel"]}
           hint={m["providerServices.pasteHint"]} defaultValue={state.paste} maxLength={serviceLimits.paste} />
-        <SubmitButton name="intent" value="import" className={secondaryClass} label={m["providerServices.pasteAdd"]}
+        <SubmitButton name="intent" value="import" variant="secondary" label={m["providerServices.pasteAdd"]}
           pendingLabel={r["records.saving"]} />
       </section>
     </form>

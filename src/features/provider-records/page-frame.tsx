@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { SiteHeader } from "@/components/site-header";
-import { Heading, Notice } from "@/components/ui/presentation";
+import { Heading, Notice, buttonClass } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { ChecklistLink, ProviderNavigation, type ProviderPage } from "@/features/provider-onboarding/workspace";
 import { publicationKey } from "@/features/provider-profile/fields";
@@ -13,7 +13,7 @@ import { getServerEnvironment } from "@/lib/config/server";
 import { translator, type Locale } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/i18n/en";
 
-export const actionLinkClass = "inline-block min-h-11 rounded-lg bg-teal-800 px-5 py-3 font-semibold text-white underline hover:bg-teal-900";
+export const actionLinkClass = buttonClass();
 
 // Account first, then workspace: record APIs are only called once the API confirms a workspace exists.
 export async function providerGate(locale: Locale) {
@@ -48,7 +48,7 @@ export function PublicationStatus({ locale, state }: { locale: Locale; state: st
       <dt className="font-semibold">{t("profileEditor.publication")}</dt>
       <dd>{t(publicationKey(state))}</dd>
     </dl>
-    <p className="text-sm text-slate-700">{t("records.publicationNote")}</p>
+    <p className="text-sm text-muted">{t("records.publicationNote")}</p>
   </div>;
 }
 

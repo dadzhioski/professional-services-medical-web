@@ -58,7 +58,7 @@ export default async function CredentialReviewPage({ params, searchParams }: Pro
     <Surface className="space-y-6 [overflow-wrap:anywhere]">
       <Heading>{t("review.credential.heading")}</Heading>
       <ReviewOutcome locale={locale} value={query.outcome} />
-      <h2 className="text-xl font-semibold text-teal-950">{credential.title}</h2>
+      <h2 className="text-xl font-semibold text-ink">{credential.title}</h2>
       <dl className="grid gap-1 sm:grid-cols-[auto_1fr] sm:gap-x-4">
         <dt className="font-semibold">{t("credential.type")}</dt><dd>{t(credentialTypeKey(credential.type))}</dd>
         <dt className="font-semibold">{t("credential.issuer")}</dt><dd>{credential.issuer}</dd>
@@ -83,18 +83,18 @@ export default async function CredentialReviewPage({ params, searchParams }: Pro
       destructive={confirmations[deciding].destructive} />}
     <Surface>
       <section aria-labelledby="evidence" className="space-y-4">
-        <h2 id="evidence" className="text-xl font-semibold text-teal-950">{t("credentials.evidence")}</h2>
+        <h2 id="evidence" className="text-xl font-semibold text-ink">{t("credentials.evidence")}</h2>
         <p>{t("review.evidencePrivacy")}</p>
         {images.length ? <ul className="flex flex-wrap gap-4">
           {images.map(({ mediaId, path: contentPath }, index) => <li key={mediaId} className="w-full max-w-md">
-            <OwnerImage path={contentPath} alt={`${t("evidence.image")} ${index + 1}`} className="rounded-lg border border-slate-300" />
+            <OwnerImage path={contentPath} alt={`${t("evidence.image")} ${index + 1}`} className="rounded-input border border-border" />
           </li>)}
         </ul> : <p>{t("evidence.noEvidence")}</p>}
       </section>
     </Surface>
     <Surface>
       <section aria-labelledby="credential-decision" className="space-y-4">
-        <h2 id="credential-decision" className="text-xl font-semibold text-teal-950">{t("review.credentialDecision")}</h2>
+        <h2 id="credential-decision" className="text-xl font-semibold text-ink">{t("review.credentialDecision")}</h2>
         {decidable ? <p className="flex flex-wrap gap-4">{decisionLink("approve")}{decisionLink("reject")}</p> :
           <p>{t("review.credentialDecided")}</p>}
       </section>

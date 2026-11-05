@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Heading, Notice } from "@/components/ui/presentation";
+import { Heading, Notice, buttonClass } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { outcomeMessage } from "@/features/media/form";
 import { approvalKey } from "@/features/provider-onboarding/workspace";
@@ -14,8 +14,8 @@ import { isLocale, translator } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ outcome?: string; confirm?: string }> };
-const linkClass = "inline-block py-2 font-semibold text-blue-800 underline underline-offset-4";
-const decisionLinkClass = "inline-block min-h-11 rounded-lg border-2 border-teal-800 px-5 py-3 font-semibold text-teal-950 underline hover:bg-teal-50";
+const linkClass = "inline-block py-2 font-semibold text-primary underline underline-offset-4";
+const decisionLinkClass = buttonClass("secondary");
 
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
   const { locale } = await params;
@@ -71,7 +71,7 @@ export default async function PublicationPage({ params, searchParams }: Props) {
       cancelHref={path} action={changePublicationAction.bind(null, locale, confirming)} destructive={confirming === "unpublish"} />}
     {publication && <Surface>
       <section aria-labelledby="publication-readiness" className="space-y-4">
-        <h2 id="publication-readiness" className="text-xl font-semibold text-teal-950">{t("publication.readiness")}</h2>
+        <h2 id="publication-readiness" className="text-xl font-semibold text-ink">{t("publication.readiness")}</h2>
         {!publication.approved && <p>{t("publication.needsApproval")}</p>}
         {publication.missing.length ? <>
           <p>{t("publication.missingIntro")}</p>

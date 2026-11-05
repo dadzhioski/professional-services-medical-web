@@ -19,7 +19,7 @@ import { isLocale, translator } from "@/lib/i18n";
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ locale: string }>;
   searchParams: Promise<{ evidence?: string; credential?: string; edit?: string; remove?: string }> };
-const linkClass = "inline-block py-2 font-semibold text-blue-800 underline underline-offset-4";
+const linkClass = "inline-block py-2 font-semibold text-primary underline underline-offset-4";
 
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
   const { locale } = await params;
@@ -87,7 +87,7 @@ export default async function CredentialsPage({ params, searchParams }: Props) {
       action={removeCredential.bind(null, locale, removing.credentialId, removing.version)} />}
     {editing && <Surface>
       <section aria-labelledby="credential-edit-heading" className="space-y-4">
-        <h2 id="credential-edit-heading" className="text-xl font-semibold text-teal-950">{t("credentials.editHeading")}</h2>
+        <h2 id="credential-edit-heading" className="text-xl font-semibold text-ink">{t("credentials.editHeading")}</h2>
         {(editing.state === "SUBMITTED" || editing.state === "APPROVED") && <Notice>{t("credentials.reviewedEditNote")}</Notice>}
         {editor(editing)}
         <a className={linkClass} href={path}>{t("records.cancel")}</a>
@@ -95,13 +95,13 @@ export default async function CredentialsPage({ params, searchParams }: Props) {
     </Surface>}
     {records && <Surface>
       <section aria-labelledby="credential-list" className="space-y-4">
-        <h2 id="credential-list" className="text-xl font-semibold text-teal-950">{t("credentials.listHeading")}</h2>
+        <h2 id="credential-list" className="text-xl font-semibold text-ink">{t("credentials.listHeading")}</h2>
         <CredentialList locale={locale} credentials={records} path={path} />
       </section>
     </Surface>}
     {records && !editing && <Surface>
       <section aria-labelledby="credential-add" className="space-y-4">
-        <h2 id="credential-add" className="text-xl font-semibold text-teal-950">{t("credentials.add")}</h2>
+        <h2 id="credential-add" className="text-xl font-semibold text-ink">{t("credentials.add")}</h2>
         {records.length < credentialLimits.count ? editor() : <p>{t("credentials.limit")}</p>}
       </section>
     </Surface>}

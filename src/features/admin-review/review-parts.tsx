@@ -1,10 +1,10 @@
-import { Notice } from "@/components/ui/presentation";
+import { Notice, buttonClass } from "@/components/ui/presentation";
 import { outcomeMessage } from "@/features/media/form";
 import { translator, type Locale } from "@/lib/i18n";
 import { reviewOutcomes } from "./outcomes";
 
-export const linkClass = "inline-block py-2 font-semibold text-blue-800 underline underline-offset-4";
-export const decisionLinkClass = "inline-block min-h-11 rounded-lg border-2 border-teal-800 px-5 py-3 font-semibold text-teal-950 underline hover:bg-teal-50";
+export const linkClass = "inline-block py-2 font-semibold text-primary underline underline-offset-4";
+export const decisionLinkClass = buttonClass("secondary");
 
 export const formatDate = (locale: Locale, date: Date) => new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(date);
 // Registration and submission times are instants, shown in UTC so every reviewer reads the same value.

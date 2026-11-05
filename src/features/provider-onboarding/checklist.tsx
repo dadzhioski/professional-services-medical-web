@@ -10,7 +10,7 @@ type FormAction = (form: FormData) => Promise<void>;
 const names = { workspace: "onboarding.step.workspace", profile: "onboarding.step.profile", service: "onboarding.step.service",
   location: "onboarding.step.location", credentials: "onboarding.step.credentials", photo: "onboarding.step.photo",
   review: "onboarding.step.review", publish: "onboarding.step.publication" } as const satisfies Record<StepId, TranslationKey>;
-const linkClass = "inline-block min-h-11 py-2.5 font-semibold text-blue-800 underline underline-offset-4";
+const linkClass = "inline-block min-h-11 py-2.5 font-semibold text-primary underline underline-offset-4";
 
 // Approval status and the owner's own rejection feedback, rendered as text only. Resubmission is offered while
 // rejected and not suspended; the API decides at the shown revision and refuses anything else.
@@ -22,7 +22,7 @@ function ReviewDetail({ locale, context, resubmit }: { locale: Locale; context: 
       <dt className="font-semibold">{t("workspace.approval")}</dt>
       <dd>{t(approvalKey(context.approvalState))}</dd>
     </dl>
-    {rejected && context.rejectionReason && <div className="space-y-1 rounded-lg border border-slate-400 p-4 [overflow-wrap:anywhere]">
+    {rejected && context.rejectionReason && <div className="space-y-1 rounded-input border border-control p-4 [overflow-wrap:anywhere]">
       <h4 className="font-semibold">{t("workspace.feedback")}</h4>
       <p className="whitespace-pre-line">{context.rejectionReason}</p>
     </div>}
@@ -57,8 +57,8 @@ export function OnboardingChecklist({ locale, steps, context, create, resubmit }
   // The optional photo never holds back completion.
   const allDone = steps.every(step => step.state === "done" || step.state === "optional");
   return <>
-    <section aria-labelledby="next-step-heading" className="space-y-4 rounded-lg border-2 border-teal-800 p-4 [overflow-wrap:anywhere]">
-      <h2 id="next-step-heading" className="text-xl font-semibold text-teal-950">{t("onboarding.next")}</h2>
+    <section aria-labelledby="next-step-heading" className="space-y-4 rounded-input border-2 border-primary p-4 [overflow-wrap:anywhere]">
+      <h2 id="next-step-heading" className="text-xl font-semibold text-ink">{t("onboarding.next")}</h2>
       {current ? <>
         <h3 className="text-lg font-semibold">{t(names[current.id])}</h3>
         {current.id === "workspace" ? <form action={create} className="space-y-4">
@@ -71,7 +71,7 @@ export function OnboardingChecklist({ locale, steps, context, create, resubmit }
       </> : <p>{t(allDone ? "onboarding.allDone" : "onboarding.noNext")}</p>}
     </section>
     <section aria-labelledby="checklist-heading" className="space-y-4">
-      <h2 id="checklist-heading" className="text-xl font-semibold text-teal-950">{t("onboarding.checklist")}</h2>
+      <h2 id="checklist-heading" className="text-xl font-semibold text-ink">{t("onboarding.checklist")}</h2>
       <ol className="list-decimal space-y-4 pl-6">
         {steps.map(step => {
           const link = step.state !== "current" && step.state !== "blocked" ? href(step) : undefined;

@@ -43,7 +43,7 @@ for (const locale of localeCodes) {
     expect(html).toContain(tr("providerServices.save"));
     expect(html).toContain(tr("providerServices.pasteHeading"));
     expect(html).toMatch(new RegExp(`<label[^>]*for="price-list-0-name"[^>]*>${tr("providerServices.name")}</label>`));
-    expect(html).toContain(`<legend class="px-1 font-semibold text-teal-950">${tr("providerServices.entry")} 1</legend>`);
+    expect(html).toContain(`<legend class="px-1 font-semibold text-ink">${tr("providerServices.entry")} 1</legend>`);
     expect(html).toContain(tr("profileEditor.publication.unpublished"));
     expect(html).toContain('aria-current="page"');
     expect(html).not.toMatch(privateValues);

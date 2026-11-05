@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
-import { Heading, Notice } from "@/components/ui/presentation";
+import { Heading, Notice, buttonClass } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { outcomeMessage } from "@/features/media/form";
 import { startOnboarding } from "@/features/provider-onboarding/actions";
@@ -22,7 +22,7 @@ import { isLocale, translator } from "@/lib/i18n";
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ notice?: string; approval?: string }> };
 
-const linkClass = "inline-block min-h-11 rounded-lg bg-teal-800 px-5 py-3 font-semibold text-white underline hover:bg-teal-900";
+const linkClass = buttonClass();
 
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
   const { locale } = await params;

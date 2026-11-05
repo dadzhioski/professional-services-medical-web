@@ -61,13 +61,18 @@ export default async function DirectoryPage({ params, searchParams }: Props) {
   const { locale, query, result, specialties, cities, countries } = await load((await params).locale, await searchParams);
   const t = translator(locale);
   // Language links drop query parameters, so switching language resets the filters.
-  return <><SiteHeader locale={locale} path={directoryHref(locale)} current="directory" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
-    <Heading>{t("directory.heading")}</Heading>
-    <p className="leading-relaxed text-slate-700">{t("directory.intro")}</p>
-    {specialties.state === "ready" && cities.state === "ready"
-      ? <DirectoryFilters locale={locale} specialties={specialties.records} cities={cities.records}
-        countries={countries.state === "ready" ? countries.records : undefined} specialtyId={query.specialtyId} cityId={query.cityId} />
-      : <p>{t("directory.referencesUnavailable")}</p>}
+  return <><SiteHeader locale={locale} path={directoryHref(locale)} current="directory" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-8 px-6">
+    {/* Hero (owner decision 3): the highlighted word is its own translation key, never a split string. */}
+    <div className="space-y-6 rounded-card bg-[radial-gradient(ellipse_at_top,var(--color-tint),transparent_70%)] px-2 pb-2 pt-6 sm:pt-10">
+      <div className="space-y-3 text-center">
+        <Heading><span>{t("directory.heroTitle")}</span> <span className="text-accent">{t("directory.heroHighlight")}</span></Heading>
+        <p className="mx-auto max-w-xl text-lg leading-relaxed text-muted">{t("directory.heroSubtitle")}</p>
+      </div>
+      {specialties.state === "ready" && cities.state === "ready"
+        ? <DirectoryFilters locale={locale} specialties={specialties.records} cities={cities.records}
+          countries={countries.state === "ready" ? countries.records : undefined} specialtyId={query.specialtyId} cityId={query.cityId} />
+        : <p className="text-center">{t("directory.referencesUnavailable")}</p>}
+    </div>
     <Body locale={locale} query={query} result={result} />
   </main></>;
 }

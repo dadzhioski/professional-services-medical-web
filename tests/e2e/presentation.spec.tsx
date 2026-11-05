@@ -40,7 +40,7 @@ for (const locale of localeCodes) {
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page).toHaveURL(`http://127.0.0.1:4310/${locale}/doctors`);
       await expect(page).toHaveTitle(translator(locale)("directory.title"));
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText(translator(locale)("directory.heading"));
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${translator(locale)("directory.heroTitle")} ${translator(locale)("directory.heroHighlight")}`);
       const languages = page.getByRole("banner").getByRole("navigation", { name: translator(locale)("navigation.language") });
       for (const target of localeCodes) await expect(languages.locator(`a[hreflang="${target}"]`)).toHaveAttribute("href", `/${target}/doctors`);
     } finally { await context.close(); }

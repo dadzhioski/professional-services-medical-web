@@ -1,12 +1,12 @@
 "use client";
 
-import { Field } from "@/components/ui/presentation";
+import { Field, controlClass } from "@/components/ui/presentation";
 import type { RecordMessages } from "@/features/provider-records/form";
 import { RecordEditor, type RecordAction } from "@/features/provider-records/record-editor";
 import { credentialLimits, type CredentialEditorState, type CredentialMessages, type CredentialValues } from "./fields";
 import { credentialTypeKey } from "./labels";
 
-const selectClass = "block min-h-11 w-full rounded-lg border border-slate-500 bg-white px-3 py-2";
+const selectClass = controlClass();
 
 export function CredentialEditor({ id, action, initial, messages: m, recordMessages, types, loginHref, reloadHref }: {
   id: string; action: RecordAction<CredentialValues, CredentialValues>; initial: CredentialEditorState; messages: CredentialMessages;
@@ -32,7 +32,7 @@ export function CredentialEditor({ id, action, initial, messages: m, recordMessa
           <option value="">{m["credentials.typeChoose"]}</option>
           {types.map(type => <option key={type} value={type}>{typeLabel(type)}</option>)}
         </select>
-        {error("type") && <p id={`${id}-type-error`} className="font-medium text-red-800">{error("type")}</p>}
+        {error("type") && <p id={`${id}-type-error`} className="font-medium text-danger">{error("type")}</p>}
       </div>
       <Field id={`${id}-title`} name="title" label={labels.title} hint={m["credentials.titleHint"]} defaultValue={state.values.title}
         maxLength={credentialLimits.title} required autoComplete="off" error={error("title")} />

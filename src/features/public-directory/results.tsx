@@ -1,5 +1,5 @@
 import type { PublicDoctorPage, PublicDoctorSummary } from "@dadzhioski/professional-services-api-client";
-import { linkClass } from "@/features/admin-review/review-parts";
+import { cardClass, linkClass } from "@/components/ui/presentation";
 import { OwnerImage } from "@/features/media/owner-image";
 import { publicMediaContentPath } from "@/lib/api/media";
 import { translator, type Locale } from "@/lib/i18n";
@@ -10,20 +10,27 @@ type Filters = { specialtyId?: string; cityId?: string };
 // 44 px touch targets on public pages.
 export const publicLinkClass = `${linkClass} min-h-11`;
 
+// Decorative initials when there is no photo; the linked name beside it is the accessible text.
+export function initials(name: string) {
+  return name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(part => [...part.normalize("NFC")][0]).join("").toLocaleUpperCase();
+}
+
 // Only the named public summary fields are shown; supplied names and labels are rendered as text.
 function DoctorCard({ locale, doctor }: { locale: Locale; doctor: PublicDoctorSummary }) {
   const t = translator(locale);
   const photo = publicMediaContentPath(doctor.photoMediaId);
   const cities = [...new Map((doctor.cities ?? []).map(city => [city.id, city])).values()]
     .map(city => referenceLabel(city.labels, city.code!, locale));
-  return <article className="flex gap-4 rounded-xl border border-slate-300 bg-white p-4">
-    {photo && <OwnerImage path={photo} alt="" thumbnail />}
-    <div className="min-w-0 space-y-1">
-      <h2 className="text-lg font-semibold text-teal-950">
-        <a className="break-words text-blue-800 underline underline-offset-4" href={`/${locale}/doctors/${encodeURIComponent(doctor.slug!)}`}>
+  return <article className={`flex h-full gap-4 p-5 ${cardClass}`}>
+    {photo ? <OwnerImage path={photo} alt="" thumbnail />
+      : <span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-input bg-tint text-lg font-semibold text-ink">
+        {initials(doctor.displayName ?? "")}</span>}
+    <div className="min-w-0 space-y-1 [overflow-wrap:anywhere]">
+      <h2 className="text-lg font-semibold leading-snug text-ink">
+        <a className="text-primary underline underline-offset-4 hover:text-primary-strong" href={`/${locale}/doctors/${encodeURIComponent(doctor.slug!)}`}>
           {doctor.displayName}</a>
       </h2>
-      <dl className="grid gap-x-3 text-slate-700 sm:grid-cols-[auto_1fr]">
+      <dl className="grid gap-x-3 text-muted">
         {doctor.specialty && <><dt className="font-semibold">{t("directory.specialty")}</dt>
           <dd>{referenceLabel(doctor.specialty.labels, doctor.specialty.code!, locale)}</dd></>}
         {cities.length > 0 && <><dt className="font-semibold">{t("directory.cities")}</dt><dd>{cities.join(", ")}</dd></>}
@@ -62,8 +69,8 @@ export function DirectoryResults({ locale, result, filters, page }: { locale: Lo
       <a className={publicLinkClass} href={directoryHref(locale)}>{t("directory.reset")}</a></div> : <p>{t("directory.empty")}</p>;
   }
   return <div className="space-y-4">
-    <p>{`${t("directory.count")}: ${result.totalElements}`}</p>
-    <ul className="space-y-4">{doctors.map(doctor => <li key={doctor.slug}><DoctorCard locale={locale} doctor={doctor} /></li>)}</ul>
+    <p className="font-semibold text-ink">{`${t("directory.count")}: ${result.totalElements}`}</p>
+    <ul className="grid gap-6 sm:grid-cols-2">{doctors.map(doctor => <li key={doctor.slug}><DoctorCard locale={locale} doctor={doctor} /></li>)}</ul>
     {totalPages > 1 && <DirectoryPagination locale={locale} filters={filters} page={page} totalPages={totalPages} />}
   </div>;
 }

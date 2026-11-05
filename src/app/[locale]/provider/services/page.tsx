@@ -60,7 +60,7 @@ export default async function ServicesPage({ params, searchParams }: Props) {
     </Surface>
     {records && <Surface>
       <section aria-labelledby="price-list" className="space-y-4">
-        <h2 id="price-list" className="text-xl font-semibold text-teal-950">{t("providerServices.listHeading")}</h2>
+        <h2 id="price-list" className="text-xl font-semibold text-ink">{t("providerServices.listHeading")}</h2>
         <PriceListEditor id="price-list" locale={locale} action={savePriceList.bind(null, locale)} messages={messages}
           recordMessages={recordMessages} currencies={currencies} defaultCurrency={defaultCurrency}
           suggestion={records.length === 0 ? t("providerServices.suggestedFirst") : undefined} loginHref={loginHref} reloadHref={path}
