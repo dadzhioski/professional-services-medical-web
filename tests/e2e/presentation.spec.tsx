@@ -17,7 +17,7 @@ function fixture(locale: Locale, variant: typeof variants[number]) {
   const long = variant === "long" ? "SyntheticLongContent".repeat(40) : "Synthetic professional";
   const empty = variant === "empty";
   return <html lang={locale}><head><meta charSet="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>{t("app.title")}</title></head>
-    <body className="min-h-screen bg-slate-50 text-slate-900 antialiased"><SiteShell locale={locale}>
+    <body className="flex min-h-screen flex-col bg-canvas text-text antialiased"><SiteShell locale={locale}>
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-5xl space-y-6 px-6">
         <LanguageLinks locale={locale} path={`/${locale}/doctors/synthetic-example?token=private`} />
         <Notice>{t("preview.notice")}</Notice>

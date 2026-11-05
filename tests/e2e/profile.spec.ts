@@ -177,7 +177,7 @@ test("submissions require the site Origin and ignore foreign identifiers", async
     const forged = await context.request.post(`${origin}/en/provider/profile`, { headers: { Origin: origin },
       multipart: { ...fields, displayName: "Dr. Forged Fields", slug: "dr-foreign", organizationId: "foreign-org" } });
     // The saved notice links back to the onboarding checklist (WEB-M1-015).
-    expect(await forged.text()).toMatch(new RegExp(`<div role="status"><p class="rounded-lg border border-teal-700 bg-teal-50 p-4 text-teal-950">${t("profileEditor.saved")}(<!-- -->)? <a [^>]*href="/en/provider/onboarding">${t("onboarding.backToChecklist")}</a></p></div>`));
+    expect(await forged.text()).toMatch(new RegExp(`<div role="status"><p class="rounded-input border border-primary bg-tint p-4 text-ink">${t("profileEditor.saved")}(<!-- -->)? <a [^>]*href="/en/provider/onboarding">${t("onboarding.backToChecklist")}</a></p></div>`));
     await page.reload();
     await expect(name(page)).toHaveValue("Dr. Forged Fields");
     expect(await slugOf(page)).toBe(slug);
