@@ -38,12 +38,12 @@ export default async function CredentialsReviewPage({ params }: Props) {
     </Surface>
     <Surface>
       <section aria-labelledby="credential-queue" className="space-y-4">
-        <h2 id="credential-queue" className="text-xl font-semibold text-teal-950">{t("review.credentials.queue")}</h2>
-        <p className="text-sm text-slate-700">{t("review.listLimit")}</p>
+        <h2 id="credential-queue" className="text-xl font-semibold text-ink">{t("review.credentials.queue")}</h2>
+        <p className="text-sm text-muted">{t("review.listLimit")}</p>
         {result.credentials.length ? <ul className="space-y-4">
           {result.credentials.map(credential => <li key={credential.credentialId}
-            className="space-y-2 rounded-xl border border-slate-300 bg-white p-4 [overflow-wrap:anywhere]">
-            <h3 className="text-lg font-semibold text-teal-950">{credential.title}</h3>
+            className="space-y-2 rounded-card border border-border bg-surface shadow-card p-4 [overflow-wrap:anywhere]">
+            <h3 className="text-lg font-semibold text-ink">{credential.title}</h3>
             <dl className="grid gap-1 sm:grid-cols-[auto_1fr] sm:gap-x-4">
               <dt className="font-semibold">{t("credential.type")}</dt><dd>{t(credentialTypeKey(credential.type))}</dd>
               <dt className="font-semibold">{t("credential.issuer")}</dt><dd>{credential.issuer}</dd>

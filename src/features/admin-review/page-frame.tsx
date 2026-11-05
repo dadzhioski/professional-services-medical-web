@@ -30,7 +30,7 @@ export function AdminNavigation({ locale, current }: { locale: Locale; current: 
   return <nav aria-label={t("admin.navigation")}>
     <ul className="flex flex-wrap gap-4">
       {links.map(([key, href]) => <li key={key}><a href={href} aria-current={key === current ? "page" : undefined}
-        className="inline-block rounded py-2 text-blue-800 underline underline-offset-4">{t(`admin.${key}`)}</a></li>)}
+        className="inline-block rounded py-2 text-primary underline underline-offset-4">{t(`admin.${key}`)}</a></li>)}
     </ul>
   </nav>;
 }

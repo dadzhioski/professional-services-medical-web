@@ -24,13 +24,13 @@ export function ProviderNavigation({ locale, current }: { locale: Locale; curren
   return <nav aria-label={t("provider.navigation")}>
     <ul className="flex flex-wrap gap-4">
       {links.map(([key, href]) => <li key={key}><a href={href} aria-current={key === current ? "page" : undefined}
-        className="inline-block rounded py-2 text-blue-800 underline underline-offset-4">{t(`provider.${key}`)}</a></li>)}
+        className="inline-block rounded py-2 text-primary underline underline-offset-4">{t(`provider.${key}`)}</a></li>)}
     </ul>
   </nav>;
 }
 
 // Success notices lead back to the checklist, which rereads progress from the API (decision 3).
 export function ChecklistLink({ locale }: { locale: Locale }) {
-  return <a href={checklistPath(locale)} className="font-semibold text-blue-800 underline underline-offset-4">
+  return <a href={checklistPath(locale)} className="font-semibold text-primary underline underline-offset-4">
     {translator(locale)("onboarding.backToChecklist")}</a>;
 }

@@ -71,6 +71,19 @@ test("keyboard, 320 px and axe checks on the public profile", async ({ page }) =
   expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: unknown[] }> } }).axe.run()).violations)).toEqual([]);
 });
 
+// WEB-M1-019: the header card, section cards and price table fit every checked width in every language.
+test("the public profile has no horizontal scroll or axe violations at 320, 375, 768 and 1280 px in all languages", async ({ page }) => {
+  for (const locale of localeCodes) {
+    for (const width of [320, 375, 768, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(`${origin}/${locale}/doctors/${seeded.slug}`);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${locale} ${width}`).toBe(true);
+      await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
+      expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: unknown[] }> } }).axe.run()).violations), `${locale} ${width}`).toEqual([]);
+    }
+  }
+});
+
 for (const revocation of ["unpublish", "suspend"]) {
   test(`${revocation} removes the profile and its photo on the next request after earlier reads`, async ({ page, request }) => {
     await page.goto(`${origin}/en/doctors/${seeded.slug}`);

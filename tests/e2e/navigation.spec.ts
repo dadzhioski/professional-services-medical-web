@@ -44,7 +44,7 @@ for (const locale of ["mk", "en"] as const) {
       await expect(header.getByRole("link", { name: t("app.title") })).toHaveAttribute("aria-current", "page");
       await expect(header.getByRole("navigation", { name: t("navigation.primary") })).toBeVisible();
       await expect(header.getByRole("navigation", { name: t("navigation.language") })).toBeVisible();
-      await expect(header.getByRole("link", { name: t("directory.heading"), exact: true })).toHaveCount(0);
+      await expect(header.getByRole("link", { name: t("directory.title"), exact: true })).toHaveCount(0);
       await expect(header.getByRole("button")).toHaveCount(0);
       await header.getByRole("link", { name: t("navigation.doctors") }).click();
       await expect(page).toHaveURL(`${origin}/${locale}/provider/onboarding`);
@@ -90,7 +90,7 @@ test("identity failures render the signed-out header with the page intact", asyn
     const response = await page.goto("/en");
     expect(response!.status()).toBe(200);
     expect(await response!.text()).not.toContain("synthetic-private-error");
-    await expect(page.getByRole("heading", { level: 1, name: t("directory.heading") })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: `${t("directory.heroTitle")} ${t("directory.heroHighlight")}` })).toBeVisible();
     await expect(page.getByRole("banner").getByRole("link", { name: t("navigation.doctors") })).toBeVisible();
     await expect(page.getByRole("banner").getByRole("button")).toHaveCount(0);
   }

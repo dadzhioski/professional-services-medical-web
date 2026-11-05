@@ -8,7 +8,7 @@ import { translator, type Locale } from "@/lib/i18n";
 import { addCredentialEvidence, removeCredentialEvidence, submitCredential } from "./actions";
 import { credentialStateKey, credentialTypeKey } from "./labels";
 
-const linkClass = "inline-block py-2 font-semibold text-blue-800 underline underline-offset-4";
+const linkClass = "inline-block py-2 font-semibold text-primary underline underline-offset-4";
 const explanations = { DRAFT: "credentials.explain.draft", SUBMITTED: "credentials.explain.submitted",
   APPROVED: "credentials.explain.approved", REJECTED: "credentials.explain.rejected" } as const;
 const explanation = (state: string) => Object.hasOwn(explanations, state) ? explanations[state as keyof typeof explanations] : undefined;
@@ -31,8 +31,8 @@ export function CredentialList({ locale, credentials, path }: { locale: Locale; 
       // Only the API decides whether submission is allowed; this only hides a button that would be refused.
       const submittable = credential.state === "DRAFT" || credential.state === "REJECTED";
       return <li key={id}>
-        <article aria-labelledby={`credential-${id}`} className="min-w-0 space-y-4 rounded-xl border border-slate-300 bg-white p-6 [overflow-wrap:anywhere]">
-          <h3 id={`credential-${id}`} className="text-xl font-semibold text-teal-950">{credential.title}</h3>
+        <article aria-labelledby={`credential-${id}`} className="min-w-0 space-y-4 rounded-card border border-border bg-surface shadow-card p-6 [overflow-wrap:anywhere]">
+          <h3 id={`credential-${id}`} className="text-xl font-semibold text-ink">{credential.title}</h3>
           <dl className="grid gap-1 sm:grid-cols-[auto_1fr] sm:gap-x-4">
             <dt className="font-semibold">{t("credential.type")}</dt><dd>{t(credentialTypeKey(credential.type))}</dd>
             <dt className="font-semibold">{t("credential.issuer")}</dt><dd>{credential.issuer}</dd>
@@ -42,7 +42,7 @@ export function CredentialList({ locale, credentials, path }: { locale: Locale; 
             <dt className="font-semibold">{t("credential.state")}</dt><dd>{t(credentialStateKey(credential.state))}</dd>
           </dl>
           {explained && <p>{t(explained)}</p>}
-          {credential.state === "REJECTED" && credential.rejectionReason && <div className="space-y-1 rounded-lg border border-slate-400 p-4">
+          {credential.state === "REJECTED" && credential.rejectionReason && <div className="space-y-1 rounded-input border border-control p-4">
             <h4 className="font-semibold">{t("credentials.feedback")}</h4>
             <p className="whitespace-pre-line">{credential.rejectionReason}</p>
           </div>}
@@ -52,12 +52,12 @@ export function CredentialList({ locale, credentials, path }: { locale: Locale; 
             <a className={linkClass} href={`${path}?remove=${encodeURIComponent(id)}#credential-remove`}>
               {t("records.remove")}<span className="sr-only">: {credential.title}</span></a>
           </p>
-          <h4 className="text-lg font-semibold text-teal-950">{t("credentials.evidence")}</h4>
+          <h4 className="text-lg font-semibold text-ink">{t("credentials.evidence")}</h4>
           {images.length ? <ul className="flex flex-wrap gap-4">
             {images.map(({ mediaId, path: contentPath }, index) => {
               const name = `${t("evidence.image")} ${index + 1}`;
               return <li key={mediaId} className="w-40 space-y-2">
-                <OwnerImage path={contentPath} alt={name} className="rounded-lg border border-slate-300" />
+                <OwnerImage path={contentPath} alt={name} className="rounded-input border border-border" />
                 <form action={removeCredentialEvidence.bind(null, locale)}>
                   <input type="hidden" name="credentialId" value={id} />
                   <input type="hidden" name="version" value={credential.version} />

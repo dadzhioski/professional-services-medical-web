@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
-import { Heading, Notice } from "@/components/ui/presentation";
+import { Heading, Notice, buttonClass } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { OwnerImage } from "@/features/media/owner-image";
 import { ProfilePresentation } from "@/features/professional-profile/presentation";
@@ -28,7 +28,7 @@ import { referenceLabel } from "@/lib/i18n/reference";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ notice?: string; photo?: string }> };
-const linkClass = "inline-block min-h-11 rounded-lg bg-teal-800 px-5 py-3 font-semibold text-white underline hover:bg-teal-900";
+const linkClass = buttonClass();
 
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
   const { locale } = await params;
@@ -96,7 +96,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       {profile?.state === "ready" && <>
         <dl className="grid gap-1 [overflow-wrap:anywhere]">
           <dt className="font-semibold">{t("profileEditor.slug")}</dt>
-          <dd><code>{profile.profile.slug}</code> <span className="block text-sm text-slate-700">{t("profileEditor.slugHint")}</span></dd>
+          <dd><code>{profile.profile.slug}</code> <span className="block text-sm text-muted">{t("profileEditor.slugHint")}</span></dd>
           <dt className="font-semibold">{t("profileEditor.publication")}</dt>
           <dd>{t(publicationKey(profile.profile.publicationState))}</dd>
         </dl>
@@ -111,7 +111,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     </Surface>
     {workspace.state === "ready" && <Surface>
       <section aria-labelledby="specialty-heading" className="space-y-4">
-        <h2 id="specialty-heading" className="text-xl font-semibold text-teal-950">{t("specialtyEditor.heading")}</h2>
+        <h2 id="specialty-heading" className="text-xl font-semibold text-ink">{t("specialtyEditor.heading")}</h2>
         <p>{t("specialtyEditor.description")}</p>
         {specialty ? <SpecialtyEditor action={saveProfileSpecialty.bind(null, locale)} messages={specialtyMessages}
           recordMessages={recordMessages} specialties={specialty.options} loginHref={loginHref} reloadHref={path} savedLink={savedLink}
@@ -124,7 +124,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     </Surface>}
     {profile?.state === "ready" && <Surface>
       <section aria-labelledby="profile-preview" className="space-y-4">
-        <h2 id="profile-preview" className="text-xl font-semibold text-teal-950">{t("profileEditor.previewHeading")}</h2>
+        <h2 id="profile-preview" className="text-xl font-semibold text-ink">{t("profileEditor.previewHeading")}</h2>
         <p>{t("profileEditor.previewNote")}</p>
         <ProfilePresentation locale={locale} nested name={profile.profile.displayName?.trim() ? profile.profile.displayName : t("profileEditor.unnamed")}
           introduction={profile.profile.biography} photo={photoPath && <OwnerImage path={photoPath} alt="" />} />

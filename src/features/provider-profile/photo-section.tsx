@@ -15,11 +15,11 @@ export function PhotoSection({ locale, version, photoMediaId, outcome }: {
   const path = mediaContentPath(photoMediaId);
   const message = outcomeMessage(photoOutcomes, outcome);
   return <section id="photo" aria-labelledby="photo-heading" className="space-y-4">
-    <h2 id="photo-heading" className="text-xl font-semibold text-teal-950">{t("photo.heading")}</h2>
+    <h2 id="photo-heading" className="text-xl font-semibold text-ink">{t("photo.heading")}</h2>
     <p>{t("photo.description")}</p>
     {message && <Notice role={message.success ? "status" : "alert"}>{t(message.key)}
       {message.success && <> <ChecklistLink locale={locale} /></>}</Notice>}
-    {path ? <OwnerImage path={path} alt={t("photo.current")} className="w-40 rounded-xl" /> : <p>{t("photo.none")}</p>}
+    {path ? <OwnerImage path={path} alt={t("photo.current")} className="w-40 rounded-card" /> : <p>{t("photo.none")}</p>}
     <form action={changeProfilePhoto.bind(null, locale)} className="space-y-4">
       <input type="hidden" name="version" value={version} />
       <ImageInput id="profile-photo" name="photo" label={t("media.file")} hint={t("media.hint")}

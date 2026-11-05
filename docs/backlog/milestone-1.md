@@ -37,6 +37,7 @@ Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005, WEB-M1-006 and WE
 | [WEB-M1-014](../tasks/WEB-M1-014-public-doctor-directory.md) | Add a public doctor directory with specialty and city filters and header/entry links (added 2026-10-26 by owner scope amendment) | WEB-M1-011, WEB-M1-013; client 0.7.0 directory capability |
 | [WEB-M1-015](../tasks/WEB-M1-015-guided-onboarding-checklist.md) | Merge the provider workspace page into a guided onboarding checklist with API-derived step status (added 2026-10-27; approved for implementation with owner decisions recorded) | WEB-M1-005 through WEB-M1-010, WEB-M1-013; no client upgrade |
 | [WEB-M1-017](../tasks/WEB-M1-017-price-list-editor.md) | Replace one-by-one service entry with a single price-list form, paste import and a public price list with an indicative-price note (added 2026-10-27; approved for implementation) | WEB-M1-007, WEB-M1-011, WEB-M1-015; no client upgrade |
+| [WEB-M1-019](../tasks/WEB-M1-019-visual-refresh.md) | Restyle the site with design tokens and shared primitives into a calm healthcare-marketplace look (reference: doctify.com) with our own palette (added 2026-11-02; approved 2026-11-05 with owner decisions recorded) | WEB-M1-002, WEB-M1-014, WEB-M1-017, WEB-M1-018; no client upgrade |
 
 ### Observed capability and approval gates
 

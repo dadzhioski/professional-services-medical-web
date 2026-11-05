@@ -47,7 +47,7 @@ for (const locale of localeCodes) {
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page.getByRole("banner").getByRole("link", { name: tl("app.title"), exact: true }))
         .toHaveAttribute("aria-current", "page");
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText(tl("directory.heading"));
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${tl("directory.heroTitle")} ${tl("directory.heroHighlight")}`);
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `${origin}/${locale}/doctors`);
       await page.getByRole("link", { name: "Dr. Synthetic Public" }).click();
@@ -137,6 +137,20 @@ test("keyboard, 320 px and axe checks on the directory", async ({ page, request 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
   expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: unknown[] }> } }).axe.run()).violations)).toEqual([]);
+});
+
+// WEB-M1-019: the restyled hero, pill filter and card grid fit every checked width in every language.
+test("the directory has no horizontal scroll or axe violations at 320, 375, 768 and 1280 px in all languages", async ({ page, request }) => {
+  await seed(request);
+  for (const locale of localeCodes) {
+    for (const width of [320, 375, 768, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(`${origin}/${locale}/doctors`);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${locale} ${width}`).toBe(true);
+      await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
+      expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: unknown[] }> } }).axe.run()).violations), `${locale} ${width}`).toEqual([]);
+    }
+  }
 });
 
 for (const revocation of ["unpublish", "suspend"]) {

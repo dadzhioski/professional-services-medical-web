@@ -1,22 +1,22 @@
 "use client";
 
 import type { ComponentPropsWithoutRef } from "react";
-import { Field } from "@/components/ui/presentation";
+import { Field, controlClass } from "@/components/ui/presentation";
 import type { RecordMessages } from "@/features/provider-records/form";
 import { RecordEditor, type RecordAction } from "@/features/provider-records/record-editor";
 import { locationLimits, type LocationEditorState, type LocationMessages, type LocationValues } from "./fields";
 
 export type CountryOption = { code: string; label: string; cities: { id: string; label: string }[] };
-const selectClass = "block min-h-11 w-full rounded-lg border border-slate-500 bg-white px-3 py-2";
+const selectClass = controlClass();
 
 function Select({ id, label, hint, error, children, ...props }: { id: string; label: string; hint?: string; error?: string } &
   ComponentPropsWithoutRef<"select">) {
   const describedBy = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ") || undefined;
   return <div className="min-w-0 space-y-2">
     <label htmlFor={id} className="block font-semibold">{label}</label>
-    {hint && <p id={`${id}-hint`} className="text-sm text-slate-700">{hint}</p>}
+    {hint && <p id={`${id}-hint`} className="text-sm text-muted">{hint}</p>}
     <select {...props} id={id} aria-describedby={describedBy} aria-invalid={error ? true : undefined} className={selectClass}>{children}</select>
-    {error && <p id={`${id}-error`} className="font-medium text-red-800">{error}</p>}
+    {error && <p id={`${id}-error`} className="font-medium text-danger">{error}</p>}
   </div>;
 }
 

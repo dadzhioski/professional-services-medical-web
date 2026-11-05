@@ -75,13 +75,13 @@ export default async function DoctorReviewPage({ params, searchParams }: Props) 
       destructive={confirmations[deciding].destructive} />}
     <Surface>
       <section aria-labelledby="profile-draft" className="space-y-4 [overflow-wrap:anywhere]">
-        <h2 id="profile-draft" className="text-xl font-semibold text-teal-950">{t("review.profile")}</h2>
+        <h2 id="profile-draft" className="text-xl font-semibold text-ink">{t("review.profile")}</h2>
         {profile ? <p className="whitespace-pre-line">{profile.biography || t("review.notProvided")}</p> : <p>{t("review.noProfile")}</p>}
       </section>
     </Surface>
     <Surface>
       <section aria-labelledby="approval-decision" className="space-y-4">
-        <h2 id="approval-decision" className="text-xl font-semibold text-teal-950">{t("review.approval")}</h2>
+        <h2 id="approval-decision" className="text-xl font-semibold text-ink">{t("review.approval")}</h2>
         <p>{t("review.separation")}</p>
         {available.approve ? <p className="flex flex-wrap gap-4">{decisionLink("approve")}{decisionLink("reject")}</p> :
           <p>{t("review.approvalDecided")}</p>}
@@ -89,14 +89,14 @@ export default async function DoctorReviewPage({ params, searchParams }: Props) 
     </Surface>
     <Surface>
       <section aria-labelledby="suspension" className="space-y-4">
-        <h2 id="suspension" className="text-xl font-semibold text-teal-950">{t("review.suspension")}</h2>
+        <h2 id="suspension" className="text-xl font-semibold text-ink">{t("review.suspension")}</h2>
         <p>{t(doctor.suspended ? "review.confirm.reinstateNote" : "review.confirm.suspendNote")}</p>
         <p className="flex flex-wrap gap-4">{decisionLink("suspend")}{decisionLink("reinstate")}</p>
       </section>
     </Surface>
     <Surface>
       <section aria-labelledby="doctor-credentials" className="space-y-4">
-        <h2 id="doctor-credentials" className="text-xl font-semibold text-teal-950">{t("review.doctorCredentials")}</h2>
+        <h2 id="doctor-credentials" className="text-xl font-semibold text-ink">{t("review.doctorCredentials")}</h2>
         {!pending ? <Notice role="alert">{t("account.unavailable")}</Notice> : pending.length ? <ul className="space-y-2">
           {pending.map(credential => <li key={credential.credentialId} className="[overflow-wrap:anywhere]">
             <a className={linkClass} href={`/${locale}/admin/credentials/${encodeURIComponent(credential.credentialId)}`}>

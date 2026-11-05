@@ -48,12 +48,12 @@ export default async function DoctorsReviewPage({ params, searchParams }: Props)
     </Surface>
     <Surface>
       <section aria-labelledby="doctor-list" className="space-y-4">
-        <h2 id="doctor-list" className="text-xl font-semibold text-teal-950">{t(filterKeys[filter])}</h2>
-        <p className="text-sm text-slate-700">{t("review.listLimit")}</p>
+        <h2 id="doctor-list" className="text-xl font-semibold text-ink">{t(filterKeys[filter])}</h2>
+        <p className="text-sm text-muted">{t("review.listLimit")}</p>
         {result.doctors.length ? <ul className="space-y-4">
           {result.doctors.map(doctor => {
             const registered = formatInstant(locale, doctor.registeredAt);
-            return <li key={doctor.organizationId} className="space-y-2 rounded-xl border border-slate-300 bg-white p-4">
+            return <li key={doctor.organizationId} className="space-y-2 rounded-card border border-border bg-surface shadow-card p-4">
               <dl className="grid gap-1 sm:grid-cols-[auto_1fr] sm:gap-x-4">
                 <dt className="font-semibold">{t("review.registered")}</dt><dd>{registered}</dd>
                 <dt className="font-semibold">{t("workspace.approval")}</dt><dd>{t(approvalKey(doctor.approvalState))}</dd>

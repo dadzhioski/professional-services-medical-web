@@ -3,6 +3,7 @@
 import type { RecordMessages } from "@/features/provider-records/form";
 import { RecordEditor, type RecordAction, type SavedLink } from "@/features/provider-records/record-editor";
 import type { SpecialtyEditorState, SpecialtyMessages, SpecialtyValues } from "./specialty";
+import { controlClass } from "@/components/ui/presentation";
 
 export type SpecialtyOption = { id: string; label: string };
 
@@ -22,15 +23,15 @@ export function SpecialtyEditor({ action, initial, messages: m, recordMessages, 
       const retired = current && !specialties.some(option => option.id === current);
       return <div className="min-w-0 space-y-2">
         <label htmlFor="specialty-specialtyId" className="block font-semibold">{m["specialtyEditor.label"]}</label>
-        <p id="specialty-specialtyId-hint" className="text-sm text-slate-700">{m["specialtyEditor.hint"]}</p>
+        <p id="specialty-specialtyId-hint" className="text-sm text-muted">{m["specialtyEditor.hint"]}</p>
         <select id="specialty-specialtyId" name="specialtyId" defaultValue={current} aria-invalid={error("specialtyId") ? true : undefined}
           aria-describedby={`specialty-specialtyId-hint${error("specialtyId") ? " specialty-specialtyId-error" : ""}`}
-          className="block min-h-11 w-full rounded-lg border border-slate-500 bg-white px-3 py-2">
+          className={controlClass(!!error("specialtyId"))}>
           <option value="">{m["specialtyEditor.none"]}</option>
           {retired && <option value={current}>{m["specialtyEditor.retired"]}</option>}
           {specialties.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
         </select>
-        {error("specialtyId") && <p id="specialty-specialtyId-error" className="font-medium text-red-800">{error("specialtyId")}</p>}
+        {error("specialtyId") && <p id="specialty-specialtyId-error" className="font-medium text-danger">{error("specialtyId")}</p>}
       </div>;
     }}
   </RecordEditor>;

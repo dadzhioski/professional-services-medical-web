@@ -17,7 +17,7 @@ import { referenceLabel } from "@/lib/i18n/reference";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ notice?: string; edit?: string; remove?: string }> };
-const linkClass = "inline-block py-2 font-semibold text-blue-800 underline underline-offset-4";
+const linkClass = "inline-block py-2 font-semibold text-primary underline underline-offset-4";
 
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
   const { locale } = await params;
@@ -89,17 +89,17 @@ export default async function LocationsPage({ params, searchParams }: Props) {
       action={removeLocation.bind(null, locale, removing.locationId!)} />}
     {records && editing && <Surface>
       <section aria-labelledby="location-edit-heading" className="space-y-4">
-        <h2 id="location-edit-heading" className="text-xl font-semibold text-teal-950">{t("providerLocations.editHeading")}</h2>
+        <h2 id="location-edit-heading" className="text-xl font-semibold text-ink">{t("providerLocations.editHeading")}</h2>
         {editor(editing)}
         <a className={linkClass} href={path}>{t("records.cancel")}</a>
       </section>
     </Surface>}
     {records && <Surface>
       <section aria-labelledby="location-list" className="space-y-4">
-        <h2 id="location-list" className="text-xl font-semibold text-teal-950">{t("providerLocations.listHeading")}</h2>
+        <h2 id="location-list" className="text-xl font-semibold text-ink">{t("providerLocations.listHeading")}</h2>
         {records.length === 0 ? <p>{t("providerLocations.empty")}</p> : <ul className="space-y-4">
-          {records.map(location => <li key={location.locationId} className="space-y-2 rounded-lg border border-slate-300 p-4 [overflow-wrap:anywhere]">
-            <h3 className="text-lg font-semibold text-teal-950">{title(location)}</h3>
+          {records.map(location => <li key={location.locationId} className="space-y-2 rounded-input border border-border p-4 [overflow-wrap:anywhere]">
+            <h3 className="text-lg font-semibold text-ink">{title(location)}</h3>
             <dl className="grid gap-1">
               <dt className="font-semibold">{t("providerLocations.address")}</dt><dd>{location.displayAddress}</dd>
               <dt className="font-semibold">{t("providerLocations.city")}</dt><dd>{place(location)}</dd>
@@ -116,7 +116,7 @@ export default async function LocationsPage({ params, searchParams }: Props) {
     </Surface>}
     {records && !editing && <Surface>
       <section aria-labelledby="location-add" className="space-y-4">
-        <h2 id="location-add" className="text-xl font-semibold text-teal-950">{t("providerLocations.add")}</h2>
+        <h2 id="location-add" className="text-xl font-semibold text-ink">{t("providerLocations.add")}</h2>
         {editor()}
       </section>
     </Surface>}
