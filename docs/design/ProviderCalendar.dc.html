@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Appointment calendar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#F6F8FB}
+a{color:#0B5CAD}a:hover{color:#08427C}
+button:focus-visible,a:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+.appt{transition:transform .15s ease, box-shadow .15s ease}
+.appt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(15,23,42,.10)}
+.fade{animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div style="min-height: 100vh; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #0F172A; background: #F6F8FB; display: flex; flex-wrap: wrap">
+
+  <aside style="flex: 1 1 240px; max-width: 100%; background: #0F172A; color: #E2E8F0; padding: 24px 16px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+      <span style="width: 32px; height: 32px; border-radius: 9px; background: {{accent}}; display: flex; align-items: center; justify-content: center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+      </span>
+      <span style="font-weight: 700; color: #FFFFFF">[Brand]</span>
+    </div>
+    <nav aria-label="Provider" style="display: flex; flex-direction: column; gap: 4px">
+      <a href="Provider.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 600; color: #CBD5E1">Overview</a>
+      <a href="Provider.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 600; color: #CBD5E1">Profile</a>
+      <a href="#top" aria-current="page" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 600; background: #1E293B; color: #FFFFFF">Requests<sc-if value="{{hasWaiting}}" hint-placeholder-val="{{ true }}"><span style="margin-left: auto; background: #F59E0B; color: #0F172A; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 8px">{{waitingCount}}</span></sc-if></a>
+      <a href="Provider.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 600; color: #CBD5E1">Settings</a>
+    </nav>
+    <div style="margin-top: auto; padding: 12px; border-radius: 12px; background: #1E293B; display: flex; gap: 10px; align-items: center">
+      <div role="img" aria-label="Doctor portrait placeholder" style="width: 36px; height: 36px; border-radius: 10px; background: #334155"></div>
+      <div style="display: flex; flex-direction: column; min-width: 0">
+        <span style="font-size: 14px; font-weight: 600; color: #FFFFFF">Dr. [Full name]</span>
+        <span style="font-size: 12px; color: #CBD5E1">Provider</span>
+      </div>
+    </div>
+  </aside>
+
+  <main id="top" style="flex: 999 1 560px; min-width: 0; padding: 32px; display: flex; flex-direction: column; gap: 20px">
+
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 28px; letter-spacing: -0.02em">Appointment requests</h1>
+        <p style="margin: 0; font-size: 15px; color: #475569">Requests are placed at the visitor's preferred time. Confirm to lock the slot.</p>
+      </div>
+      <div role="group" aria-label="View" style="display: flex; gap: 4px; padding: 4px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px">
+        <a href="Provider.dc.html" style="display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 9px; color: #334155; font-weight: 600; font-size: 14px; text-decoration: none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>
+          List
+        </a>
+        <a href="#top" aria-current="page" style="display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 9px; background: #0F172A; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+          Calendar
+        </a>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <button type="button" onClick="{{prev}}" aria-label="Previous week" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; cursor: pointer; display: flex; align-items: center; justify-content: center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+        </button>
+        <button type="button" onClick="{{next}}" aria-label="Next week" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; cursor: pointer; display: flex; align-items: center; justify-content: center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+        </button>
+        <button type="button" onClick="{{today}}" disabled="{{isThisWeek}}" style="{{todayStyle}}">This week</button>
+        <h2 aria-live="polite" style="margin: 0 0 0 8px; font-size: 20px; letter-spacing: -0.01em">{{range}}</h2>
+      </div>
+      <div role="group" aria-label="Show" style="display: flex; flex-wrap: wrap; gap: 6px">
+        <sc-for list="{{filters}}" as="f" hint-placeholder-count="3">
+          <button type="button" onClick="{{f.pick}}" aria-pressed="{{f.pressed}}" style="{{f.style}}">
+            <span style="{{f.dot}}"></span>
+            {{f.label}}
+            <span style="font-weight: 700">{{f.count}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+
+      <section aria-label="Week calendar" style="flex: 999 1 640px; min-width: 0; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; overflow-x: auto">
+        <div style="min-width: 760px">
+          <div style="display: grid; grid-template-columns: 64px repeat(6, minmax(0, 1fr)); border-bottom: 1px solid #E2E8F0">
+            <div></div>
+            <sc-for list="{{days}}" as="d" hint-placeholder-count="6">
+              <div style="padding: 14px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; border-left: 1px solid #EEF2F6">
+                <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #475569">{{d.dow}}</span>
+                <span style="{{d.numStyle}}">{{d.num}}</span>
+                <span style="{{d.loadStyle}}">{{d.load}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: grid; grid-template-columns: 64px repeat(6, minmax(0, 1fr)); padding-bottom: 8px">
+            <div style="display: flex; flex-direction: column">
+              <sc-for list="{{hours}}" as="h" hint-placeholder-count="10">
+                <div style="height: 64px; box-sizing: border-box; padding: 4px 10px 0 0; text-align: right; font-size: 12px; color: #475569">{{h}}</div>
+              </sc-for>
+            </div>
+            <sc-for list="{{days}}" as="d" hint-placeholder-count="6">
+              <div style="{{d.colStyle}}">
+                <sc-for list="{{d.items}}" as="a" hint-placeholder-count="1">
+                  <button class="appt" type="button" onClick="{{a.pick}}" aria-label="{{a.aria}}" aria-pressed="{{a.pressed}}" style="{{a.style}}">
+                    <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700">
+                      <span style="{{a.dot}}"></span>
+                      {{a.time}}
+                    </span>
+                    <span style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.service}}</span>
+                    <span style="font-size: 12px; opacity: 0.85">{{a.statusLabel}}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+      <aside style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <sc-if value="{{hasSel}}" hint-placeholder-val="{{ true }}">
+          <section class="fade" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 16px">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+              <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+                <h3 style="margin: 0; font-size: 18px">{{sel.service}}</h3>
+                <span style="font-size: 14px; color: #475569">{{sel.when}}</span>
+              </div>
+              <span style="{{sel.badge}}">{{sel.statusLabel}}</span>
+            </div>
+            <dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; font-size: 14px">
+              <dt style="color: #475569">Visitor</dt><dd style="margin: 0; font-weight: 600">[Visitor name]</dd>
+              <dt style="color: #475569">Contact</dt><dd style="margin: 0; font-weight: 600">[phone or email]</dd>
+              <dt style="color: #475569">Location</dt><dd style="margin: 0">[Practice name]</dd>
+              <dt style="color: #475569">Received</dt><dd style="margin: 0">{{sel.received}}</dd>
+            </dl>
+            <sc-if value="{{sel.waiting}}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.5">Confirming sends the visitor an email with the time and a link to cancel.</p>
+                <div style="display: flex; gap: 8px">
+                  <button type="button" onClick="{{decline}}" style="flex: 1; min-height: 46px; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; font: 600 14px system-ui, sans-serif; cursor: pointer">Decline</button>
+                  <button type="button" onClick="{{confirm}}" style="flex: 2; min-height: 46px; border-radius: 12px; border: 0; background: {{accent}}; color: #FFFFFF; font: 600 14px system-ui, sans-serif; cursor: pointer">Confirm time</button>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{sel.confirmed}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; gap: 8px">
+                <button type="button" onClick="{{reopen}}" style="flex: 1; min-height: 46px; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; font: 600 14px system-ui, sans-serif; cursor: pointer">Move back to waiting</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{sel.declined}}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{reopen}}" style="min-height: 46px; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; font: 600 14px system-ui, sans-serif; cursor: pointer">Undo decline</button>
+            </sc-if>
+          </section>
+        </sc-if>
+        <sc-if value="{{noSel}}" hint-placeholder-val="{{ false }}">
+          <section style="background: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 20px; padding: 28px 22px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+            <span style="font-weight: 600">Select an appointment</span>
+            <span style="font-size: 14px; color: #475569">Details and actions appear here.</span>
+          </section>
+        </sc-if>
+
+        <section style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 12px">
+          <h3 style="margin: 0; font-size: 15px">This week</h3>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+            <div style="padding: 14px; border-radius: 14px; background: #FFF7E6; display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 26px; font-weight: 700; color: #78350F">{{weekWaiting}}</span>
+              <span style="font-size: 13px; color: #78350F">Waiting</span>
+            </div>
+            <div style="padding: 14px; border-radius: 14px; background: #E3F5F3; display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 26px; font-weight: 700; color: #0B5753">{{weekConfirmed}}</span>
+              <span style="font-size: 13px; color: #0B5753">Confirmed</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #334155">
+            <span style="display: flex; align-items: center; gap: 8px"><span style="width: 14px; height: 14px; border-radius: 4px; border: 2px dashed #B45309; background: #FFF7E6"></span>Waiting: the visitor's preferred slot</span>
+            <span style="display: flex; align-items: center; gap: 8px"><span style="width: 14px; height: 14px; border-radius: 4px; background: #0B6E6A"></span>Confirmed by you</span>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#0B5CAD","options":["#0B5CAD","#0B6E6A","#1E40AF"]},"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { week: 0, filter: 'all', selected: 'a5', status: {} };
+  }
+  renderVals() {
+    var self = this;
+    var st = this.state;
+    var accent = this.props.accent ?? '#0B5CAD';
+    var ROW = 64, START = 8, END = 18;
+    var data = {
+      '-1': [
+        { id: 'p1', day: 0, start: 9, dur: 1, service: '[Consultation]', status: 'confirmed' },
+        { id: 'p2', day: 2, start: 11, dur: 0.5, service: '[Follow-up visit]', status: 'confirmed' },
+        { id: 'p3', day: 3, start: 14, dur: 1, service: '[Diagnostic service]', status: 'confirmed' }
+      ],
+      '0': [
+        { id: 'a1', day: 0, start: 9, dur: 1, service: '[Consultation]', status: 'confirmed' },
+        { id: 'a2', day: 0, start: 11, dur: 0.5, service: '[Follow-up visit]', status: 'confirmed' },
+        { id: 'a3', day: 1, start: 10, dur: 1, service: '[Diagnostic service]', status: 'waiting' },
+        { id: 'a4', day: 2, start: 9.5, dur: 0.5, service: '[Follow-up visit]', status: 'confirmed' },
+        { id: 'a5', day: 2, start: 14, dur: 1, service: '[Consultation]', status: 'waiting' },
+        { id: 'a6', day: 3, start: 12, dur: 1.5, service: '[Procedure]', status: 'confirmed' },
+        { id: 'a7', day: 4, start: 9, dur: 1, service: '[Consultation]', status: 'waiting' },
+        { id: 'a8', day: 4, start: 15, dur: 0.5, service: '[Follow-up visit]', status: 'confirmed' },
+        { id: 'a9', day: 5, start: 10, dur: 1, service: '[Consultation]', status: 'waiting' }
+      ],
+      '1': [
+        { id: 'n1', day: 0, start: 10, dur: 1, service: '[Consultation]', status: 'waiting' },
+        { id: 'n2', day: 2, start: 16, dur: 0.5, service: '[Follow-up visit]', status: 'confirmed' },
+        { id: 'n3', day: 3, start: 9, dur: 1, service: '[Diagnostic service]', status: 'waiting' }
+      ]
+    };
+    var DOW = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    var DOWL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    var monday = new Date(2026, 10, 9 + st.week * 7);
+    var dateOf = function (i) { return new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i); };
+    var fmt = function (h) { var hh = Math.floor(h), mm = Math.round((h - hh) * 60); return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm; };
+    var statusOf = function (a) { return st.status[a.id] || a.status; };
+    var all = (data[String(st.week)] || []);
+    var live = all.filter(function (a) { return statusOf(a) !== 'declined'; });
+    var weekWaiting = live.filter(function (a) { return statusOf(a) === 'waiting'; }).length;
+    var weekConfirmed = live.filter(function (a) { return statusOf(a) === 'confirmed'; }).length;
+    var shown = live.filter(function (a) { return st.filter === 'all' || statusOf(a) === st.filter; });
+
+    var days = DOW.map(function (dow, i) {
+      var d = dateOf(i);
+      var isToday = st.week === 0 && i === 4;
+      var mine = shown.filter(function (a) { return a.day === i; });
+      var cnt = live.filter(function (a) { return a.day === i; }).length;
+      var items = mine.map(function (a) {
+        var s = statusOf(a);
+        var waiting = s === 'waiting';
+        var sel = st.selected === a.id;
+        var top = (a.start - START) * ROW + 3;
+        var h = a.dur * ROW - 6;
+        return {
+          time: fmt(a.start) + '–' + fmt(a.start + a.dur),
+          service: a.service,
+          statusLabel: waiting ? 'Waiting for you' : 'Confirmed',
+          aria: a.service + ', ' + DOWL[i] + ' ' + fmt(a.start) + ', ' + (waiting ? 'waiting' : 'confirmed'),
+          pressed: sel ? 'true' : 'false',
+          pick: function () { self.setState({ selected: a.id }); },
+          dot: 'width: 8px; height: 8px; border-radius: 999px; flex-shrink: 0; background: ' + (waiting ? '#D97706' : '#FFFFFF'),
+          style: 'position: absolute; left: 4px; right: 4px; top: ' + top + 'px; height: ' + h + 'px; box-sizing: border-box; padding: 6px 8px; border-radius: 10px; cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 2px; overflow: hidden; font-family: system-ui, sans-serif; ' +
+            (waiting ? 'background: #FFF7E6; color: #78350F; border: 2px dashed #B45309;' : 'background: #0B6E6A; color: #FFFFFF; border: 2px solid #0B6E6A;') +
+            (sel ? ' box-shadow: 0 0 0 3px ' + accent + ';' : '')
+        };
+      });
+      return {
+        dow: dow,
+        num: d.getDate(),
+        numStyle: 'width: 36px; height: 36px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; ' + (isToday ? 'background: ' + accent + '; color: #FFFFFF' : 'color: #0F172A'),
+        load: cnt === 0 ? 'Free' : cnt + (cnt === 1 ? ' appt' : ' appts'),
+        loadStyle: 'font-size: 12px; color: ' + (cnt === 0 ? '#475569' : '#334155'),
+        colStyle: 'position: relative; height: ' + ((END - START) * ROW) + 'px; border-left: 1px solid #EEF2F6; background-image: repeating-linear-gradient(to bottom, transparent 0, transparent ' + (ROW - 1) + 'px, #EEF2F6 ' + (ROW - 1) + 'px, #EEF2F6 ' + ROW + 'px)' + (isToday ? ', linear-gradient(#F3F8FE, #F3F8FE)' : ''),
+        items: items
+      };
+    });
+
+    var hours = [];
+    for (var h = START; h < END; h++) hours.push(fmt(h));
+
+    var first = dateOf(0), last = dateOf(5);
+    var range = first.getMonth() === last.getMonth()
+      ? first.getDate() + ' – ' + last.getDate() + ' ' + MON[last.getMonth()] + ' ' + last.getFullYear()
+      : first.getDate() + ' ' + MON[first.getMonth()].slice(0, 3) + ' – ' + last.getDate() + ' ' + MON[last.getMonth()].slice(0, 3) + ' ' + last.getFullYear();
+
+    var fdefs = [['all', 'All', live.length, '#94A3B8'], ['waiting', 'Waiting', weekWaiting, '#D97706'], ['confirmed', 'Confirmed', weekConfirmed, '#0B6E6A']];
+    var filters = fdefs.map(function (f) {
+      var on = st.filter === f[0];
+      return { label: f[1], count: f[2], pressed: on ? 'true' : 'false',
+        pick: function () { self.setState({ filter: f[0] }); },
+        dot: 'width: 8px; height: 8px; border-radius: 999px; background: ' + (on ? '#FFFFFF' : f[3]),
+        style: 'display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 999px; cursor: pointer; font: 600 14px system-ui, sans-serif; border: 1px solid ' + (on ? '#0F172A' : '#CBD5E1') + '; background: ' + (on ? '#0F172A' : '#FFFFFF') + '; color: ' + (on ? '#FFFFFF' : '#334155') };
+    });
+
+    var selA = all.filter(function (a) { return a.id === st.selected; })[0];
+    var sel = null;
+    if (selA) {
+      var s = statusOf(selA);
+      var labels = { waiting: 'Waiting', confirmed: 'Confirmed', declined: 'Declined' };
+      var badges = { waiting: 'background: #FEF3C7; color: #78350F', confirmed: 'background: #E3F5F3; color: #0B5753', declined: 'background: #F1F5F9; color: #334155' };
+      var sd = dateOf(selA.day);
+      sel = {
+        service: selA.service,
+        when: DOWL[selA.day] + ', ' + sd.getDate() + ' ' + MON[sd.getMonth()] + ' · ' + fmt(selA.start) + '–' + fmt(selA.start + selA.dur),
+        statusLabel: labels[s],
+        badge: 'flex-shrink: 0; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; ' + badges[s],
+        received: '[date received]',
+        waiting: s === 'waiting', confirmed: s === 'confirmed', declined: s === 'declined'
+      };
+    }
+    var setS = function (v) { return function () { if (!selA) return; var n = Object.assign({}, st.status); n[selA.id] = v; self.setState({ status: n }); }; };
+
+    var totalWaiting = 0;
+    Object.keys(data).forEach(function (k) { data[k].forEach(function (a) { if (statusOf(a) === 'waiting') totalWaiting++; }); });
+
+    return {
+      accent: accent, days: days, hours: hours, range: range, filters: filters,
+      weekWaiting: weekWaiting, weekConfirmed: weekConfirmed,
+      waitingCount: totalWaiting, hasWaiting: totalWaiting > 0,
+      isThisWeek: st.week === 0,
+      todayStyle: 'min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; font: 600 14px system-ui, sans-serif; ' + (st.week === 0 ? 'color: #475569; cursor: default' : 'color: #0F172A; cursor: pointer'),
+      prev: function () { self.setState({ week: st.week - 1, selected: null }); },
+      next: function () { self.setState({ week: st.week + 1, selected: null }); },
+      today: function () { self.setState({ week: 0 }); },
+      hasSel: !!sel, noSel: !sel,
+      sel: sel || { service: '', when: '', statusLabel: '', badge: '', received: '', waiting: false, confirmed: false, declined: false },
+      confirm: setS('confirmed'), decline: setS('declined'), reopen: setS('waiting')
+    };
+  }
+}
+</script>
+</body>
+</html>

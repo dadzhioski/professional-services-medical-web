@@ -46,7 +46,8 @@ Image names default to `professional-services-medical-web:<git HEAD full SHA>`;
 `IMAGE` overrides must also have a full 40-character SHA tag. Local builds of
 uncommitted changes are development evidence only, not published release artifacts.
 The base uses digest-pinned Node 24.19.0 on Alpine 3.24, with libcrypto3 and
-libssl3 pinned to 3.5.9-r0 to address CVE-2026-14456. The runtime starts
+libssl3 pinned to 3.5.9-r0 to address CVE-2026-14456, and musl/musl-utils 1.2.6-r3
+and zlib 1.4-r0 to address CVE-2026-107891, CVE-2026-85091 and CVE-2026-4738. The runtime starts
 `node server.js`, listens on port 3000 as UID/GID 10001,
 and requires `API_INTERNAL_URL` and `PUBLIC_ORIGIN` at startup. Image smoke checks
 also verify rejection of missing/invalid public origins. The Docker build uses a
@@ -60,8 +61,9 @@ tests isolated routing/outages/restarts/accessibility, and scans its OS/Go inven
 Both verified images are saved together and published by a package matrix under
 the existing publishing guard. Neither job deploys the images.
 
-The edge image rebuilds Caddy 2.11.7 with Go 1.26.10, `golang.org/x/net@v0.60.0` and
-`github.com/go-jose/go-jose/v4@v4.1.6` (CVE-2026-116587)
+The edge image rebuilds Caddy 2.11.7 with Go 1.26.11 (CVE-2026-97054 in `net/http`),
+`golang.org/x/net@v0.62.0` (CVE-2026-78661, CVE-2026-97045), `github.com/go-jose/go-jose/v4@v4.1.6` (CVE-2026-116587) and
+`github.com/klauspost/compress@v1.20.4` (CVE-2026-116591)
 because the upstream binary contains four high findings (CVE-2026-78667,
 CVE-2026-78669 and CVE-2026-97031). Compiler and runtime base images are pinned
 by digest in `deployment/Dockerfile.caddy`. The only scan exception is the
@@ -181,10 +183,13 @@ owner approval; there is no automatic renewal or environment-variable bypass.
 
 The repository owner approved this exception in chat on 2026-10-28, answering
 "Bump v4, add exception" to the proposal for CVE-2026-116587 (go-jose denial of
-service when parsing JWKs that contain RSA keys). Approval expires
-**2026-11-11 at 00:00 UTC**. It covers only `github.com/go-jose/go-jose/v3`
-v3.0.5 compiled into `usr/bin/caddy`. Caddy 2.11.7 is the latest release and
-requires go-jose v3, and there is no patched v3 release. The v4 finding from the
+service when parsing JWKs that contain RSA keys), with expiry 2026-11-11. On
+2026-11-13 the owner extended it by 14 days ("Extend 14 days"), after it had
+lapsed. Approval expires
+**2026-11-27 at 00:00 UTC**. It covers only `github.com/go-jose/go-jose/v3`
+v3.0.5 compiled into `usr/bin/caddy`. As of 2026-11-13 the pinned Caddy 2.11.7
+and the newest release 2.11.9 both require go-jose v3 v3.0.5, and there is no
+patched v3 release. The v4 finding from the
 same CVE is fixed by rebuilding with v4.1.6. This is temporary risk acceptance,
 not remediation.
 

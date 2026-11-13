@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Provider dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#F6F8FB}
+a{color:#0B5CAD}a:hover{color:#08427C}
+button:focus-visible,a:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+.bar{transition:width .4s ease}
+.row{transition:background .2s ease}
+</style>
+</helmet>
+<div style="min-height: 100vh; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #0F172A; background: #F6F8FB; display: flex; flex-wrap: wrap">
+
+  <aside style="flex: 1 1 240px; max-width: 100%; background: #0F172A; color: #E2E8F0; padding: 24px 16px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+      <span style="width: 32px; height: 32px; border-radius: 9px; background: {{accent}}; display: flex; align-items: center; justify-content: center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+      </span>
+      <span style="font-weight: 700; color: #FFFFFF">[Brand]</span>
+    </div>
+    <nav aria-label="Provider" style="display: flex; flex-direction: column; gap: 4px">
+      <sc-for list="{{nav}}" as="n" hint-placeholder-count="4">
+        <a href="#top" aria-current="{{n.current}}" style="{{n.style}}">{{n.label}}<sc-if value="{{n.badge}}" hint-placeholder-val="{{ false }}"><span style="margin-left: auto; background: #F59E0B; color: #0F172A; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 8px">{{pending}}</span></sc-if></a>
+      </sc-for>
+    </nav>
+    <div style="margin-top: auto; padding: 12px; border-radius: 12px; background: #1E293B; display: flex; gap: 10px; align-items: center">
+      <div role="img" aria-label="Doctor portrait placeholder" style="width: 36px; height: 36px; border-radius: 10px; background: #334155"></div>
+      <div style="display: flex; flex-direction: column; min-width: 0">
+        <span style="font-size: 14px; font-weight: 600; color: #FFFFFF">Dr. [Full name]</span>
+        <span style="font-size: 12px; color: #CBD5E1">Provider</span>
+      </div>
+    </div>
+  </aside>
+
+  <main id="top" style="flex: 999 1 560px; min-width: 0; padding: 32px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 28px; letter-spacing: -0.02em">Good morning, Dr. [Surname]</h1>
+        <p style="margin: 0; font-size: 15px; color: #475569">Finish your profile, then review new requests.</p>
+      </div>
+      <a href="Main.dc.html" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; font-weight: 600; font-size: 14px; text-decoration: none">Preview public profile</a>
+    </div>
+
+    <section style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 28px; display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+        <h2 style="margin: 0; font-size: 18px">Profile setup</h2>
+        <span style="font-size: 14px; color: #475569"><strong style="color: #0F172A">{{doneCount}}</strong> of {{total}} complete</span>
+      </div>
+      <div style="height: 8px; background: #EEF2F6; border-radius: 999px; overflow: hidden">
+        <div class="bar" style="{{barStyle}}"></div>
+      </div>
+      <ul style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px">
+        <sc-for list="{{steps}}" as="s" hint-placeholder-count="6">
+          <li>
+            <button type="button" onClick="{{s.toggle}}" aria-pressed="{{s.pressed}}" style="{{s.style}}">
+              <span style="{{s.dot}}">
+                <sc-if value="{{s.done}}" hint-placeholder-val="{{ false }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                </sc-if>
+              </span>
+              <span style="display: flex; flex-direction: column; gap: 2px; text-align: left">
+                <span style="font-weight: 600; font-size: 15px">{{s.label}}</span>
+                <span style="font-size: 13px; color: #475569">{{s.hint}}</span>
+              </span>
+            </button>
+          </li>
+        </sc-for>
+      </ul>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 16px; border-radius: 14px; background: #F8FAFC">
+        <span style="font-size: 14px; color: #334155">{{publishNote}}</span>
+        <button type="button" disabled="{{publishDisabled}}" style="{{publishStyle}}">Submit for review</button>
+      </div>
+    </section>
+
+    <section style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 28px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+        <h2 style="margin: 0; font-size: 18px">Appointment requests</h2>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px">
+          <span style="font-size: 14px; color: #475569">{{pending}} awaiting your decision</span>
+          <a href="ProviderCalendar.dc.html" style="display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #CBD5E1; color: #0F172A; font-weight: 600; font-size: 14px; text-decoration: none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+            Calendar view
+          </a>
+        </div>
+      </div>
+      <div style="overflow-x: auto">
+        <table style="width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px">
+          <thead>
+            <tr style="text-align: left; color: #475569">
+              <th scope="col" style="padding: 10px 12px; font-weight: 600">Visitor</th>
+              <th scope="col" style="padding: 10px 12px; font-weight: 600">Service</th>
+              <th scope="col" style="padding: 10px 12px; font-weight: 600">Preferred</th>
+              <th scope="col" style="padding: 10px 12px; font-weight: 600">Status</th>
+              <th scope="col" style="padding: 10px 12px; font-weight: 600; text-align: right">Decision</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{requests}}" as="r" hint-placeholder-count="4">
+              <tr class="row" style="border-top: 1px solid #F1F5F9">
+                <td style="padding: 14px 12px"><div style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600">{{r.name}}</span><span style="color: #475569; font-size: 13px">{{r.contact}}</span></div></td>
+                <td style="padding: 14px 12px">{{r.service}}</td>
+                <td style="padding: 14px 12px">{{r.when}}</td>
+                <td style="padding: 14px 12px"><span style="{{r.badge}}">{{r.status}}</span></td>
+                <td style="padding: 14px 12px">
+                  <div style="display: flex; gap: 8px; justify-content: flex-end">
+                    <sc-if value="{{r.open}}" hint-placeholder-val="{{ true }}">
+                      <button type="button" onClick="{{r.decline}}" style="min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; font: 600 13px system-ui, sans-serif; cursor: pointer">Decline</button>
+                      <button type="button" onClick="{{r.accept}}" style="min-height: 40px; padding: 0 14px; border-radius: 10px; border: 0; background: {{accent}}; color: #FFFFFF; font: 600 13px system-ui, sans-serif; cursor: pointer">Accept</button>
+                    </sc-if>
+                    <sc-if value="{{r.closed}}" hint-placeholder-val="{{ false }}">
+                      <button type="button" onClick="{{r.undo}}" style="min-height: 40px; padding: 0 14px; border-radius: 10px; border: 0; background: transparent; color: #0B5CAD; font: 600 13px system-ui, sans-serif; cursor: pointer">Undo</button>
+                    </sc-if>
+                  </div>
+                </td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#0B5CAD","options":["#0B5CAD","#0B6E6A","#1E40AF"]},"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { done: [true, true, true, false, false, false], decisions: {} };
+  }
+  renderVals() {
+    var self = this;
+    var st = this.state;
+    var accent = this.props.accent ?? '#0B5CAD';
+    var defs = [['Basic details', 'Name, specialty, languages'], ['Credentials', 'Licence and education'], ['Services', 'What you offer, prices'], ['Locations', 'Addresses and hours'], ['Photo', 'Professional portrait'], ['Contact', 'Practice phone and email']];
+    var steps = defs.map(function (d, i) {
+      var on = st.done[i];
+      return {
+        label: d[0], hint: d[1], done: on, pressed: on ? 'true' : 'false',
+        toggle: function () { var n = st.done.slice(); n[i] = !n[i]; self.setState({ done: n }); },
+        style: 'width: 100%; display: flex; gap: 12px; align-items: center; padding: 14px; min-height: 64px; border-radius: 14px; cursor: pointer; font-family: system-ui, sans-serif; color: #0F172A; background: ' + (on ? '#F3FAF9' : '#FFFFFF') + '; border: 1px solid ' + (on ? '#A7DCD6' : '#E2E8F0'),
+        dot: 'width: 24px; height: 24px; border-radius: 999px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; ' + (on ? 'background: #0B6E6A' : 'border: 2px solid #94A3B8')
+      };
+    });
+    var doneCount = st.done.filter(Boolean).length;
+    var total = defs.length;
+    var ready = doneCount === total;
+    var reqDefs = [
+      { id: 1, name: '[Visitor name]', contact: '[phone]', service: '[Consultation]', when: 'Mornings' },
+      { id: 2, name: '[Visitor name]', contact: '[email]', service: '[Follow-up visit]', when: 'Any time' },
+      { id: 3, name: '[Visitor name]', contact: '[phone]', service: '[Diagnostic service]', when: 'This week' },
+      { id: 4, name: '[Visitor name]', contact: '[email]', service: '[Consultation]', when: 'Afternoons' }
+    ];
+    var badges = {
+      New: 'background: #FEF3C7; color: #78350F',
+      Accepted: 'background: #E3F5F3; color: #0B5753',
+      Declined: 'background: #F1F5F9; color: #334155'
+    };
+    var pending = 0;
+    var requests = reqDefs.map(function (r) {
+      var d = st.decisions[r.id];
+      var status = d || 'New';
+      if (!d) pending++;
+      var set = function (v) { return function () { var n = Object.assign({}, st.decisions); if (v) n[r.id] = v; else delete n[r.id]; self.setState({ decisions: n }); }; };
+      return Object.assign({}, r, {
+        status: status, open: !d, closed: !!d,
+        badge: 'display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; ' + badges[status],
+        accept: set('Accepted'), decline: set('Declined'), undo: set(null)
+      });
+    });
+    var navDefs = ['Overview', 'Profile', 'Requests', 'Settings'];
+    var nav = navDefs.map(function (l, i) {
+      var on = i === 0;
+      return { label: l, current: on ? 'page' : 'false', badge: l === 'Requests' && pending > 0,
+        style: 'display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 600; ' + (on ? 'background: #1E293B; color: #FFFFFF' : 'color: #CBD5E1') };
+    });
+    return {
+      accent: accent, steps: steps, doneCount: doneCount, total: total,
+      barStyle: 'height: 100%; border-radius: 999px; background: #0B6E6A; width: ' + Math.round(doneCount / total * 100) + '%',
+      publishNote: ready ? 'Everything is ready. An administrator reviews your profile before it goes public.' : 'Complete every step to submit your profile for review.',
+      publishDisabled: !ready,
+      publishStyle: 'min-height: 46px; padding: 0 20px; border: 0; border-radius: 12px; font: 600 14px system-ui, sans-serif; ' + (ready ? 'background: ' + accent + '; color: #FFFFFF; cursor: pointer' : 'background: #E2E8F0; color: #475569; cursor: not-allowed'),
+      requests: requests, pending: pending, nav: nav
+    };
+  }
+}
+</script>
+</body>
+</html>

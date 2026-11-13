@@ -1,6 +1,7 @@
 FROM node:24.19.0-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS base
 # Explicit security patch versions; never ignore a fixable runtime finding.
-RUN apk add --no-cache --update-cache libcrypto3=3.5.9-r0 libssl3=3.5.9-r0
+RUN apk add --no-cache --update-cache libcrypto3=3.5.9-r0 libssl3=3.5.9-r0 \
+    musl=1.2.6-r3 musl-utils=1.2.6-r3 zlib=1.4-r0
 
 FROM base AS dependencies
 WORKDIR /app
