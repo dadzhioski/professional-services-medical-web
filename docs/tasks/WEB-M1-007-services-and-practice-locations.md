@@ -1,6 +1,6 @@
 # WEB-M1-007: Add services, specialties and practice-location editors
 
-- **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
+- **Status:** IMPLEMENTED LOCALLY (2026-10-22) against pinned client 0.3.0 (`ServicesApi`, `LocationsApi`, `ReferenceApi`, `MedicalApi`); human boundary review, live API and non-production checks pending; API contract amendment requested (see below)
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-006; WEB-M1-004 catalog/reference capability
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
@@ -37,11 +37,25 @@ Use /[locale]/provider/services and /[locale]/provider/locations with four-local
 7. Keep pages/layouts server-rendered, use typed translation keys and generated API types, and restrict API calls to server-only wrappers. Use the existing Vitest/Testing Library/Playwright conventions; test affected SSR, accessibility, safe failure and environment boundaries.
 8. Confirm required capabilities in the approved published client before implementation. Stop on missing methods or unresolved contract/security conflicts and request an amendment to the linked API task; do not invent fields, endpoints or successful mock fallbacks.
 
+## Scope decisions and contract notes (2026-10-22)
+
+Owner decisions: the specialty selector is a single dropdown on `/[locale]/provider/profile` (licence number and registration body stay in WEB-M1-009). Reference labels exist only for `mk`, `en` and `bg`, so Albanian (`sq`) pages show the stable reference `code`.
+
+Observed 0.3.0 behaviour: services and locations are replaced in full on `PUT` with `version`; a stale version returns 409; 400 responses (invalid input, unknown or foreign references, limits) carry no field codes; deleting a location unlinks it from services. `Price.amount` is a decimal string (`EUR`/`MKD`); the web never converts it to a number, keeps "no price" distinct from `0`, and formats it with `Intl` from the string. `editMedicalProfile` replaces licence number, registration body and specialty together, so the web re-reads the first two on the server and sends them unchanged. Service, location and medical responses carry no publication state; after each change the page re-reads the profile and shows the API-reported `publicationState`. Owner endpoints are called only after current context confirms a workspace. The CSRF header gap recorded in WEB-M1-005 also applies.
+
+Requested amendment to [API-M1-006](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-006-services-and-locations.md):
+
+- document field-level validation codes (including foreign-location and limit failures);
+- add `sq` reference labels, or document the intended fallback;
+- return the resulting publication/completeness state from service, location and medical mutations, or document that clients must re-read the profile.
+
+The API repository is not modified by this task.
+
 ## Acceptance criteria
 
-- [ ] CRUD, invalid/unknown references, absent/zero prices, failed deletion and foreign association rejection are covered.
-- [ ] Keyboard/mobile editing works and API-reported unpublication is reflected without claiming success after failure.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
+- [x] CRUD, invalid/unknown references, absent/zero prices, failed deletion and foreign association rejection are covered (synthetic unit and browser fixture; live API not exercised).
+- [x] Keyboard/mobile editing works and API-reported unpublication is reflected without claiming success after failure (synthetic browser fixture).
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; live API, human boundary review and non-production checks remain pending. `npm run lint` over `.` also scans an untracked local `.claude/worktrees/` directory; `eslint src tests scripts` passes.
 - [ ] No deferred Milestone 0 obligation is marked passed or waived.
 
 ## Verification

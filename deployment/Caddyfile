@@ -32,9 +32,38 @@
 		}
 	}
 
+	# Image uploads (WEB-M1-008) post to these pages only. The web bounds each upload action at 40s,
+	# inside the 50s header timeout, so users get its translated outcome rather than an empty 504.
+	# Keep the list in step with the locale registry; integration validation fails on drift.
+	@web_upload {
+		method POST
+		path /mk/provider/profile /en/provider/profile /bg/provider/profile /sq/provider/profile
+		path /mk/provider/credentials /en/provider/credentials /bg/provider/credentials /sq/provider/credentials
+	}
+	handle @web_upload {
+		log_append route web-upload
+		# One 10 MiB image plus multipart overhead (the web's own Server Action limit is 11 MiB).
+		request_body {
+			max_size 12MB
+		}
+		reverse_proxy web:3000 {
+			transport http {
+				dial_timeout 2s
+				response_header_timeout 50s
+				# Caddy applies the read deadline while awaiting headers too, so it must match.
+				read_timeout 50s
+				write_timeout 30s
+			}
+		}
+	}
+
 	# Bare /api follows the web route (currently 404).
 	handle {
 		log_append route web
+		# Nothing else accepts uploads; this matches Next.js's default Server Action limit.
+		request_body {
+			max_size 1MB
+		}
 		reverse_proxy web:3000 {
 			transport http {
 				dial_timeout 2s

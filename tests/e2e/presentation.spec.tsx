@@ -17,13 +17,13 @@ function fixture(locale: Locale, variant: typeof variants[number]) {
   const long = variant === "long" ? "SyntheticLongContent".repeat(40) : "Synthetic professional";
   const empty = variant === "empty";
   return <html lang={locale}><head><meta charSet="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>{t("app.title")}</title></head>
-    <body className="min-h-screen bg-slate-50 text-slate-900 antialiased"><SiteShell locale={locale}>
+    <body className="flex min-h-screen flex-col bg-canvas text-text antialiased"><SiteShell locale={locale}>
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-5xl space-y-6 px-6">
         <LanguageLinks locale={locale} path={`/${locale}/doctors/synthetic-example?token=private`} />
         <Notice>{t("preview.notice")}</Notice>
         <ProfilePresentation locale={locale} name={long} introduction={empty ? undefined : "Synthetic introduction"}
           specialties={empty ? [] : [long]} credentials={empty ? [" "] : ["Synthetic qualification"]}
-          services={empty ? [] : ["Synthetic service"]} locations={empty ? [] : ["Synthetic location"]}
+          services={empty ? [] : [{ name: "Synthetic service", price: "MKD 1,500.00" }]} locations={empty ? [] : ["Synthetic location"]}
           photo={variant === "complete" ? <svg role="img" aria-label="Synthetic portrait" viewBox="0 0 128 128"><rect width="128" height="128" fill="#ccfbf1" /><circle cx="64" cy="48" r="24" fill="#115e59" /><path d="M16 128a48 48 0 0 1 96 0" fill="#115e59" /></svg> : undefined} />
         {variant === "field-error" && <form><Field id="professional-name" label={t("form.professionalName")} hint={t("form.nameHint")} error={t("form.nameRequired")} required /><Button>{t("form.save")}</Button></form>}
       </main>
@@ -38,9 +38,11 @@ for (const locale of localeCodes) {
       const response = await page.goto(`http://127.0.0.1:4310/${locale}`);
       expect(response?.status()).toBe(200);
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
-      await expect(page).toHaveTitle(translator(locale)("app.title"));
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText(translator(locale)("home.heading"));
-      for (const target of localeCodes) await expect(page.locator(`a[hreflang="${target}"]`)).toHaveAttribute("href", `/${target}`);
+      await expect(page).toHaveURL(`http://127.0.0.1:4310/${locale}/doctors`);
+      await expect(page).toHaveTitle(translator(locale)("directory.title"));
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${translator(locale)("directory.heroTitle")} ${translator(locale)("directory.heroHighlight")}`);
+      const languages = page.getByRole("banner").getByRole("navigation", { name: translator(locale)("navigation.language") });
+      for (const target of localeCodes) await expect(languages.locator(`a[hreflang="${target}"]`)).toHaveAttribute("href", `/${target}/doctors`);
     } finally { await context.close(); }
   });
   for (const variant of variants) {
@@ -83,9 +85,15 @@ test("default redirects, unavailable features, unsupported locales and no shippe
   for (const path of ["/", "/provider", "/provider/onboarding", "/provider/profile", "/provider/services", "/provider/locations", "/provider/credentials", "/provider/publication", "/admin", "/admin/doctors", "/admin/credentials", "/doctors/stable-slug"]) {
     const response = await request.get(path + "?token=private", { maxRedirects: 0 });
     expect(response.status()).toBe(307);
-    expect(response.headers().location).toBe("/mk" + (path === "/" ? "" : path));
+    expect(response.headers().location).toBe("/mk" + (path === "/" ? "/doctors" : path));
   }
-  for (const path of ["/fr", "/fr/doctors/example", "/en/doctors/synthetic-example", "/mk/provider/services", "/presentation-fixture"]) {
+  // The site starts at the directory with a real redirect, never a 200 meta-refresh page.
+  for (const locale of localeCodes) {
+    const response = await request.get(`/${locale}?token=private`, { maxRedirects: 0 });
+    expect(response.status()).toBe(307);
+    expect(response.headers().location).toBe(`/${locale}/doctors`);
+  }
+  for (const path of ["/fr", "/fr/doctors/example", "/en/doctors/synthetic-example", "/mk/admin/audit", "/presentation-fixture"]) {
     const response = await request.get(path);
     expect(response.status()).toBe(404);
     expect(await response.text()).not.toContain("Synthetic qualification");

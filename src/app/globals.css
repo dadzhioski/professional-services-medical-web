@@ -1,11 +1,71 @@
 @import "tailwindcss";
 
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
+/* WEB-M1-019 design tokens. Every colour, radius and shadow in src/ comes from here.
+   Contrast (WCAG 2.2): ink/text/muted/primary/danger/focus are >= 4.5:1 on canvas, surface and tint;
+   white is 6.07:1 on primary; canvas is 11.51:1 on ink. Accent is 4.20:1 on canvas, so it is
+   used for large text only. Border is decorative (1.40:1); control boundaries use --color-control. */
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+
+  --color-canvas: #f3f8f7;
+  --color-surface: #ffffff;
+  --color-ink: #0b3b3a;
+  --color-text: #29403f;
+  --color-muted: #4f6665;
+  --color-primary: #0d6e6b;
+  --color-primary-strong: #0a5654;
+  --color-accent: #c2553d;
+  --color-tint: #dff1ee;
+  --color-border: #c9dedb;
+  --color-control: #4f6665;
+  --color-danger: #b42318;
+  --color-danger-strong: #8a1a12;
+  --color-danger-tint: #fdeeec;
+  --color-focus: #1d4ed8;
+
+  --radius-input: 12px;
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(13 110 107 / 0.08);
+  --shadow-button: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-hero: 0 2px 4px rgb(0 0 0 / 0.04), 0 16px 48px rgb(13 110 107 / 0.18);
 }
 
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-canvas);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--color-ink);
+  }
+}
+
+/* The focus colour is >= 3:1 on canvas, surface and tint. It is 1.84:1 on ink, so anything
+   focusable added to the ink footer needs a light outline. */
 :focus-visible {
-  outline: 3px solid #1d4ed8;
+  outline: 3px solid var(--color-focus);
   outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }

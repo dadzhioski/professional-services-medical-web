@@ -9,12 +9,25 @@ test("profile sections render supplied content safely in every language", () => 
   for (const locale of localeCodes) {
     const html = renderToStaticMarkup(<ProfilePresentation locale={locale} name="Synthetic professional"
       introduction={'<script>alert("synthetic")</script>'} specialties={["Synthetic specialty"]}
-      credentials={["Synthetic qualification"]} services={["Synthetic service"]} locations={["Synthetic location"]} />);
+      credentials={["Synthetic qualification"]} services={[{ name: "Synthetic service" }]} locations={["Synthetic location"]} />);
     expect(html).toContain(translator(locale)("profile.credentials"));
     expect(html).toContain("Synthetic qualification");
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
   }
+});
+test("the price list is a table with an on-request fallback and the indicative-price note", () => {
+  render(<ProfilePresentation locale="en" name="Synthetic professional" services={[
+    { name: "Synthetic exam", price: "MKD 1,500.00", description: "Line one\nline two" }, { name: "<b>Synthetic</b> unpriced" }]} />);
+  const t = translator("en");
+  const table = screen.getByRole("table");
+  expect(screen.getByRole("heading", { level: 2, name: t("profile.services") })).toBeVisible();
+  expect(screen.getByRole("columnheader", { name: t("profile.pricePrice") })).toBeVisible();
+  expect(screen.getByRole("rowheader", { name: /Synthetic exam/ })).toHaveTextContent("Line one");
+  expect(table).toHaveTextContent("MKD 1,500.00");
+  expect(screen.getByRole("row", { name: /unpriced/ })).toHaveTextContent(t("profile.priceOnRequest"));
+  expect(table.innerHTML).not.toContain("<b>");
+  expect(screen.getByText(t("profile.priceNote"))).toBeVisible();
 });
 test("empty sections and missing photos disappear cleanly", () => {
   render(<ProfilePresentation locale="en" name="Synthetic professional" introduction=" " specialties={["", " "]} />);

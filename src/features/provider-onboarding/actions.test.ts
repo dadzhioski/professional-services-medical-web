@@ -22,7 +22,7 @@ test("action uses origin and selected session, then shows the workspace", async 
   await startOnboarding("bg");
   expect(onboardWorkspace).toHaveBeenCalledTimes(1);
   expect(mocks.set).toHaveBeenCalledWith(expect.objectContaining({ value: "rotated" }));
-  expect(mocks.redirect).toHaveBeenCalledWith("/bg/provider");
+  expect(mocks.redirect).toHaveBeenCalledWith("/bg/provider/onboarding");
 });
 test.each(["expired", "forbidden", "unavailable", "signedOut"] as const)("failure %s never appears as success", async state => {
   vi.mocked(onboardWorkspace).mockResolvedValue(state);

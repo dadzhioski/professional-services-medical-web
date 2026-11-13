@@ -2,5 +2,5 @@ import { redirect } from "next/navigation";
 import { defaultLocale } from "@/lib/i18n";
 
 export default function Entry() {
-  redirect(`/${defaultLocale}`);
+  redirect(`/${defaultLocale}/doctors`);
 }

@@ -44,5 +44,7 @@ if (process.argv[2] === "workflows") {
   const name = edge ? "edge-container" : "container";
   docker(["save", image, "--output", `reports/${name}.tar`]);
   docker(["run", "--rm", "-v", `${resolve("reports")}:/reports`, trivy, "image", "--quiet", "--input", `/reports/${name}.tar`, "--scanners", "vuln,secret", "--format", "json", "--output", `/reports/security/${name}.json`]);
-  console.log(checkContainerReport(JSON.parse(readFileSync(`reports/security/${name}.json`)), edge ? "gobinary" : "node-pkg"));
+  // Only the edge scan reads the owner-approved exception; the web image scan has none.
+  const exception = edge ? JSON.parse(readFileSync("scripts/edge-container-exception.json")) : null;
+  console.log(checkContainerReport(JSON.parse(readFileSync(`reports/security/${name}.json`)), edge ? "gobinary" : "node-pkg", exception));
 } else { throw new Error("Expected secrets, container, or edge-container"); }

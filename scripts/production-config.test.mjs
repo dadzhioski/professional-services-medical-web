@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateImage, validateSite, validateTopology } from "./production-config.mjs";
+import { validateEdgeLimits, validateImage, validateSite, validateTopology } from "./production-config.mjs";
 
 test("release image validation rejects mutable and malformed identities", () => {
   for (const image of [undefined, "", "web", "web:", "web:latest", "web:main", "web:abcdef0", `web:sha-${"a".repeat(40)}`, `web:${"A".repeat(40)}`, `web:${"a".repeat(40)}\n`, `web:${"a".repeat(40)}@sha256:${"b".repeat(64)}`]) {
@@ -62,4 +62,28 @@ test("public origin must match the approved HTTPS site; legacy rollback remains 
   }
   config.services.web.environment.PUBLIC_ORIGIN = "https://medical.example.test";
   validateTopology(config);
+});
+
+test("only upload pages get the longer edge timeout and larger body limit", () => {
+  const proxy = (dial, timeouts) => ({ handler: "reverse_proxy", upstreams: [{ dial }], transport: { protocol: "http", ...timeouts } });
+  const s = 1_000_000_000;
+  const paths = ["mk", "en"].flatMap(l => ["profile", "credentials"].map(p => `/${l}/provider/${p}`));
+  const config = (uploadPaths = paths, uploadTimeout = 50 * s, webLimit = 1_000_000) => ({ apps: { http: { servers: { srv0: { routes: [
+    { match: [{ path: ["/api/*"] }], handle: [{ handler: "subroute", routes: [{ handle: [proxy("api:8080", { response_header_timeout: 6 * s })] }] }] },
+    { match: [{ method: ["POST"], path: uploadPaths }], handle: [{ handler: "subroute", routes: [{ handle: [
+      { handler: "request_body", max_size: 12_000_000 }, proxy("web:3000", { response_header_timeout: uploadTimeout, read_timeout: uploadTimeout, write_timeout: 30 * s })] }] }] },
+    { handle: [{ handler: "subroute", routes: [{ handle: [{ handler: "request_body", max_size: webLimit },
+      proxy("web:3000", { response_header_timeout: 10 * s, read_timeout: 10 * s, write_timeout: 10 * s })] }] }] },
+  ] } } } } });
+  const expected = { locales: ["mk", "en"], uploadPages: ["profile", "credentials"], uploadBudgetMs: 40_000 };
+  validateEdgeLimits(config(), expected);
+  const hosted = config();
+  hosted.apps.http.servers.srv0.routes = [{ match: [{ host: ["medical.example.test"] }], handle: [{ handler: "subroute", routes: hosted.apps.http.servers.srv0.routes }] }];
+  validateEdgeLimits(hosted, expected);
+  assert.throws(() => validateEdgeLimits(config(paths.slice(1)), expected));
+  assert.throws(() => validateEdgeLimits(config([...paths, "/en/provider/onboarding"]), expected));
+  assert.throws(() => validateEdgeLimits(config(), { ...expected, locales: ["mk", "en", "sq"] }));
+  assert.throws(() => validateEdgeLimits(config(paths, 44 * s), expected));
+  assert.throws(() => validateEdgeLimits(config(), { ...expected, uploadBudgetMs: 46_000 }));
+  assert.throws(() => validateEdgeLimits(config(paths, 50 * s, 12_000_000), expected));
 });

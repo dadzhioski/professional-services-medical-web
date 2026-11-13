@@ -1,6 +1,6 @@
 # WEB-M1-010: Add administrator review and provider publication controls
 
-- **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
+- **Status:** IMPLEMENTED LOCALLY (2026-10-26) against pinned client 0.7.0, which contains `DoctorReviewApi`, `CredentialReviewApi`, `MediaApi.getMediaContentAsAdministrator`, `ProfileApi` publication operations and `OrganizationApi.resubmitForApproval`, so the earlier capability block is resolved. The administrator policy is reconciled by owner decisions recorded in API-M1-007/008/009 (MFA deferred; stored administrator grant, audited, API-ADR-0009). WEB-ADR-0006 administrator-boundary review, live API and non-production checks are pending.
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-007, WEB-M1-009; WEB-M1-004 review/publication capabilities; resolved WEB-M1-001 administrator policy
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
@@ -26,6 +26,16 @@ Expose API-authorized review decisions and explicit provider publication control
 
 Owner decision (2026-10-16): defer MFA entirely for this MVP, including administrators. Reconcile API-M1-003/004/007/008/009 through the API owner before administrator integration; retain API-owned stored privileges, controlled bootstrap, tenant isolation and audits, with no bypass of existing enforcement. Use /[locale]/admin/doctors and /[locale]/admin/credentials for review and /[locale]/provider/publication for publication; detail identifiers come from the generated contract. Test unauthorized denial under the reconciled policy, not web-owned MFA.
 
+Observed 0.7.0 behaviour and implementation notes:
+
+- The contract exposes no role on the current account, so administrator access is shown only from the review API's own 403; the web never infers or grants it. An administrator needs no doctor workspace.
+- There is no single-doctor review read. The doctor page finds the decision revision in the three approval-state lists (each at most 100, oldest first) and reads the review profile separately; a doctor beyond those lists is not reachable from the web.
+- Decisions send the revision on screen through a server-rendered confirmation step; 409 reloads the page with fresh state and is never retried. Rejection reasons are required and trimmed; their length bound is not in the published contract, so the API enforces it (400 is shown as invalid).
+- A 422 on publish is not parsed; the page rereads `GET /api/v1/profile/publication` and shows the API's `missing` list, including unknown parts.
+- Evidence is loaded from `/api/v1/admin/media/{id}/content` (same origin through Caddy, no-store, audited upstream), never optimized.
+- Login `returnTo` must match the API's configured return paths, so administrators sign in through the existing provider return path and then open `/[locale]/admin/...`.
+- Doctor resubmission (`POST /api/v1/approval/resubmission`) and the owner-only rejection reason are on the provider workspace page.
+
 ## Requirements
 
 1. Do not begin administrator implementation until the Google/MFA policy conflict is resolved in the API tasks and published authorization contract; no frontend role/MFA workaround.
@@ -40,10 +50,12 @@ Owner decision (2026-10-16): defer MFA entirely for this MVP, including administ
 
 ## Acceptance criteria
 
-- [ ] Unauthorized and expired sessions, denied administrator access, stale decisions, rejection/resubmission and suspension/reinstatement are covered.
-- [ ] Eligible publication, denied publication, explicit unpublish and completeness-loss states match API responses; controls never replace API enforcement.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] Unauthorized and expired sessions, denied administrator access, stale decisions, rejection/resubmission and suspension/reinstatement are covered (unit tests and synthetic browser fixture; live API pending).
+- [x] Eligible publication, denied publication, explicit unpublish and completeness-loss states match API responses; controls never replace API enforcement (synthetic browser fixture; live API pending).
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly. Lint passes for the repository's own files; `npm run lint` also scans untracked local build output under `.claude/worktrees/`, which is not part of the repository.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
+
+Pending: the owner's WEB-ADR-0006 administrator-boundary review (including administrator evidence access) before merge; live API checks; non-production VPS checks. Follow-ups for the API: a single-doctor review read or paging (doctors beyond the first 100 per approval state are unreachable), and one shared time budget across the doctor page's chained reads (worst case exceeds Caddy's 10 s web response timeout under a slow API).
 
 ## Verification
 

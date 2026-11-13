@@ -81,3 +81,52 @@ export function validateTopology(config, smoke = false) {
     assert.ok(service.mem_limit > 0);
   }
 }
+
+const second = 1_000_000_000;
+// The reverse proxies in adapted (JSON) Caddy configuration, with the route matchers and body limit that lead to each.
+export function edgeProxies(config) {
+  const proxies = [];
+  const walk = (routes, match, maxSize) => {
+    for (const route of routes ?? []) {
+      // Site host matchers wrap every route; only path and method matchers distinguish the proxies.
+      const own = (route.match ?? []).map(m => Object.fromEntries(Object.entries(m).filter(([key]) => key !== "host")))
+        .filter(m => Object.keys(m).length);
+      const matched = own.length ? own : match;
+      let limit = maxSize;
+      for (const handler of route.handle ?? []) {
+        if (handler.handler === "subroute") walk(handler.routes, matched, limit);
+        if (handler.handler === "request_body") limit = handler.max_size;
+        if (handler.handler === "reverse_proxy") proxies.push({ match: matched ?? [], maxSize: limit,
+          dial: handler.upstreams.map(u => u.dial), transport: handler.transport });
+      }
+    }
+  };
+  for (const server of Object.values(config.apps.http.servers)) walk(server.routes);
+  return proxies;
+}
+
+// Only image-upload pages may hold the web for longer, and only for a budget the web itself stays inside.
+export function validateEdgeLimits(config, { locales, uploadPages, uploadBudgetMs }) {
+  const proxies = edgeProxies(config);
+  assert.equal(proxies.length, 3, "Expected the API, web-upload and web proxies only");
+  const [api, upload, web] = proxies;
+  assert.deepEqual(api.dial, ["api:8080"]);
+  assert.deepEqual(api.match, [{ path: ["/api/*"] }]);
+  assert.equal(api.transport.response_header_timeout, 6 * second);
+  assert.equal(api.maxSize, undefined);
+  assert.deepEqual(upload.dial, ["web:3000"]);
+  assert.equal(upload.match.length, 1);
+  assert.deepEqual(upload.match[0].method, ["POST"]);
+  assert.deepEqual([...upload.match[0].path].sort(), uploadPages.flatMap(page => locales.map(l => `/${l}/provider/${page}`)).sort());
+  assert.equal(upload.maxSize, 12_000_000);
+  assert.equal(upload.transport.response_header_timeout, 50 * second);
+  // Caddy's read deadline also covers the wait for headers.
+  assert.equal(upload.transport.read_timeout, 50 * second);
+  assert.equal(upload.transport.write_timeout, 30 * second);
+  assert.ok(uploadBudgetMs * 1_000_000 + 5 * second <= upload.transport.response_header_timeout,
+    "The web upload budget must end at least 5s before the edge gives up");
+  assert.deepEqual(web.dial, ["web:3000"]);
+  assert.deepEqual(web.match, []);
+  assert.equal(web.maxSize, 1_000_000);
+  for (const key of ["response_header_timeout", "read_timeout", "write_timeout"]) assert.equal(web.transport[key], 10 * second);
+}

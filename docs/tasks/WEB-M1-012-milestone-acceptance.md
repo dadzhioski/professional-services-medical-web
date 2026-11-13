@@ -1,6 +1,6 @@
 # WEB-M1-012: Verify the Milestone 1 provider-to-public journey
 
-- **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
+- **Status:** IMPLEMENTED — synthetic fixture acceptance and local gates passed (2026-10-27); real API, Google, media, non-production VPS checks, API-owner administrator reconciliation and owner review not executed. The earlier capability block is resolved by pinned client 0.7.0 (see evidence below).
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-003 through WEB-M1-011 implemented; WEB-M1-001 decisions resolved
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
@@ -40,11 +40,39 @@ Exercise mk/en/bg/sq, default redirects, unsupported locales, language navigatio
 
 ## Acceptance criteria
 
-- [ ] The feature journey and security/accessibility failure cases pass with synthetic fixtures.
-- [ ] Real API/provider/VPS checks are individually evidenced or marked unexecuted; no milestone completion claim hides pending feature acceptance.
+- [x] The feature journey and security/accessibility failure cases pass with synthetic fixtures.
+- [x] Real API/provider/VPS checks are individually evidenced or marked unexecuted; no milestone completion claim hides pending feature acceptance.
 - [ ] Owner review identifies remaining feature risks without certifying Milestone 0 closure or authorizing production.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
+
+## Evidence (2026-10-27)
+
+**Versions:** web base commit `927c3e73ceb5a7e8f30c3360a5e6679ff4b78229` plus the WEB-M1-012 journey spec; `@dadzhioski/professional-services-api-client@0.7.0` (exact pin); Node 24.19.0, npm 11.17.0, Playwright 1.64.0. API: the synthetic fixture only (`tests/e2e/api-fixture.mjs`, reporting `synthetic-api 0.2.0`); no real API was contacted.
+
+**Client capabilities (requirement 9):** the installed 0.7.0 declarations contain every method the journey uses: OrganizationApi, ProfileApi (including photo attach/detach and publish/unpublish), MedicalApi, ServicesApi, LocationsApi, ReferenceApi, MediaApi (owner, administrator and public content), CredentialsApi, CredentialReviewApi, DoctorReviewApi (approve/reject/suspend/reinstate) and PublicApi (profile and directory).
+
+**Synthetic fixture results:**
+- `tests/e2e/journey.spec.ts`, on Chromium and mobile Chromium, uses only the web UI plus the operator administrator grant:
+  - the end-to-end provider-to-public journey, from onboarding through publication, anonymous reading in all four locales without JavaScript, the directory filters, and suspension/reinstatement/republish/unpublish revocation after earlier reads;
+  - the failure cases: cross-account isolation, the expired session, the CSRF refusal, the stale publication, the refused upload, and the outage on the public and provider pages;
+  - keyboard, 320 px and axe checks on the published end state.
+- Feature specs relied on and not duplicated: locale defaults and unsupported locales (`presentation.spec.tsx`); Origin-required mutations (`identity.spec.ts`, `onboarding.spec.ts`, `profile.spec.ts`, `media.spec.ts`); spoofed-host canonicals and cookie non-forwarding (`public-profile.spec.ts`, `public-directory.spec.ts`); stale edits and reviews (`profile`, `services`, `locations`, `credentials`, `admin-review`); rejected uploads and photo revocation (`media.spec.ts`).
+
+**Gates:** all passed.
+- `npm run typecheck`, `npm test -- --run`, `npm run build`, `check:api-client-version`, `test:policy`, `security:dependencies` (0 findings, 0 accepted), `security:secrets`, `git diff --check` and the full `npm run e2e` (270 passed).
+- Lint: `npx eslint . --ignore-pattern ".claude/**" --max-warnings=0` passed. Plain `npm run lint` failed only on build output inside an untracked local `.claude/worktrees/` agent checkout, not on repository sources. The ESLint config was not changed.
+- The dependency exception dated 2026-10-26 has expired and was not extended. The gate no longer needs it, because `eslint-config-next` 16.4.3 has no findings.
+
+**Unexecuted:**
+- real API compatibility (`make integration-compatibility-test`);
+- Google login/logout;
+- R2/actual media delivery;
+- non-production VPS deployment and route checks;
+- API-owner reconciliation of administrator policy with the MFA deferral (the WEB-ADR-0006 administrator boundary is still pending);
+- human boundary review and owner feature review.
+
+Milestone 0 deferred acceptance remains open; nothing here passes or waives it.
 
 ## Verification
 

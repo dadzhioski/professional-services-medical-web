@@ -15,7 +15,8 @@ export function failure(error: unknown, session?: string): IdentityState {
   return "unavailable";
 }
 
-export function sessionConfiguration(session: string | undefined, apply?: ApplySession): Configuration {
+// Each call is bounded by 5 s unless it brings its own signal; an optional budget bounds all calls together.
+export function sessionConfiguration(session: string | undefined, apply?: ApplySession, budget?: AbortSignal): Configuration {
   const { apiInternalUrl, publicOrigin } = getServerEnvironment();
   const name = sessionCookieName(publicOrigin);
   let current = incomingSession(session ? [{ name, value: session }] : [], name);
@@ -23,15 +24,17 @@ export function sessionConfiguration(session: string | undefined, apply?: ApplyS
   return new Configuration({
     basePath: apiInternalUrl,
     fetchApi: async (url, init) => {
-      // A new header set per request retains only the CSRF header and the generated JSON body type.
+      // A new header set per request retains only the CSRF header and the generated JSON body type;
+      // multipart bodies get their boundary type from fetch itself.
       const headers = new Headers();
       const generated = new Headers(init?.headers);
       const csrf = generated.get("X-CSRF-TOKEN");
       if (csrf) headers.set("X-CSRF-TOKEN", csrf);
       if (init?.body !== undefined && generated.get("Content-Type") === "application/json") headers.set("Content-Type", "application/json");
       if (current) headers.set("Cookie", `${name}=${current}`);
+      const call = init?.signal ?? AbortSignal.timeout(5_000);
       const response = await fetch(url, { ...init, headers, cache: "no-store", credentials: "omit",
-        redirect: "error", signal: AbortSignal.timeout(5_000) });
+        redirect: "error", signal: budget ? AbortSignal.any([call, budget]) : call });
       const changes = sessionChanges(response.headers, name);
       if (apply) {
         for (const cookie of changes) {
@@ -53,13 +56,14 @@ export function csrfHeader(token: string): InitOverrideFunction {
 }
 
 export async function csrfMutation<T>(origin: string | null, session: string | undefined, apply: ApplySession,
-  mutate: (configuration: Configuration, token: string, session: string) => Promise<T>): Promise<MutationResult<T>> {
+  mutate: (configuration: Configuration, token: string, session: string) => Promise<T>, budget?: number): Promise<MutationResult<T>> {
   const { publicOrigin } = getServerEnvironment();
   // Do not bootstrap CSRF until the web entry point has passed origin validation.
   if (origin !== publicOrigin) return { ok: false, state: "forbidden" };
   if (!session) return { ok: false, state: "signedOut" };
   try {
-    const configuration = sessionConfiguration(session, apply);
+    // The budget starts with the CSRF bootstrap, so the whole mutation ends within it.
+    const configuration = sessionConfiguration(session, apply, budget === undefined ? undefined : AbortSignal.timeout(budget));
     const csrf = await (await new IdentityApi(configuration).getCsrfTokenRaw()).value();
     if (!csrf || csrf.headerName !== "X-CSRF-TOKEN" || typeof csrf.token !== "string" ||
         !csrf.token || csrf.token.length > 4096 || /[\s\x00-\x1f\x7f]/.test(csrf.token)) return { ok: false, state: "unavailable" };

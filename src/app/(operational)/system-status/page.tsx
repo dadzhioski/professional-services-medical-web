@@ -19,19 +19,19 @@ export default async function SystemStatusPage() {
           <dl className="mt-6 space-y-4">
             <div>
               <dt className="font-semibold">{t("systemStatus.service")}</dt>
-              <dd className="mt-1 break-words text-slate-700">{result.data.service}</dd>
+              <dd className="mt-1 break-words text-muted">{result.data.service}</dd>
             </div>
             <div>
               <dt className="font-semibold">{t("systemStatus.version")}</dt>
-              <dd className="mt-1 break-words text-slate-700">{result.data.version}</dd>
+              <dd className="mt-1 break-words text-muted">{result.data.version}</dd>
             </div>
             <div>
               <dt className="font-semibold">{t("systemStatus.status")}</dt>
-              <dd className="mt-1 text-slate-700">{t("systemStatus.up")}</dd>
+              <dd className="mt-1 text-muted">{t("systemStatus.up")}</dd>
             </div>
           </dl>
         ) : (
-          <p className="mt-6 text-slate-700">{t("systemStatus.unavailable")}</p>
+          <p className="mt-6 text-muted">{t("systemStatus.unavailable")}</p>
         )}
       </Surface>
     </main>

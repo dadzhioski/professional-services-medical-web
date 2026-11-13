@@ -9,7 +9,7 @@ security-check:
 	node scripts/security.mjs secrets
 	npm run security:dependencies
 
-.PHONY: validate-production-config edge-network integration-up integration-routing-test integration-api-unavailable-test integration-restart-test integration-down integration-test integration-browser-test
+.PHONY: validate-production-config edge-network integration-up integration-routing-test integration-api-unavailable-test integration-upload-test integration-restart-test integration-down integration-test integration-browser-test
 validate-production-config:
 	node scripts/integration.mjs validate
 edge-network:
@@ -20,6 +20,8 @@ integration-routing-test:
 	node scripts/integration.mjs routing
 integration-api-unavailable-test:
 	node scripts/integration.mjs unavailable
+integration-upload-test:
+	node scripts/integration.mjs uploads
 integration-restart-test:
 	node scripts/integration.mjs restart
 integration-down:

@@ -1,6 +1,6 @@
 # Web Milestone 1 — Frontend planning authorization
 
-- **Status:** AUTHORIZED FOR PLANNING AND IMPLEMENTATION (owner decision, 2026-10-16); WEB-M1-001 through WEB-M1-012 created (WEB-M1-013 site navigation added 2026-10-21), with feature-specific decisions and API gates below.
+- **Status:** AUTHORIZED FOR PLANNING AND IMPLEMENTATION (owner decision, 2026-10-16); WEB-M1-001 through WEB-M1-012 created (WEB-M1-013 site navigation added 2026-10-21; WEB-M1-014 public directory added 2026-10-26; WEB-M1-015 guided onboarding checklist added 2026-10-27), with feature-specific decisions and API gates below.
 - **Direction:** Public doctor profiles and provider onboarding, as described in `build-plan.md`.
 - **Starting point:** Implemented Next.js/SSR foundation, exact generated API client, CI/images and owner-confirmed working first non-production deployment.
 - **Milestone 0:** Formal acceptance remains open; deferred work is tracked in `milestone-0.md` and does not block unrelated frontend work.
@@ -17,7 +17,7 @@
 
 ## Milestone 1 task backlog (2026-10-16)
 
-Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005 and WEB-M1-006 are implemented locally, with WEB-M1-003/005/006 human boundary review and live acceptance pending. Use [the task template](../tasks/TASK-TEMPLATE.md) and assign one task at a time. WEB-M1-001 records owner decisions (2026-10-16), with remaining ADR review and API-owner policy reconciliation pending; it does not reopen authorization to begin Milestone 1.
+Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005, WEB-M1-006 and WEB-M1-007 are implemented locally, with WEB-M1-003/005/006/007 human boundary review and live acceptance pending. Use [the task template](../tasks/TASK-TEMPLATE.md) and assign one task at a time. WEB-M1-001 records owner decisions (2026-10-16), with remaining ADR review and API-owner policy reconciliation pending; it does not reopen authorization to begin Milestone 1.
 
 | Task | Outcome | Dependencies |
 |---|---|---|
@@ -27,23 +27,27 @@ Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005 and WEB-M1-006 are
 | [WEB-M1-004](../tasks/WEB-M1-004-feature-client-adoption.md) | Adopt an approved published feature API client | None; feature-specific API publication and explicit upgrade approval |
 | [WEB-M1-005](../tasks/WEB-M1-005-provider-onboarding.md) | Add solo-provider onboarding and workspace | WEB-M1-002, WEB-M1-003, WEB-M1-004 onboarding capability |
 | [WEB-M1-006](../tasks/WEB-M1-006-provider-profile-editor.md) | Add professional profile draft editing | WEB-M1-005; WEB-M1-004 profile capability |
-| [WEB-M1-007](../tasks/WEB-M1-007-services-and-practice-locations.md) | Add services, specialties and practice-location editors | WEB-M1-006; WEB-M1-004 catalog/reference capability |
+| [WEB-M1-007](../tasks/WEB-M1-007-services-and-practice-locations.md) | Add services, specialties and practice-location editors (implemented locally 2026-10-22; specialty on the profile page) | WEB-M1-006; WEB-M1-004 catalog/reference capability |
 | [WEB-M1-008](../tasks/WEB-M1-008-profile-photo-and-private-evidence.md) | Add profile-photo and private professional-evidence UI | WEB-M1-005; WEB-M1-004 media capability; WEB-M1-001 media boundary decision |
 | [WEB-M1-009](../tasks/WEB-M1-009-provider-credentials.md) | Add structured credential editing and submission | WEB-M1-006, WEB-M1-008; WEB-M1-004 credential capability |
 | [WEB-M1-010](../tasks/WEB-M1-010-administrative-review-and-publication.md) | Add administrator review and provider publication controls | WEB-M1-007, WEB-M1-009; WEB-M1-004 review/publication capabilities; resolved WEB-M1-001 administrator policy |
 | [WEB-M1-011](../tasks/WEB-M1-011-public-profile-and-seo.md) | Integrate public server-rendered doctor profiles and SEO | WEB-M1-002; WEB-M1-004 public-profile capability; WEB-M1-001 route/origin decisions |
 | [WEB-M1-012](../tasks/WEB-M1-012-milestone-acceptance.md) | Verify the Milestone 1 provider-to-public journey | WEB-M1-003 through WEB-M1-011 implemented; WEB-M1-001 decisions resolved |
 | [WEB-M1-013](../tasks/WEB-M1-013-site-navigation-and-entry.md) | Add a localized entry page and global site navigation with sign-in entry (added 2026-10-21) | WEB-M1-002, WEB-M1-003, WEB-M1-005; owner branding/entry-content decisions for final copy |
+| [WEB-M1-014](../tasks/WEB-M1-014-public-doctor-directory.md) | Add a public doctor directory with specialty and city filters and header/entry links (added 2026-10-26 by owner scope amendment) | WEB-M1-011, WEB-M1-013; client 0.7.0 directory capability |
+| [WEB-M1-015](../tasks/WEB-M1-015-guided-onboarding-checklist.md) | Merge the provider workspace page into a guided onboarding checklist with API-derived step status (added 2026-10-27; approved for implementation with owner decisions recorded) | WEB-M1-005 through WEB-M1-010, WEB-M1-013; no client upgrade |
+| [WEB-M1-017](../tasks/WEB-M1-017-price-list-editor.md) | Replace one-by-one service entry with a single price-list form, paste import and a public price list with an indicative-price note (added 2026-10-27; approved for implementation) | WEB-M1-007, WEB-M1-011, WEB-M1-015; no client upgrade |
+| [WEB-M1-019](../tasks/WEB-M1-019-visual-refresh.md) | Restyle the site with design tokens and shared primitives into a calm healthcare-marketplace look (reference: doctify.com) with our own palette (added 2026-11-02; approved 2026-11-05 with owner decisions recorded) | WEB-M1-002, WEB-M1-014, WEB-M1-017, WEB-M1-018; no client upgrade |
 
 ### Observed capability and approval gates
 
-- The repository pins `@dadzhioski/professional-services-api-client@0.3.0` (WEB-M1-004). It adds OrganizationApi, ProfileApi, MedicalApi, ServicesApi, LocationsApi and ReferenceApi (API-M1-004 through API-M1-006) to the system/health and IdentityApi methods; media, credential, review, publication and public profile/directory methods are still absent. See the WEB-M1-004 capability matrix.
+- The repository pins `@dadzhioski/professional-services-api-client@0.7.0` (WEB-M1-008). 0.3.0 (WEB-M1-004) added OrganizationApi, ProfileApi, MedicalApi, ServicesApi, LocationsApi and ReferenceApi (API-M1-004 through API-M1-006) to the system/health and IdentityApi methods; 0.4.0 adds MediaApi and MediaResponse (API-M1-007); 0.5.0 adds profile photo attach/detach (API-M1-013); 0.6.0 adds credentials, credential/doctor review and publication (API-M1-008/009); 0.7.0 adds PublicApi profiles/directory (API-M1-010). See the WEB-M1-004 capability matrix.
 - Contract gap (2026-10-21, WEB-M1-005): the API enforces session CSRF on cookie-authenticated mutations, but the 0.3.0 OpenAPI omits the `X-CSRF-TOKEN` header and 403 on those operations. The web sends the token through a shared server-only transport via generated `initOverrides` (owner-approved); an API-M1-004/011 contract amendment is requested.
 - Contract notes (2026-10-21, WEB-M1-006): profile 400 responses carry no field-level validation codes, the profile contract has no professional contact fields, `publicationState` is an unconstrained string, and profile reads before onboarding return 500 rather than a documented status. The web maps 400 to one generic message and checks the workspace first; an API-M1-005 contract amendment is requested.
 - Installed declarations are capability observations, not fresh registry-publication or deployed-API proof. WEB-M1-003 verifies identity provenance/compatibility before use; WEB-M1-004 requires explicit approval and an actually published exact feature version.
 - API-M1-004 through API-M1-010 are planned in the inspected sibling tasks. API-M1-011 prepares the client release but does not publish it. Each dependent web task remains blocked until its actual methods/types and compatible backend behavior are available.
 - The owner deferred MFA entirely for this MVP, including administrators (2026-10-16). API-M1-003/004/007/008/009 still require API-owner reconciliation and compatible authorization before administrator integration/evidence access; no local bypass. Stored privileges, controlled bootstrap, tenant isolation and audits remain mandatory.
-- [WEB-M1-001](../tasks/WEB-M1-001-experience-and-security-decisions.md#owner-decision-record-2026-10-16) records approved mk-default/en/bg/sq build-time locale configuration, localized routes, neutral medical style, resumable onboarding and professional contact policy. Session-cookie/server-only forwarding, PUBLIC_ORIGIN and no-store publication-aware photo design scope are owner-approved; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) has owner acceptance for identity/session and PUBLIC_ORIGIN in WEB-M1-003; media/administrator review remains pending. Implementation boundary tests and human review remain required; synthetic presentation may proceed.
+- [WEB-M1-001](../tasks/WEB-M1-001-experience-and-security-decisions.md#owner-decision-record-2026-10-16) records approved mk-default/en/bg/sq build-time locale configuration, localized routes, neutral medical style, resumable onboarding and professional contact policy. Session-cookie/server-only forwarding, PUBLIC_ORIGIN and no-store publication-aware photo design scope are owner-approved; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) has owner acceptance for identity/session and PUBLIC_ORIGIN in WEB-M1-003 and for media in WEB-M1-008 (2026-10-25); administrator review remains pending. Implementation boundary tests and human review remain required; synthetic presentation may proceed.
 - Cross-repository task links assume the sibling checkout layout `professional-services-platform-api/professional-services-platform-api`, matching the inspected workspace. These files are read-only dependencies; this task creation does not modify the API repository.
 
 ### Execution paths
@@ -57,13 +61,13 @@ Task creation is complete; WEB-M1-002, WEB-M1-003, WEB-M1-005 and WEB-M1-006 are
 
 ### Scope and milestone acceptance
 
-The default scope follows `build-plan.md`: public doctor profiles, credentials, services, locations, photo, provider onboarding/editing, administrator review and publication. Directory/search is excluded despite API-M1-010 also providing directory endpoints; adding it requires an explicit task amendment. Appointment requests remain Milestone 2, and analytics/pilot readiness remain later work.
+The default scope follows `build-plan.md`: public doctor profiles, credentials, services, locations, photo, provider onboarding/editing, administrator review and publication. Directory/search was excluded at first despite API-M1-010 also providing directory endpoints. On 2026-10-26 the owner amended scope to add the specialty/city directory in WEB-M1-014; free-text search remains excluded. Appointment requests remain Milestone 2, and analytics/pilot readiness remain later work.
 
 - [ ] Applicable product/security decisions reviewed without silently accepting proposed API policy.
 - [ ] Provider onboarding, private editing and review/publication journeys implemented against an approved exact client.
 - [ ] Public profile HTML, SEO and eligible images reflect current API publication state without leaking private evidence.
-- [ ] Accessible responsive UI and JavaScript-disabled public reading verified.
-- [ ] Synthetic success/failure, isolation, session, CSRF and stale-revision scenarios pass.
+- [x] Accessible responsive UI and JavaScript-disabled public reading verified (synthetic fixture, WEB-M1-012 2026-10-27).
+- [x] Synthetic success/failure, isolation, session, CSRF and stale-revision scenarios pass (WEB-M1-012 2026-10-27).
 - [ ] Quality/security gates pass for the affected release; no automatic dependency-exception extension.
 - [ ] Live API, Google, media and non-production checks are separately evidenced or explicitly unexecuted; pending feature checks prevent an unqualified completion claim.
 - [ ] Owner reviews feature acceptance; deferred Milestone 0 obligations remain open.
@@ -77,7 +81,7 @@ The default scope follows `build-plan.md`: public doctor profiles, credentials, 
 - [API-M1-007](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-007-media-and-private-evidence.md): Photos and private evidence.
 - [API-M1-008](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-008-credential-review.md): Credential review.
 - [API-M1-009](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-009-approval-and-publication.md): Doctor approval, publication and suspension.
-- [API-M1-010](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-010-public-profiles-and-directory.md): Public profiles; directory UI excluded here.
+- [API-M1-010](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-010-public-profiles-and-directory.md): Public profiles (WEB-M1-011) and directory (WEB-M1-014).
 - [API-M1-011](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-011-contract-and-release-readiness.md): Contract and client release preparation.
 - [API-M1-012](../../../../professional-services-platform-api/professional-services-platform-api/docs/tasks/API-M1-012-milestone-acceptance.md): API feature acceptance coordination.
 

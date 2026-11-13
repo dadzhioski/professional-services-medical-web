@@ -1,6 +1,6 @@
 # WEB-M1-013: Add a localized entry page and global site navigation
 
-- **Status:** PLANNED (2026-10-21); owner decisions below block final copy and branding, not the structural implementation
+- **Status:** IMPLEMENTED LOCALLY (2026-10-21) with neutral placeholder copy; owner decisions 1–3 and non-production VPS checks open
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-002, WEB-M1-003, WEB-M1-005; owner decisions listed below
 - **Related ADRs:** WEB-ADR-0001; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (accepted for identity/session and PUBLIC_ORIGIN)
@@ -55,16 +55,16 @@ These are recorded for the owner, not decided by this task. Implementation may p
 
 ## Acceptance criteria
 
-- [ ] From `/[locale]` a signed-out visitor reaches the Google sign-in page in one click from the header and one from the entry page.
-- [ ] A signed-in doctor sees a workspace link and a working sign-out in the header on every localized page; after sign-out the header shows the signed-out entry.
-- [ ] Identity unavailable, expired and forbidden states render the signed-out entry with the page intact.
-- [ ] No development copy remains on the entry page or footer; all four locales have complete keys.
-- [ ] Pages are server-rendered and usable without JavaScript; keyboard and axe checks pass.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; the pinned client is unchanged.
+- [x] From `/[locale]` a signed-out visitor reaches the Google sign-in page in one click from the header and one from the entry page.
+- [x] A signed-in doctor sees a workspace link and a working sign-out in the header on every localized page; after sign-out the header shows the signed-out entry.
+- [x] Identity unavailable, expired and forbidden states render the signed-out entry with the page intact.
+- [x] No development copy remains on the entry page or footer; all four locales have complete keys.
+- [x] Pages are server-rendered and usable without JavaScript; keyboard and axe checks pass.
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; the pinned client is unchanged.
 - [ ] (owner) Product name and branding recorded in this task.
 - [ ] (owner) Patient-facing entry content recorded in this task.
 - [ ] (owner) Header entry wording recorded in this task.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
 
 ## Verification
 

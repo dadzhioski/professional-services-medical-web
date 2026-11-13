@@ -1,6 +1,6 @@
 # WEB-M1-011: Integrate public server-rendered doctor profiles and SEO
 
-- **Status:** BLOCKED — required feature API capabilities are absent from the currently installed client; see linked API tasks
+- **Status:** IMPLEMENTED LOCALLY (2026-10-26) against pinned client 0.7.0, which contains `PublicApi.getPublicProfile` and `MediaApi.getPublicMediaContent`, so the earlier capability block is resolved. Owner decision (2026-10-26): the photo is not placed in og:image or JSON-LD, because third-party copies would outlive revocation. Owner decision (2026-10-26): a transient API failure keeps HTTP 200 with noindex rather than a 5xx. Live API and non-production checks are pending.
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-002; WEB-M1-004 public-profile capability; WEB-M1-001 route/origin decisions
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0002, WEB-ADR-0005; [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (Proposed; owner design scope recorded in WEB-M1-001)
@@ -40,10 +40,10 @@ Use /[locale]/doctors/[slug] for mk/en/bg/sq, with mk default; translate interfa
 
 ## Acceptance criteria
 
-- [ ] Published success, missing/hidden profiles, unavailable API, empty optional data and malicious text have SSR/metadata tests.
-- [ ] JavaScript-disabled reading, keyboard/axe, mobile/desktop and publication revocation checks pass; public HTML/JSON-LD contain no private data.
-- [ ] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
-- [ ] No deferred Milestone 0 obligation is marked passed or waived.
+- [x] Published success, missing/hidden profiles, unavailable API, empty optional data and malicious text have SSR/metadata tests.
+- [x] JavaScript-disabled reading, keyboard/axe, mobile/desktop and publication revocation checks pass; public HTML/JSON-LD contain no private data.
+- [x] Lint, types, unit tests, production build, affected browser checks and API-client policy pass; pending checks are reported honestly.
+- [x] No deferred Milestone 0 obligation is marked passed or waived.
 
 ## Verification
 

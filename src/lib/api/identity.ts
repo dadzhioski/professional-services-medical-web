@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { IdentityApi, type CurrentAccount } from "@dadzhioski/professional-services-api-client";
 import { isLocale, type Locale } from "@/lib/i18n";
 import { isDeletedSession, type SessionCookie } from "./session-cookie";
@@ -14,7 +15,8 @@ export async function googleLoginHref(locale: Locale): Promise<string> {
   return `${options.path}?${new URLSearchParams(options.query as Record<string, string>)}`;
 }
 
-export async function currentAccount(session?: string): Promise<AccountResult> {
+// Memoized per server request so the site header and the page share one identity call.
+export const currentAccount = cache(async (session?: string): Promise<AccountResult> => {
   if (!session) return { state: "signedOut" };
   const api = new IdentityApi(sessionConfiguration(session));
   try {
@@ -26,7 +28,7 @@ export async function currentAccount(session?: string): Promise<AccountResult> {
     if (account.sessionExpiresAt.getTime() <= Date.now()) return { state: "expired" };
     return { state: "authenticated", account };
   } catch (error) { return { state: failure(error, session) }; }
-}
+});
 
 export async function logoutSession(origin: string | null, session: string | undefined,
   apply: (cookie: SessionCookie) => void): Promise<IdentityState> {
