@@ -182,10 +182,13 @@ owner approval; there is no automatic renewal or environment-variable bypass.
 
 The repository owner approved this exception in chat on 2026-10-28, answering
 "Bump v4, add exception" to the proposal for CVE-2026-116587 (go-jose denial of
-service when parsing JWKs that contain RSA keys). Approval expires
-**2026-11-11 at 00:00 UTC**. It covers only `github.com/go-jose/go-jose/v3`
-v3.0.5 compiled into `usr/bin/caddy`. Caddy 2.11.7 is the latest release and
-requires go-jose v3, and there is no patched v3 release. The v4 finding from the
+service when parsing JWKs that contain RSA keys), with expiry 2026-11-11. On
+2026-11-13 the owner extended it by 14 days ("Extend 14 days"), after it had
+lapsed. Approval expires
+**2026-11-27 at 00:00 UTC**. It covers only `github.com/go-jose/go-jose/v3`
+v3.0.5 compiled into `usr/bin/caddy`. As of 2026-11-13 the pinned Caddy 2.11.7
+and the newest release 2.11.9 both require go-jose v3 v3.0.5, and there is no
+patched v3 release. The v4 finding from the
 same CVE is fixed by rebuilding with v4.1.6. This is temporary risk acceptance,
 not remediation.
 

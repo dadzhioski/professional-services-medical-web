@@ -25,7 +25,7 @@ Open items carried in from Milestone 1 that affect Milestone 2 work:
 |---|---|
 | WEB-M1-016 (free-text qualifications, client 0.9.0) is implemented on its branch but not merged to `main` | WEB-M2-003 upgrades from whatever `main` pins at that time; merge 016 first to avoid two competing client upgrades |
 | WEB-M1-019 (visual refresh) is on its branch, not merged | WEB-M2-002 builds on its design tokens and primitives; merge 019 first |
-| `scripts/edge-container-exception.json` (go-jose v3 in Caddy) expired 2026-11-11 | The edge image scan fails until it is remediated or the owner approves an extension; blocks edge validation and releases, not task planning |
+| `scripts/edge-container-exception.json` (go-jose v3 in Caddy) lapsed 2026-11-11; the owner extended it on 2026-11-13 to 2026-11-27 | The edge image scan fails again after that date unless a fix is published or the owner approves another extension; blocks edge validation and releases, not task planning |
 | Local `node_modules` holds client 0.9.0 while the lock file pins 0.7.0 | Run `npm ci` before relying on local type checks on `main` or WEB-M1-019 |
 | Live API, Google, media and non-production checks from WEB-M1-012 are unexecuted | WEB-M2-008 does not close them; they stay Milestone 1 obligations |
 
