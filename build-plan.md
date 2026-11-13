@@ -124,6 +124,8 @@ Owner authorization on 2026-10-16 permits Milestone 1 frontend planning and impl
 
 Minimal request form, consent, confirmation states, signed cancellation flow, provider decisions, and safe email-linked pages.
 
+Tasks WEB-M2-001 through WEB-M2-008 were drafted on 2026-11-13; see `docs/backlog/milestone-2.md`. Owner authorization and the linked API Milestone 2 tasks are still required.
+
 ### Milestone 3 — Pilot readiness
 
 Analytics, performance budgets, structured-data validation, production observability, privacy review, and pilot onboarding.
