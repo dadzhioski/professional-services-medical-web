@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Find a doctor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#F6F8FB}
+a{color:#0B5CAD}a:hover{color:#08427C}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+.lift{transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease}
+.lift:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(15,23,42,.08);border-color:#BFD3EA}
+.pill{transition:background .15s ease,color .15s ease}
+</style>
+</helmet>
+<div style="min-height: 100vh; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #0F172A; background: #F6F8FB">
+
+  <header style="background: #FFFFFF; border-bottom: 1px solid #E2E8F0">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+      <a href="#top" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #0F172A">
+        <span style="width: 36px; height: 36px; border-radius: 10px; background: {{accent}}; display: flex; align-items: center; justify-content: center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        </span>
+        <span style="font-weight: 700; font-size: 17px; letter-spacing: -0.01em">[Brand]</span>
+      </a>
+      <nav aria-label="Main" style="display: flex; flex-wrap: wrap; align-items: center; gap: 20px; font-size: 15px">
+        <a href="#top" aria-current="page" style="text-decoration: none; color: #0F172A; font-weight: 600">Find a doctor</a>
+        <a href="Provider.dc.html" style="text-decoration: none; color: #334155">For doctors</a>
+        <div role="group" aria-label="Language" style="display: flex; gap: 4px; padding: 4px; background: #F1F5F9; border-radius: 999px">
+          <sc-for list="{{locales}}" as="l" hint-placeholder-count="4">
+            <button class="pill" type="button" onClick="{{l.pick}}" aria-pressed="{{l.pressed}}" style="{{l.style}}">{{l.code}}</button>
+          </sc-for>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <section style="background: #FFFFFF; border-bottom: 1px solid #E2E8F0">
+    <div id="top" style="max-width: 1200px; margin: 0 auto; padding: 40px 24px 32px; display: flex; flex-direction: column; gap: 20px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h1 style="margin: 0; font-size: 40px; line-height: 1.1; letter-spacing: -0.02em">Find a doctor</h1>
+        <p style="margin: 0; font-size: 17px; color: #475569">Browse verified doctors by specialty and city, then send a short appointment request.</p>
+      </div>
+
+      <form role="search" method="get" action="#top" onSubmit="{{submit}}" style="display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; background: #F6F8FB; border: 1px solid #E2E8F0; border-radius: 18px">
+        <label style="flex: 2 1 260px; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 14px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 12px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Doctor name</span>
+          <input type="search" name="q" placeholder="Doctor name" value="{{query}}" onChange="{{setQuery}}" style="flex: 1; min-width: 0; border: 0; outline: none; font: 400 15px system-ui, sans-serif; color: #0F172A; background: transparent">
+        </label>
+        <label style="flex: 1 1 200px; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 52px; padding: 4px 14px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 12px; font-size: 12px; font-weight: 600; color: #475569">
+          Specialty
+          <select name="specialty" value="{{specialty}}" onChange="{{setSpecialty}}" style="border: 0; padding: 0; font: 600 15px system-ui, sans-serif; color: #0F172A; background: transparent; outline: none">
+            <option value="">All specialties</option>
+            <sc-for list="{{specialties}}" as="o" hint-placeholder-count="6">
+              <option value="{{o}}">{{o}}</option>
+            </sc-for>
+          </select>
+        </label>
+        <label style="flex: 1 1 180px; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 52px; padding: 4px 14px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 12px; font-size: 12px; font-weight: 600; color: #475569">
+          City
+          <select name="city" value="{{city}}" onChange="{{setCity}}" style="border: 0; padding: 0; font: 600 15px system-ui, sans-serif; color: #0F172A; background: transparent; outline: none">
+            <option value="">All cities</option>
+            <sc-for list="{{cities}}" as="o" hint-placeholder-count="5">
+              <option value="{{o}}">{{o}}</option>
+            </sc-for>
+          </select>
+        </label>
+        <button type="submit" style="flex: 0 1 auto; min-height: 52px; padding: 0 26px; border: 0; border-radius: 12px; background: {{accent}}; color: #FFFFFF; font: 600 15px system-ui, sans-serif; cursor: pointer">Search</button>
+      </form>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+        <span style="font-size: 14px; color: #475569; margin-right: 4px">Popular:</span>
+        <sc-for list="{{quick}}" as="qk" hint-placeholder-count="4">
+          <button class="pill" type="button" onClick="{{qk.pick}}" aria-pressed="{{qk.pressed}}" style="{{qk.style}}">{{qk.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <main style="max-width: 1200px; margin: 0 auto; padding: 28px 24px 64px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+      <p aria-live="polite" style="margin: 0; font-size: 15px; color: #334155"><strong style="color: #0F172A">{{count}}</strong> {{countLabel}}</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+        <label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; color: #334155; cursor: pointer">
+          <input type="checkbox" checked="{{accepting}}" onChange="{{toggleAccepting}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{accent}}">
+          Accepting new patients
+        </label>
+        <sc-if value="{{hasFilters}}" hint-placeholder-val="{{ false }}">
+          <button type="button" onClick="{{clear}}" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: #0B5CAD; font: 600 14px system-ui, sans-serif; cursor: pointer">Clear filters</button>
+        </sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{hasResults}}" hint-placeholder-val="{{ true }}">
+      <ul style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px">
+        <sc-for list="{{results}}" as="d" hint-placeholder-count="6">
+          <li>
+            <a class="lift" href="Main.dc.html" style="height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; padding: 22px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; text-decoration: none; color: #0F172A">
+              <div style="display: flex; gap: 14px; align-items: center">
+                <span role="img" aria-label="Portrait placeholder" style="width: 64px; height: 64px; border-radius: 18px; background: #E6F0FA; flex-shrink: 0; display: flex; align-items: center; justify-content: center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0B5CAD" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>
+                </span>
+                <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+                  <span style="font-weight: 700; font-size: 17px">{{d.name}}</span>
+                  <span style="font-size: 14px; color: #0B5CAD; font-weight: 600">{{d.specialty}}</span>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #475569">
+                <span style="display: flex; align-items: center; gap: 8px">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6 7-12a7 7 0 1 0-14 0c0 6 7 12 7 12z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>
+                  {{d.city}} · [Practice name]
+                </span>
+                <span style="display: flex; align-items: center; gap: 8px">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"></path></svg>
+                  {{d.languages}}
+                </span>
+              </div>
+              <div style="margin-top: auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding-top: 14px; border-top: 1px solid #F1F5F9">
+                <span style="{{d.badge}}">{{d.status}}</span>
+                <span style="display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #0B5CAD">
+                  View profile
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+                </span>
+              </div>
+            </a>
+          </li>
+        </sc-for>
+      </ul>
+    </sc-if>
+
+    <sc-if value="{{noResults}}" hint-placeholder-val="{{ false }}">
+      <div style="background: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 20px; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+        <span style="width: 56px; height: 56px; border-radius: 999px; background: #F1F5F9; display: flex; align-items: center; justify-content: center; color: #475569">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        </span>
+        <h2 style="margin: 0; font-size: 19px">No doctors match these filters</h2>
+        <p style="margin: 0; font-size: 15px; color: #475569">Try another city or specialty.</p>
+        <button type="button" onClick="{{clear}}" style="min-height: 46px; padding: 0 20px; border: 1px solid #CBD5E1; border-radius: 12px; background: #FFFFFF; color: #0F172A; font: 600 14px system-ui, sans-serif; cursor: pointer">Clear filters</button>
+      </div>
+    </sc-if>
+  </main>
+
+  <footer style="border-top: 1px solid #E2E8F0; background: #FFFFFF">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; font-size: 14px; color: #475569">
+      <span>© [Brand]</span>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap">
+        <a href="#top" style="color: #475569">Privacy</a>
+        <a href="#top" style="color: #475569">Terms</a>
+        <a href="#top" style="color: #475569">Contact</a>
+      </div>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#0B5CAD","options":["#0B5CAD","#0B6E6A","#1E40AF"]},"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { locale: 'EN', query: '', specialty: '', city: '', accepting: false };
+  }
+  renderVals() {
+    var self = this;
+    var st = this.state;
+    var accent = this.props.accent ?? '#0B5CAD';
+    var specialties = ['Cardiology', 'Dermatology', 'General practice', 'Gynecology', 'Ophthalmology', 'Pediatrics'];
+    var cities = ['Skopje', 'Bitola', 'Ohrid', 'Tetovo', 'Kumanovo'];
+    var doctors = [
+      { specialty: 'Cardiology', city: 'Skopje', languages: 'Macedonian, English', open: true },
+      { specialty: 'Pediatrics', city: 'Skopje', languages: 'Macedonian, Albanian', open: true },
+      { specialty: 'Dermatology', city: 'Bitola', languages: 'Macedonian', open: false },
+      { specialty: 'General practice', city: 'Ohrid', languages: 'Macedonian, English', open: true },
+      { specialty: 'Gynecology', city: 'Tetovo', languages: 'Albanian, Macedonian', open: true },
+      { specialty: 'Ophthalmology', city: 'Kumanovo', languages: 'Macedonian, Bulgarian', open: false },
+      { specialty: 'Cardiology', city: 'Bitola', languages: 'Macedonian', open: true },
+      { specialty: 'Pediatrics', city: 'Ohrid', languages: 'Macedonian, English', open: true },
+      { specialty: 'General practice', city: 'Skopje', languages: 'Macedonian, Albanian', open: false }
+    ];
+    var q = st.query.trim().toLowerCase();
+    var filtered = doctors.filter(function (d) {
+      if (st.specialty && d.specialty !== st.specialty) return false;
+      if (st.city && d.city !== st.city) return false;
+      if (st.accepting && !d.open) return false;
+      if (q && 'dr. [full name]'.indexOf(q) === -1 && d.specialty.toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+    var results = filtered.map(function (d) {
+      return {
+        name: 'Dr. [Full name]', specialty: d.specialty, city: d.city, languages: d.languages,
+        status: d.open ? 'Accepting new patients' : 'Waitlist only',
+        badge: 'padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; ' + (d.open ? 'background: #E3F5F3; color: #0B5753' : 'background: #F1F5F9; color: #334155')
+      };
+    });
+    var locales = ['MK', 'EN', 'BG', 'SQ'].map(function (code) {
+      var on = st.locale === code;
+      return { code: code, pressed: on ? 'true' : 'false', pick: function () { self.setState({ locale: code }); },
+        style: 'border: 0; cursor: pointer; min-width: 44px; min-height: 36px; border-radius: 999px; font: 600 13px system-ui, sans-serif; ' + (on ? 'background: ' + accent + '; color: #FFFFFF' : 'background: transparent; color: #334155') };
+    });
+    var quick = ['Cardiology', 'Pediatrics', 'Dermatology', 'General practice'].map(function (s) {
+      var on = st.specialty === s;
+      return { label: s, pressed: on ? 'true' : 'false', pick: function () { self.setState({ specialty: on ? '' : s }); },
+        style: 'min-height: 40px; padding: 0 16px; border-radius: 999px; cursor: pointer; font: 600 14px system-ui, sans-serif; border: 1px solid ' + (on ? accent : '#CBD5E1') + '; background: ' + (on ? accent : '#FFFFFF') + '; color: ' + (on ? '#FFFFFF' : '#334155') };
+    });
+    var hasFilters = !!(st.query || st.specialty || st.city || st.accepting);
+    var where = [st.specialty, st.city].filter(Boolean).join(' · ');
+    return {
+      accent: accent, locales: locales, quick: quick,
+      specialties: specialties, cities: cities,
+      query: st.query, specialty: st.specialty, city: st.city, accepting: st.accepting,
+      results: results, count: results.length,
+      countLabel: (results.length === 1 ? 'doctor' : 'doctors') + (where ? ' · ' + where : ''),
+      hasResults: results.length > 0, noResults: results.length === 0, hasFilters: hasFilters,
+      setQuery: function (e) { self.setState({ query: e.target.value }); },
+      setSpecialty: function (e) { self.setState({ specialty: e.target.value }); },
+      setCity: function (e) { self.setState({ city: e.target.value }); },
+      toggleAccepting: function () { self.setState({ accepting: !st.accepting }); },
+      submit: function (e) { if (e && e.preventDefault) e.preventDefault(); },
+      clear: function () { self.setState({ query: '', specialty: '', city: '', accepting: false }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
