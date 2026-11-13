@@ -46,7 +46,8 @@ Image names default to `professional-services-medical-web:<git HEAD full SHA>`;
 `IMAGE` overrides must also have a full 40-character SHA tag. Local builds of
 uncommitted changes are development evidence only, not published release artifacts.
 The base uses digest-pinned Node 24.19.0 on Alpine 3.24, with libcrypto3 and
-libssl3 pinned to 3.5.9-r0 to address CVE-2026-14456. The runtime starts
+libssl3 pinned to 3.5.9-r0 to address CVE-2026-14456, and musl/musl-utils 1.2.6-r3
+and zlib 1.4-r0 to address CVE-2026-107891, CVE-2026-85091 and CVE-2026-4738. The runtime starts
 `node server.js`, listens on port 3000 as UID/GID 10001,
 and requires `API_INTERNAL_URL` and `PUBLIC_ORIGIN` at startup. Image smoke checks
 also verify rejection of missing/invalid public origins. The Docker build uses a
