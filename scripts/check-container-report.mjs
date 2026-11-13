@@ -23,7 +23,8 @@ export function checkContainerReport(report, applicationType = "node-pkg", excep
   const summary = { highOrCritical: vulnerabilities.length, secrets: secrets.length, accepted };
   if (accepted.length) summary.exceptionExpiresAt = exception.expiresAt;
   if (vulnerabilities.length || secrets.length) {
-    throw new Error(`Container security gate failed: ${JSON.stringify(summary)}`);
+    // Name the blocking findings; a count alone forces guessing from the advisory databases.
+    throw new Error(`Container security gate failed: ${JSON.stringify({ ...summary, findings: vulnerabilities })}`);
   }
   return summary;
 }

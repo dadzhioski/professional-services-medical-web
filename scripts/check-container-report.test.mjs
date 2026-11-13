@@ -38,6 +38,10 @@ test("the edge exception accepts only the approved unfixed go-jose v3 finding, v
     highOrCritical: 0, secrets: 0, accepted: ["CVE-2026-116587 github.com/go-jose/go-jose/v3@v3.0.5"],
     exceptionExpiresAt: exception.expiresAt });
 });
+test("a failing gate names the blocking findings", () => {
+  assert.throws(() => checkContainerReport(edge(finding(), { ...finding(), PkgName: "golang.org/x/net" }), "gobinary", exception, before),
+    /"findings":\["CVE-2026-116587 golang\.org\/x\/net@v3\.0\.5"\]/);
+});
 test("the edge exception expires", () => {
   assert.throws(() => checkContainerReport(edge(finding()), "gobinary", exception, new Date(exception.expiresAt)));
 });

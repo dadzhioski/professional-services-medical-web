@@ -62,7 +62,7 @@ Both verified images are saved together and published by a package matrix under
 the existing publishing guard. Neither job deploys the images.
 
 The edge image rebuilds Caddy 2.11.7 with Go 1.26.11 (CVE-2026-97054 in `net/http`),
-`golang.org/x/net@v0.60.0`, `github.com/go-jose/go-jose/v4@v4.1.6` (CVE-2026-116587) and
+`golang.org/x/net@v0.62.0` (CVE-2026-78661, CVE-2026-97045), `github.com/go-jose/go-jose/v4@v4.1.6` (CVE-2026-116587) and
 `github.com/klauspost/compress@v1.20.4` (CVE-2026-116591)
 because the upstream binary contains four high findings (CVE-2026-78667,
 CVE-2026-78669 and CVE-2026-97031). Compiler and runtime base images are pinned

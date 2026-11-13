@@ -3,7 +3,7 @@ FROM golang:1.26.11-alpine@sha256:ae52b5bc6ed045a9ed26ab03dc19327a802a9cc9aa8b27
 ENV GOTOOLCHAIN=local CGO_ENABLED=0
 WORKDIR /build
 RUN go mod init medical-web-edge && \
-    go get github.com/caddyserver/caddy/v2@v2.11.7 golang.org/x/net@v0.60.0 github.com/go-jose/go-jose/v4@v4.1.6 \
+    go get github.com/caddyserver/caddy/v2@v2.11.7 golang.org/x/net@v0.62.0 github.com/go-jose/go-jose/v4@v4.1.6 \
            github.com/klauspost/compress@v1.20.4 && \
     go build -mod=mod -trimpath -ldflags="-s -w" -o /caddy github.com/caddyserver/caddy/v2/cmd/caddy
 
@@ -20,4 +20,4 @@ LABEL org.opencontainers.image.revision=$REVISION \
       org.opencontainers.image.source="https://github.com/dadzhioski/professional-services-medical-web" \
       io.professional-services.caddy.version="2.11.7" \
       io.professional-services.caddy.go="1.26.11" \
-      io.professional-services.caddy.x-net="0.60.0"       io.professional-services.caddy.go-jose-v4="4.1.6"
+      io.professional-services.caddy.x-net="0.62.0"       io.professional-services.caddy.go-jose-v4="4.1.6"
