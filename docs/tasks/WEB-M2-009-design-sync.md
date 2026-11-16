@@ -1,6 +1,6 @@
 # WEB-M2-009: Sync the docs/design mockups with the current implementation
 
-- **Status:** IN PROGRESS (owner decisions recorded 2026-11-16)
+- **Status:** IMPLEMENTED (2026-11-16) on branch `WEB-M2-009`; manual 320/1280 px comparison and the non-production VPS check not run
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-019 merged (done, PR #30); `docs/design` snapshot of 2026-11-13 (merged, PR #31)
 - **Blocks:** WEB-M2-002 (request form presentation) and the presentation parts of WEB-M2-004, 005 and 006
@@ -145,13 +145,13 @@ Not built here. Hand the mockup to WEB-M2-001 (decision 8) and WEB-M2-002. Keep 
 
 ## Acceptance criteria
 
-- [ ] (owner) Decisions 1–8 recorded.
-- [ ] Final sync register in `docs/design/README.md`; every row classified.
-- [ ] Directory, profile, provider overview and admin review match the agreed mockups for all **Build** rows.
-- [ ] Mockups updated to the decisions; `Request.dc.html` is referenced from WEB-M2-001 and 002.
-- [ ] API requests added to the Milestone 2 backlog; nothing built on missing data.
-- [ ] No new dependency, Client Component, external asset or API call; pinned client unchanged.
-- [ ] Lint, types, unit tests, production build, affected Playwright tests and API-client policy pass.
+- [x] (owner) Decisions 1–8 recorded.
+- [x] Final sync register in `docs/design/README.md`; every row classified.
+- [x] Directory, profile, provider overview and admin review match the agreed mockups for all **Build** rows.
+- [x] Mockups updated to the decisions; `Request.dc.html` is referenced from WEB-M2-001 and 002.
+- [x] API requests added to the Milestone 2 backlog; nothing built on missing data.
+- [x] No new dependency, Client Component, external asset or API call; pinned client unchanged.
+- [x] Lint, types, unit tests, production build, affected Playwright tests and API-client policy pass.
 
 ## Verification
 

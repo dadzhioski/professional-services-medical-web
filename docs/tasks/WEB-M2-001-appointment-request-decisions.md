@@ -5,6 +5,7 @@
 - **Depends on:** None
 - **Related ADRs:** WEB-ADR-0001, WEB-ADR-0004, WEB-ADR-0005, [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md); creates WEB-ADR-0007 (Proposed)
 - **Cross-repository dependency:** API Milestone 2 tasks, not yet created (see [Milestone 2](../backlog/milestone-2.md#api-work-to-request)). Decisions only; no API changes.
+- **Design reference:** [`docs/design`](../design/README.md), aligned by WEB-M2-009 on 2026-11-16; `Request.dc.html` for the form, confirmation and error summary. WEB-M2-009 decision 8: a service picker over published services (radio inputs), separate typed phone and email fields, and cancellation only through the signed link. Record these under decisions 2 and 5. The mockup's "Undo" was removed; "propose another time" stays under decision 10.
 - **Risk:** Medium
 
 ## Goal

@@ -5,6 +5,7 @@
 - **Depends on:** WEB-M2-001 (decisions 2, 3, 4, 7, 8, 9); WEB-M2-002; WEB-M2-003 submission capability
 - **Related ADRs:** WEB-ADR-0001, [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md); WEB-ADR-0007 (must be accepted for the parts this task implements)
 - **Cross-repository dependency:** API Milestone 2 submission, consent and rate-limit task(s), to be linked when created
+- **Design reference:** [`docs/design`](../design/README.md), aligned by WEB-M2-009 on 2026-11-16; the request call to action and "not a booking" note were removed from `Main.dc.html` and belong to this task, with the form in `Request.dc.html`.
 - **Risk:** High
 
 ## Goal
