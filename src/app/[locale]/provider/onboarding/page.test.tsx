@@ -98,6 +98,11 @@ test("a partially complete checklist marks done steps, one current step and why 
   expect(item(html, "onboarding.step.service").querySelector('a[href="/en/provider/services"]')?.textContent).toContain(t("onboarding.action.edit"));
   expect(item(html, "onboarding.step.location").textContent).toContain(t("onboarding.state.todo"));
   expect(item(html, "onboarding.step.credentials").textContent).toContain(t("onboarding.credential.submit"));
+  // Progress counts the required steps only (the photo is optional); nothing is published, so no preview link.
+  const done = [...show(html).querySelectorAll("#checklist-heading + ol > li")]
+    .filter(li => li.querySelector("h3")?.textContent !== t("onboarding.step.photo") && li.textContent?.includes(t("onboarding.state.done"))).length;
+  expect(show(html).body.textContent).toContain(`${done} ${t("onboarding.progressOf")} 7 ${t("onboarding.progressDone")}`);
+  expect(html).not.toContain(t("onboarding.preview"));
   expect(item(html, "onboarding.step.photo").textContent).toContain(t("onboarding.state.optional"));
   expect(item(html, "onboarding.step.publication").textContent).toContain(t("onboarding.reason.completeAbove"));
   expect(item(html, "onboarding.step.publication").querySelector("a")).toBeNull();
@@ -165,6 +170,10 @@ test("published without the optional photo is complete", async () => {
   const html = await render();
   expect(next(html).textContent).toContain(t("onboarding.allDone"));
   expect(item(html, "onboarding.step.photo").textContent).toContain(t("onboarding.state.optional"));
+  expect(show(html).body.textContent).toContain(`7 ${t("onboarding.progressOf")} 7 ${t("onboarding.progressDone")}`);
+  // Published: the preview opens the public profile from the slug already read, with no extra API call.
+  const preview = [...show(html).querySelectorAll("a")].find(link => link.textContent === t("onboarding.preview"));
+  expect(preview?.getAttribute("href")).toBe("/en/doctors/synthetic-slug");
 });
 
 // Every scenario renders server-side in every locale with its translated state and no raw values.

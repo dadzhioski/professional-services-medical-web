@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { readableMainClass } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { getSystemStatus } from "@/lib/api/system-status";
 import { t } from "@/lib/i18n/en";
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 export default async function SystemStatusPage() {
   const result = await getSystemStatus();
   return (
-    <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl px-6">
+    <main id="main-content" tabIndex={-1} className={readableMainClass}>
       <Surface>
         <h1 className="text-3xl font-bold tracking-tight">{t("systemStatus.heading")}</h1>
         {result.available ? (

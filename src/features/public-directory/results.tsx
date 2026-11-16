@@ -16,26 +16,32 @@ export function initials(name: string) {
 }
 
 // Only the named public summary fields are shown; supplied names and labels are rendered as text.
+// The whole card is one target: the name link is stretched over the card, so there is a single link whose
+// accessible name is the doctor's name. "View profile" and the arrow are decorative repeats of that link.
 function DoctorCard({ locale, doctor }: { locale: Locale; doctor: PublicDoctorSummary }) {
   const t = translator(locale);
   const photo = publicMediaContentPath(doctor.photoMediaId);
   const cities = [...new Map((doctor.cities ?? []).map(city => [city.id, city])).values()]
     .map(city => referenceLabel(city.labels, city.code!, locale));
-  return <article className={`flex h-full gap-4 p-5 ${cardClass}`}>
-    {photo ? <OwnerImage path={photo} alt="" thumbnail />
-      : <span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-input bg-tint text-lg font-semibold text-ink">
-        {initials(doctor.displayName ?? "")}</span>}
-    <div className="min-w-0 space-y-1 [overflow-wrap:anywhere]">
-      <h2 className="text-lg font-semibold leading-snug text-ink">
-        <a className="text-primary underline underline-offset-4 hover:text-primary-strong" href={`/${locale}/doctors/${encodeURIComponent(doctor.slug!)}`}>
-          {doctor.displayName}</a>
-      </h2>
-      <dl className="grid gap-x-3 text-muted">
-        {doctor.specialty && <><dt className="font-semibold">{t("directory.specialty")}</dt>
-          <dd>{referenceLabel(doctor.specialty.labels, doctor.specialty.code!, locale)}</dd></>}
-        {cities.length > 0 && <><dt className="font-semibold">{t("directory.cities")}</dt><dd>{cities.join(", ")}</dd></>}
-      </dl>
+  return <article className={`hover-lift relative flex h-full flex-col gap-4 p-5 ${cardClass}`}>
+    <div className="flex gap-4">
+      {photo ? <OwnerImage path={photo} alt="" thumbnail />
+        : <span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-input bg-tint text-lg font-semibold text-ink">
+          {initials(doctor.displayName ?? "")}</span>}
+      <div className="min-w-0 space-y-1 [overflow-wrap:anywhere]">
+        <h2 className="text-lg font-semibold leading-snug text-ink">
+          <a className="rounded text-primary underline underline-offset-4 after:absolute after:inset-0 after:rounded-card after:content-[''] hover:text-primary-strong"
+            href={`/${locale}/doctors/${encodeURIComponent(doctor.slug!)}`}>{doctor.displayName}</a>
+        </h2>
+        <dl className="grid gap-x-3 text-muted">
+          {doctor.specialty && <><dt className="font-semibold">{t("directory.specialty")}</dt>
+            <dd>{referenceLabel(doctor.specialty.labels, doctor.specialty.code!, locale)}</dd></>}
+          {cities.length > 0 && <><dt className="font-semibold">{t("directory.cities")}</dt><dd>{cities.join(", ")}</dd></>}
+        </dl>
+      </div>
     </div>
+    <p aria-hidden="true" className="mt-auto flex items-center gap-1 font-semibold text-primary">
+      {t("directory.viewProfile")}<span>→</span></p>
   </article>;
 }
 
@@ -53,9 +59,15 @@ export function DirectoryPagination({ locale, filters, page, totalPages }: { loc
   </nav>;
 }
 
-// page is 1-based here; the API page is 0-based.
-export function DirectoryResults({ locale, result, filters, page }: { locale: Locale; result: PublicDoctorPage; filters: Filters;
-  page: number }) {
+// Decorative magnifier for the empty state; the text beside it carries the meaning.
+function EmptyIcon() {
+  return <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round"
+    className="size-10 stroke-primary"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>;
+}
+
+// page is 1-based here; the API page is 0-based. filterLabels are the display labels of the active filters.
+export function DirectoryResults({ locale, result, filters, page, filterLabels = [] }: { locale: Locale; result: PublicDoctorPage;
+  filters: Filters; page: number; filterLabels?: string[] }) {
   const t = translator(locale);
   const doctors = result.content!;
   const totalPages = result.totalPages!;
@@ -65,12 +77,18 @@ export function DirectoryResults({ locale, result, filters, page }: { locale: Lo
       <a className={publicLinkClass} href={directoryHref(locale, { ...filters, page: totalPages })}>{t("directory.lastPage")}</a></div>;
   }
   if (!doctors.length) {
-    return filtered ? <div className="space-y-2"><p>{t("directory.noMatch")}</p>
-      <a className={publicLinkClass} href={directoryHref(locale)}>{t("directory.reset")}</a></div> : <p>{t("directory.empty")}</p>;
+    return <div className={`flex flex-col items-center gap-3 p-8 text-center ${cardClass}`}>
+      <EmptyIcon />
+      <p className="text-lg font-semibold text-ink">{t(filtered ? "directory.noMatch" : "directory.empty")}</p>
+      {filtered && <a className={publicLinkClass} href={directoryHref(locale)}>{t("directory.reset")}</a>}
+    </div>;
   }
   return <div className="space-y-4">
-    <p className="font-semibold text-ink">{`${t("directory.count")}: ${result.totalElements}`}</p>
-    <ul className="grid gap-6 sm:grid-cols-2">{doctors.map(doctor => <li key={doctor.slug}><DoctorCard locale={locale} doctor={doctor} /></li>)}</ul>
+    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+      <p className="font-semibold text-ink">{`${t("directory.count")}: ${result.totalElements}`}</p>
+      {filterLabels.length > 0 && <p className="text-muted">{`${t("directory.activeFilters")}: ${filterLabels.join(", ")}`}</p>}
+    </div>
+    <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{doctors.map(doctor => <li key={doctor.slug}><DoctorCard locale={locale} doctor={doctor} /></li>)}</ul>
     {totalPages > 1 && <DirectoryPagination locale={locale} filters={filters} page={page} totalPages={totalPages} />}
   </div>;
 }

@@ -31,8 +31,10 @@ for (const locale of localeCodes) {
     const links = [...header.querySelectorAll("a")].map(link => [link.getAttribute("href"), link.textContent]);
     expect(links).toEqual([
       ...localeCodes.map(code => [`/${code}/doctors/stable-slug`, locales[code].name]),
-      [`/${locale}/doctors`, t("app.title")], [`/${locale}/provider`, t("navigation.doctors")],
-      [`/${locale}/provider`, t("account.signIn")]]);
+      [`/${locale}/doctors`, t("app.title")], [`/${locale}/doctors`, t("navigation.findDoctor")],
+      [`/${locale}/provider`, t("navigation.doctors")], [`/${locale}/provider`, t("account.signIn")]]);
+    // The "+" mark is decorative, so the wordmark link's accessible name stays the title.
+    expect(header.querySelector("a svg")?.getAttribute("aria-hidden")).toBe("true");
     expect([...header.querySelectorAll("nav")].map(nav => nav.getAttribute("aria-label")))
       .toEqual([t("navigation.language"), t("navigation.primary")]);
     expect(header.querySelector(`nav a[hreflang="${locale}"]`)?.getAttribute("aria-current")).toBe("page");

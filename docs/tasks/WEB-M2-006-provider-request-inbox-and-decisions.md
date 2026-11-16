@@ -5,6 +5,7 @@
 - **Depends on:** WEB-M2-001 (decisions 4, 10, 11); WEB-M2-002; WEB-M2-003 provider capability; WEB-M1-015 (workspace checklist)
 - **Related ADRs:** WEB-ADR-0001, [WEB-ADR-0006](../adr/WEB-ADR-0006-milestone-1-experience-and-security-boundaries.md) (session and CSRF boundary); WEB-ADR-0007
 - **Cross-repository dependency:** API Milestone 2 provider-decision task(s) and login return allowlist entries for the new routes, to be linked when created
+- **Design reference:** [`docs/design`](../design/README.md), aligned by WEB-M2-009 on 2026-11-16; the requests table in `Provider.dc.html` (confirm and decline as server forms, separate phone and email, no "Undo"). The calendar view is deferred (WEB-M2-009 decision 7).
 - **Risk:** Medium
 
 ## Goal

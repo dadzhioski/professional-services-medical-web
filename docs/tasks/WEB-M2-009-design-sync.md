@@ -1,6 +1,6 @@
 # WEB-M2-009: Sync the docs/design mockups with the current implementation
 
-- **Status:** PLANNED (drafted 2026-11-16); owner decisions below not recorded yet
+- **Status:** IMPLEMENTED (2026-11-16) on branch `WEB-M2-009`; manual 320/1280 px comparison and the non-production VPS check not run
 - **Target repository:** `professional-services-medical-web`
 - **Depends on:** WEB-M1-019 merged (done, PR #30); `docs/design` snapshot of 2026-11-13 (merged, PR #31)
 - **Blocks:** WEB-M2-002 (request form presentation) and the presentation parts of WEB-M2-004, 005 and 006
@@ -29,6 +29,23 @@ Before Milestone 2 feature work starts, the design mockups in `docs/design` and 
 6. **Provider and admin shell.** Keep the current top header (default) or adopt the mockups' dark sidebar (provider) and dark admin header with an "ADMIN" label.
 7. **Calendar view.** `ProviderCalendar` is out of Milestone 2 scope ("calendars or availability", `milestone-2.md`). Confirm it stays deferred.
 8. **Request-flow details for WEB-M2-001.** The `Request` mockup feeds WEB-M2-001 and is not built here. Record the owner's view on: picking a published service in the form; a single "phone or email" field versus separate typed fields (WEB-M2-002 requirement 3); and the "Cancel this request" button on the confirmation screen versus cancellation only through the signed link (WEB-M2-005).
+
+### Recorded owner decisions (2026-11-16)
+
+1. **Colour:** keep the WEB-M1-019 tokens; the mockups move to the token values.
+2. **Container width:** about 1200 px (`--container-page: 75rem`) on all pages, public, provider, admin and status. Forms and text stacks stay capped at `max-w-3xl` inside it. Directory is 3 columns at `lg`; profile has a sidebar at `lg`.
+3. **Header:** add the decorative "+" mark (reopens WEB-M1-019 decision 5; the mark is `aria-hidden`, so the wordmark's accessible name is unchanged). Nav links are "Find a doctor" and "For doctors". The language switch is a pill group of `<a hreflang>` links.
+4. **Footer:** keep the dark single-notice footer. No Privacy, Terms or Contact links.
+5. **Profile layout:** no in-page navigation; the tab bar is rejected. Keep the WEB-M1-017 price-list table.
+6. **Provider and admin shell:** keep the shared top header. The provider sidebar and the dark admin header are rejected.
+7. **Calendar:** deferred out of Milestone 2; recorded as API work to request.
+8. **Request flow (for WEB-M2-001/002):** the form picks one of the doctor's published services; phone and email are separate typed fields; cancellation is only through the signed link (no "Cancel this request" button on the confirmation screen).
+
+Additional rows decided with the owner: "Popular" specialty chips → Reject (the specialty select covers it). "Credentials verified" badge → Reject.
+
+Pinned client 0.7.0 rechecked after `npm ci`. It carries every field the Build rows use: `PublicDoctorSummary` (`slug`, `displayName`, `photoMediaId`, `specialty`, `cities`); `PublicProfileResponse` (`biography`, `credentials`, `locations`, `services`, `specialty`); `PublicCredential` (`title`, `issuer`, `issuedOn`); `PublicPracticeLocation` (`label`, `displayAddress`, `city`). `ProfileResponse` carries `slug`. No admin review response carries a slug.
+
+The final register is in `docs/design/README.md`.
 
 ## Sync register (initial classification)
 
@@ -128,13 +145,13 @@ Not built here. Hand the mockup to WEB-M2-001 (decision 8) and WEB-M2-002. Keep 
 
 ## Acceptance criteria
 
-- [ ] (owner) Decisions 1–8 recorded.
-- [ ] Final sync register in `docs/design/README.md`; every row classified.
-- [ ] Directory, profile, provider overview and admin review match the agreed mockups for all **Build** rows.
-- [ ] Mockups updated to the decisions; `Request.dc.html` is referenced from WEB-M2-001 and 002.
-- [ ] API requests added to the Milestone 2 backlog; nothing built on missing data.
-- [ ] No new dependency, Client Component, external asset or API call; pinned client unchanged.
-- [ ] Lint, types, unit tests, production build, affected Playwright tests and API-client policy pass.
+- [x] (owner) Decisions 1–8 recorded.
+- [x] Final sync register in `docs/design/README.md`; every row classified.
+- [x] Directory, profile, provider overview and admin review match the agreed mockups for all **Build** rows.
+- [x] Mockups updated to the decisions; `Request.dc.html` is referenced from WEB-M2-001 and 002.
+- [x] API requests added to the Milestone 2 backlog; nothing built on missing data.
+- [x] No new dependency, Client Component, external asset or API call; pinned client unchanged.
+- [x] Lint, types, unit tests, production build, affected Playwright tests and API-client policy pass.
 
 ## Verification
 

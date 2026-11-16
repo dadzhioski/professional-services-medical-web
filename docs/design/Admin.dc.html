@@ -9,161 +9,128 @@
 <x-dc>
 <helmet>
 <style>
-body{margin:0;background:#F6F8FB}
-a{color:#0B5CAD}a:hover{color:#08427C}
-button:focus-visible,a:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+/* WEB-M2-009: colours are WEB-M1-019 token values; see Doctors.dc.html for the list.
+   Decision 6: the shared top header (no dark admin header). Queue and detail are separate pages (separate routes),
+   shown here side by side only as two frames. Reviewer check toggles are rejected (client-only state, no stored result).
+   "Changes in this submission", "Audit log" and "Preview" need API data (see docs/design/README.md). */
+body{margin:0;background:#f3f8f7}
+a{color:#0d6e6b;text-underline-offset:4px}a:hover{color:#0a5654}
+button:focus-visible,a:focus-visible{outline:3px solid #1d4ed8;outline-offset:4px}
+.card{background:#ffffff;border:1px solid #c9dedb;border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(13,110,107,.08);padding:40px;display:flex;flex-direction:column;gap:24px;box-sizing:border-box}
+.pill{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;border-radius:999px}
+.pill[aria-current="page"]{background:#0d6e6b;color:#ffffff;font-weight:600;text-decoration:none}
+.frame-label{margin:0;font-size:14px;font-weight:600;color:#4f6665;text-transform:uppercase;letter-spacing:.06em}
 </style>
 </helmet>
-<div style="min-height: 100vh; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #0F172A; background: #F6F8FB">
+<div style="min-height: 100vh; display: flex; flex-direction: column; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #29403f; background: #f3f8f7">
 
-  <header style="background: #0F172A; color: #FFFFFF">
-    <div style="max-width: 1280px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
-      <div style="display: flex; align-items: center; gap: 12px">
-        <span style="font-weight: 700">[Brand]</span>
-        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; background: #F59E0B; color: #0F172A; padding: 3px 8px; border-radius: 6px">ADMIN</span>
-      </div>
-      <nav aria-label="Admin" style="display: flex; gap: 6px; flex-wrap: wrap">
-        <a href="#top" aria-current="page" style="min-height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 10px; background: #1E293B; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none">Profile review</a>
-        <a href="#top" style="min-height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 10px; color: #CBD5E1; font-weight: 600; font-size: 14px; text-decoration: none">Providers</a>
-        <a href="#top" style="min-height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 10px; color: #CBD5E1; font-weight: 600; font-size: 14px; text-decoration: none">Audit log</a>
+  <header style="background: #ffffff; border-bottom: 1px solid #c9dedb">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 8px 24px 12px; display: flex; flex-direction: column; gap: 4px">
+      <nav aria-label="Language" style="display: flex; justify-content: flex-end">
+        <ul style="list-style: none; margin: 0; display: flex; gap: 4px; padding: 4px; background: #f3f8f7; border: 1px solid #c9dedb; border-radius: 999px; font-size: 14px">
+          <li><a class="pill" href="#top" hreflang="mk" lang="mk">Македонски</a></li>
+          <li><a class="pill" href="#top" hreflang="en" lang="en" aria-current="page">English</a></li>
+          <li><a class="pill" href="#top" hreflang="bg" lang="bg">Български</a></li>
+          <li><a class="pill" href="#top" hreflang="sq" lang="sq">Shqip</a></li>
+        </ul>
       </nav>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px">
+        <a href="Doctors.dc.html" style="display: flex; align-items: center; gap: 8px; min-height: 44px; text-decoration: none; color: #0b3b3a; font-weight: 600; font-size: 20px">
+          <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#0d6e6b"></rect><path d="M16 9v14M9 16h14" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"></path></svg>
+          [Brand]
+        </a>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px">
+          <nav aria-label="Main">
+            <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 24px">
+              <li><a href="Doctors.dc.html" style="display: inline-block; padding: 10px 0; font-weight: 600">Find a doctor</a></li>
+              <li><a href="Provider.dc.html" style="display: inline-block; padding: 10px 0; font-weight: 600">My workspace</a></li>
+            </ul>
+          </nav>
+          <form><button type="submit" style="min-height: 44px; padding: 0 24px; border: 1px solid #4f6665; border-radius: 999px; background: #ffffff; color: #0b3b3a; font: 600 16px system-ui, sans-serif; cursor: pointer">Sign out</button></form>
+        </div>
+      </div>
     </div>
   </header>
 
-  <main id="top" style="max-width: 1280px; margin: 0 auto; padding: 32px 24px 64px; display: flex; flex-direction: column; gap: 20px">
-    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
-      <div style="display: flex; flex-direction: column; gap: 4px">
-        <h1 style="margin: 0; font-size: 28px; letter-spacing: -0.02em">Profile review</h1>
-        <p style="margin: 0; font-size: 15px; color: #475569">Profiles go public only after approval.</p>
-      </div>
-      <div role="group" aria-label="Filter" style="display: flex; gap: 4px; padding: 4px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px">
-        <sc-for list="{{filters}}" as="f" hint-placeholder-count="3">
-          <button type="button" onClick="{{f.pick}}" aria-pressed="{{f.pressed}}" style="{{f.style}}">{{f.label}}</button>
-        </sc-for>
-      </div>
-    </div>
+  <main id="top" style="width: 100%; box-sizing: border-box; max-width: 1200px; margin: 32px auto 0; padding: 0 24px; display: flex; flex-direction: column; gap: 24px">
+    <nav aria-label="Administration">
+      <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px">
+        <li><a href="#top" aria-current="page" style="display: inline-block; padding: 10px 0; font-weight: 600; color: #0b3b3a">Doctor applications</a></li>
+        <li><a href="#top" style="display: inline-block; padding: 10px 0">Credential review</a></li>
+      </ul>
+    </nav>
 
-    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
-      <section aria-label="Queue" style="flex: 1 1 340px; min-width: 0; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 10px; display: flex; flex-direction: column; gap: 4px">
-        <sc-for list="{{queue}}" as="q" hint-placeholder-count="4">
-          <button type="button" onClick="{{q.pick}}" aria-pressed="{{q.pressed}}" style="{{q.style}}">
-            <span role="img" aria-label="Portrait placeholder" style="width: 40px; height: 40px; border-radius: 12px; background: #E6F0FA; flex-shrink: 0"></span>
-            <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; text-align: left">
-              <span style="font-weight: 600; font-size: 15px">{{q.name}}</span>
-              <span style="font-size: 13px; color: #475569">{{q.meta}}</span>
-            </span>
-            <span style="{{q.badge}}">{{q.status}}</span>
-          </button>
-        </sc-for>
-        <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
-          <p style="margin: 0; padding: 24px; text-align: center; color: #475569; font-size: 14px">Nothing here.</p>
-        </sc-if>
-      </section>
-
-      <section style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 28px; display: flex; flex-direction: column; gap: 22px">
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center">
-          <div role="img" aria-label="Submitted portrait placeholder" style="width: 72px; height: 72px; border-radius: 18px; background: #E6F0FA"></div>
-          <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0">
-            <h2 style="margin: 0; font-size: 22px">{{sel.name}}</h2>
-            <span style="font-size: 14px; color: #475569">{{sel.meta}}</span>
-          </div>
-          <span style="{{sel.badge}}">{{sel.status}}</span>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px">
-          <sc-for list="{{checks}}" as="c" hint-placeholder-count="4">
-            <button type="button" onClick="{{c.toggle}}" aria-pressed="{{c.pressed}}" style="{{c.style}}">
-              <span style="{{c.box}}">
-                <sc-if value="{{c.on}}" hint-placeholder-val="{{ false }}">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
-                </sc-if>
-              </span>
-              <span style="display: flex; flex-direction: column; gap: 2px; text-align: left">
-                <span style="font-weight: 600; font-size: 14px">{{c.label}}</span>
-                <span style="font-size: 13px; color: #475569">{{c.hint}}</span>
-              </span>
-            </button>
-          </sc-for>
-        </div>
-
-        <div style="border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
-          <h3 style="margin: 0; font-size: 15px">Changes in this submission</h3>
-          <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #334155; line-height: 1.7">
-            <li>[Field changed] — [summary of change]</li>
-            <li>[Field changed] — [summary of change]</li>
-            <li>New photo uploaded</li>
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+      <!-- Page 1: /admin/doctors (queue) -->
+      <div style="flex: 1 1 380px; min-width: 0; max-width: 768px; display: flex; flex-direction: column; gap: 12px">
+        <p class="frame-label">Queue page</p>
+        <section class="card">
+          <h1 style="margin: 0; font-size: 32px; line-height: 1.1; color: #0b3b3a">Doctor applications</h1>
+          <p style="margin: 0">Review doctor applications and decide approval or suspension.</p>
+          <!-- Status filters are links (?state=…), not buttons with client state. -->
+          <nav aria-label="Filter by approval status">
+            <ul style="list-style: none; margin: 0; display: flex; flex-wrap: wrap; width: fit-content; gap: 4px; padding: 4px; background: #f3f8f7; border: 1px solid #c9dedb; border-radius: 999px">
+              <li><a class="pill" href="#top" aria-current="page">Awaiting decision</a></li>
+              <li><a class="pill" href="#top">Approved</a></li>
+              <li><a class="pill" href="#top">Not approved</a></li>
+            </ul>
+          </nav>
+          <p style="margin: 0; font-size: 14px; color: #4f6665">Oldest first. At most 100 entries are shown.</p>
+          <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px">
+            <sc-for list="{{queue}}" as="q" hint-placeholder-count="3">
+              <li style="padding: 16px; border: 1px solid #c9dedb; border-radius: 16px; background: #ffffff; display: flex; flex-direction: column; gap: 8px">
+                <dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 16px">
+                  <dt style="font-weight: 600">Registered</dt><dd style="margin: 0">{{q.registered}}</dd>
+                  <dt style="font-weight: 600">Approval status</dt><dd style="margin: 0">Awaiting decision</dd>
+                  <dt style="font-weight: 600">Suspension</dt><dd style="margin: 0">Not suspended</dd>
+                </dl>
+                <a href="#detail" style="display: inline-block; padding: 8px 0; font-weight: 600">Review</a>
+              </li>
+            </sc-for>
           </ul>
-        </div>
+        </section>
+      </div>
 
-        <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; padding-top: 6px; border-top: 1px solid #F1F5F9">
-          <a href="Main.dc.html" style="display: flex; align-items: center; min-height: 46px; padding: 0 18px; border-radius: 12px; color: #0B5CAD; font-weight: 600; font-size: 14px; text-decoration: none">Preview profile</a>
-          <button type="button" onClick="{{requestChanges}}" style="min-height: 46px; padding: 0 18px; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; font: 600 14px system-ui, sans-serif; cursor: pointer">Request changes</button>
-          <button type="button" onClick="{{approve}}" disabled="{{approveDisabled}}" style="{{approveStyle}}">Approve and publish</button>
-        </div>
-      </section>
+      <!-- Page 2: /admin/doctors/[organizationId] (detail) -->
+      <div id="detail" style="flex: 1 1 480px; min-width: 0; max-width: 768px; display: flex; flex-direction: column; gap: 12px">
+        <p class="frame-label">Detail page</p>
+        <section class="card">
+          <h1 style="margin: 0; font-size: 32px; line-height: 1.1; color: #0b3b3a">Dr. [Full name]</h1>
+          <dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 16px">
+            <dt style="font-weight: 600">Registered</dt><dd style="margin: 0">[Date and time, UTC]</dd>
+            <dt style="font-weight: 600">Approval status</dt><dd style="margin: 0">Awaiting decision</dd>
+            <dt style="font-weight: 600">Suspension</dt><dd style="margin: 0">Not suspended</dd>
+            <dt style="font-weight: 600">Publication</dt><dd style="margin: 0">Draft</dd>
+          </dl>
+        </section>
+        <section class="card">
+          <h2 style="margin: 0; font-size: 22px; color: #0b3b3a">Profile draft</h2>
+          <p style="margin: 0; line-height: 1.6">[Biography as submitted, shown as text]</p>
+        </section>
+        <section class="card">
+          <h2 style="margin: 0; font-size: 22px; color: #0b3b3a">Approval</h2>
+          <p style="margin: 0">Doctor approval, credential review and profile publication are separate decisions.</p>
+          <!-- Each action opens a server-rendered confirmation with a reason field; nothing changes on GET. -->
+          <div style="display: flex; flex-wrap: wrap; gap: 12px">
+            <a href="#detail" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 24px; border: 1px solid #4f6665; border-radius: 999px; background: #ffffff; color: #0b3b3a; font-weight: 600; text-decoration: none">Approve</a>
+            <a href="#detail" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 24px; border: 1px solid #4f6665; border-radius: 999px; background: #ffffff; color: #0b3b3a; font-weight: 600; text-decoration: none">Reject</a>
+          </div>
+        </section>
+      </div>
     </div>
   </main>
+
+  <footer style="margin-top: auto; padding-top: 64px">
+    <div style="background: #0b3b3a; color: #f3f8f7">
+      <div style="max-width: 1200px; margin: 0 auto; padding: 40px 24px; font-size: 14px; line-height: 1.6">No medical information about patients is collected on this site.</div>
+    </div>
+  </footer>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#0B5CAD","options":["#0B5CAD","#0B6E6A","#1E40AF"]},"$preview":{"width":1440,"height":1000}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
 class Component extends DCLogic {
-  constructor(props) {
-    super(props);
-    this.state = {
-      filter: 'Pending',
-      selected: 1,
-      status: { 1: 'Pending', 2: 'Pending', 3: 'Pending', 4: 'Approved' },
-      checks: { 1: [true, false, false, false], 2: [false, false, false, false], 3: [false, false, false, false], 4: [true, true, true, true] }
-    };
-  }
   renderVals() {
-    var self = this;
-    var st = this.state;
-    var accent = this.props.accent ?? '#0B5CAD';
-    var people = [
-      { id: 1, name: 'Dr. [Full name]', meta: '[Specialty] · New profile' },
-      { id: 2, name: 'Dr. [Full name]', meta: '[Specialty] · Updated credentials' },
-      { id: 3, name: 'Dr. [Full name]', meta: '[Specialty] · New photo' },
-      { id: 4, name: 'Dr. [Full name]', meta: '[Specialty] · New profile' }
-    ];
-    var badges = {
-      Pending: 'background: #FEF3C7; color: #78350F',
-      Approved: 'background: #E3F5F3; color: #0B5753',
-      'Changes requested': 'background: #FDE8E7; color: #8A1C12'
-    };
-    var badge = function (s) { return 'flex-shrink: 0; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; ' + badges[s]; };
-    var filters = ['Pending', 'Approved', 'All'].map(function (f) {
-      var on = st.filter === f;
-      return { label: f, pressed: on ? 'true' : 'false', pick: function () { self.setState({ filter: f }); },
-        style: 'min-height: 40px; padding: 0 14px; border: 0; border-radius: 9px; cursor: pointer; font: 600 14px system-ui, sans-serif; ' + (on ? 'background: #0F172A; color: #FFFFFF' : 'background: transparent; color: #334155') };
-    });
-    var visible = people.filter(function (p) { return st.filter === 'All' || st.status[p.id] === st.filter; });
-    var queue = visible.map(function (p) {
-      var on = st.selected === p.id;
-      return { name: p.name, meta: p.meta, status: st.status[p.id], badge: badge(st.status[p.id]), pressed: on ? 'true' : 'false',
-        pick: function () { self.setState({ selected: p.id }); },
-        style: 'display: flex; gap: 12px; align-items: center; width: 100%; padding: 12px; min-height: 64px; border-radius: 14px; cursor: pointer; font-family: system-ui, sans-serif; color: #0F172A; border: 0; background: ' + (on ? '#EEF5FD' : 'transparent') };
-    });
-    var sp = people.filter(function (p) { return p.id === st.selected; })[0];
-    var cks = st.checks[sp.id];
-    var defs = [['Identity', 'Matches licence holder'], ['Licence', 'Checked with the chamber'], ['Photo', 'Professional, no patients'], ['Content', 'No clinical claims or patient data']];
-    var checks = defs.map(function (d, i) {
-      var on = cks[i];
-      return { label: d[0], hint: d[1], on: on, pressed: on ? 'true' : 'false',
-        toggle: function () { var all = Object.assign({}, st.checks); var n = all[sp.id].slice(); n[i] = !n[i]; all[sp.id] = n; self.setState({ checks: all }); },
-        style: 'display: flex; gap: 12px; align-items: center; padding: 14px; min-height: 60px; border-radius: 14px; cursor: pointer; font-family: system-ui, sans-serif; color: #0F172A; background: ' + (on ? '#F3FAF9' : '#FFFFFF') + '; border: 1px solid ' + (on ? '#A7DCD6' : '#E2E8F0'),
-        box: 'width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; ' + (on ? 'background: #0B6E6A' : 'border: 2px solid #94A3B8') };
-    });
-    var allChecked = cks.every(Boolean);
-    var setStatus = function (v) { return function () { var s = Object.assign({}, st.status); s[sp.id] = v; self.setState({ status: s }); }; };
-    return {
-      filters: filters, queue: queue, empty: queue.length === 0, checks: checks,
-      sel: { name: sp.name, meta: sp.meta, status: st.status[sp.id], badge: badge(st.status[sp.id]) },
-      approve: setStatus('Approved'),
-      requestChanges: setStatus('Changes requested'),
-      approveDisabled: !allChecked,
-      approveStyle: 'min-height: 46px; padding: 0 20px; border: 0; border-radius: 12px; font: 600 14px system-ui, sans-serif; ' + (allChecked ? 'background: ' + accent + '; color: #FFFFFF; cursor: pointer' : 'background: #E2E8F0; color: #475569; cursor: not-allowed')
-    };
+    return { queue: [{ registered: '[Date and time, UTC]' }, { registered: '[Date and time, UTC]' }, { registered: '[Date and time, UTC]' }] };
   }
 }
 </script>

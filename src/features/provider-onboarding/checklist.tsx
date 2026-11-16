@@ -11,6 +11,11 @@ const names = { workspace: "onboarding.step.workspace", profile: "onboarding.ste
   location: "onboarding.step.location", credentials: "onboarding.step.credentials", photo: "onboarding.step.photo",
   review: "onboarding.step.review", publish: "onboarding.step.publication" } as const satisfies Record<StepId, TranslationKey>;
 const linkClass = "inline-block min-h-11 py-2.5 font-semibold text-primary underline underline-offset-4";
+// State badges carry the state as text; the colour only supplements it.
+const badgeBase = "inline-block rounded-pill px-3 py-0.5 text-sm font-semibold";
+const badgeClass: Record<Step["state"], string> = { done: `${badgeBase} bg-tint text-ink`, current: `${badgeBase} bg-primary text-white`,
+  todo: `${badgeBase} border border-control text-ink`, blocked: `${badgeBase} border border-border text-muted`,
+  optional: `${badgeBase} border border-control text-muted` };
 
 // Approval status and the owner's own rejection feedback, rendered as text only. Resubmission is offered while
 // rejected and not suspended; the API decides at the shown revision and refuses anything else.
@@ -48,8 +53,22 @@ function StepBody({ locale, step, context, resubmit }: { locale: Locale; step: S
   </>;
 }
 
-export function OnboardingChecklist({ locale, steps, context, create, resubmit }: {
-  locale: Locale; steps: Step[]; context?: ContextResponse; create: FormAction; resubmit: FormAction;
+// "n of m steps complete" with a decorative bar; the text carries the value. The optional photo is not counted.
+export function OnboardingProgress({ locale, steps }: { locale: Locale; steps: Step[] }) {
+  const t = translator(locale);
+  const counted = steps.filter(step => step.id !== "photo");
+  const done = counted.filter(step => step.state === "done").length;
+  const percent = counted.length ? Math.round((done / counted.length) * 100) : 0;
+  return <div className="space-y-2">
+    <p className="font-semibold text-ink">{`${done} ${t("onboarding.progressOf")} ${counted.length} ${t("onboarding.progressDone")}`}</p>
+    <div aria-hidden="true" className="h-2 overflow-hidden rounded-pill bg-tint">
+      <div className="h-full rounded-pill bg-primary" style={{ width: `${percent}%` }} />
+    </div>
+  </div>;
+}
+
+export function OnboardingChecklist({ locale, steps, context, create, resubmit, previewHref }: {
+  locale: Locale; steps: Step[]; context?: ContextResponse; create: FormAction; resubmit: FormAction; previewHref?: string;
 }) {
   const t = translator(locale);
   const href = (step: Step) => step.page && `/${locale}/provider/${step.page}`;
@@ -57,6 +76,8 @@ export function OnboardingChecklist({ locale, steps, context, create, resubmit }
   // The optional photo never holds back completion.
   const allDone = steps.every(step => step.state === "done" || step.state === "optional");
   return <>
+    <OnboardingProgress locale={locale} steps={steps} />
+    {previewHref && <p><a className={linkClass} href={previewHref}>{t("onboarding.preview")}</a></p>}
     <section aria-labelledby="next-step-heading" className="space-y-4 rounded-input border-2 border-primary p-4 [overflow-wrap:anywhere]">
       <h2 id="next-step-heading" className="text-xl font-semibold text-ink">{t("onboarding.next")}</h2>
       {current ? <>
@@ -77,7 +98,7 @@ export function OnboardingChecklist({ locale, steps, context, create, resubmit }
           const link = step.state !== "current" && step.state !== "blocked" ? href(step) : undefined;
           return <li key={step.id} aria-current={step.state === "current" ? "step" : undefined} className="space-y-2 [overflow-wrap:anywhere]">
             <h3 className="font-semibold">{t(names[step.id])}</h3>
-            <p><strong>{t(`onboarding.state.${step.state}`)}</strong></p>
+            <p><span className={badgeClass[step.state]}>{t(`onboarding.state.${step.state}`)}</span></p>
             {step.state !== "current" && <StepBody locale={locale} step={step} context={context} resubmit={resubmit} />}
             {link && <a className={linkClass} href={link}>
               {t(step.state !== "done" ? "onboarding.action.open" : step.id === "publish" ? "onboarding.action.view" : "onboarding.action.edit")}

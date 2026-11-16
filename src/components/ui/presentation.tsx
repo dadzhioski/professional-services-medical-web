@@ -15,6 +15,16 @@ export const linkClass = "inline-block py-2 font-semibold text-primary underline
 const controlBase = "block min-h-11 w-full rounded-input border bg-surface px-3 py-2 text-text";
 // The error border is a supplement; the error text always says what is wrong.
 export const controlClass = (invalid = false) => `${controlBase} ${invalid ? "border-danger" : "border-control"}`;
+// The shared page column (WEB-M2-009 decision 2); readable stacks inside it stay at max-w-3xl.
+export const pageContainerClass = "mx-auto w-full max-w-page px-4 sm:px-6";
+// Provider, admin and status pages: the same column, with each block capped at a readable width.
+export const readableMainClass = `${pageContainerClass} space-y-6 *:max-w-3xl`;
+// Pill groups of plain links (language switch, review filters). The current link is filled (white on primary,
+// 6.07:1); the others keep an underline so they read as links without colour.
+export const pillGroupClass = "flex flex-wrap gap-1 rounded-pill border border-border bg-canvas p-1";
+export const pillLinkClass = "inline-flex min-h-11 items-center rounded-pill px-3 text-primary underline underline-offset-4 "
+  + "hover:bg-tint hover:text-primary-strong aria-[current=page]:bg-primary aria-[current=page]:font-semibold "
+  + "aria-[current=page]:text-white aria-[current=page]:no-underline";
 export const cardClass = "rounded-card border border-border bg-surface shadow-card";
 export const errorTextClass = "font-medium text-danger";
 

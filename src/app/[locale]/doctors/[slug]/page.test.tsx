@@ -53,7 +53,16 @@ for (const locale of localeCodes) {
     expect(html).toContain(`src="/api/v1/public/media/${photoMediaId}/content"`);
     expect(html).toContain('referrerPolicy="no-referrer"');
     expect(html).toContain(`data-language-path="/${locale}/doctors/dr-synthetic"`);
-    expect(html).toContain(`href="/${locale}/doctors">${t("publicProfile.backToDirectory")}</a>`);
+    // Breadcrumb: Doctors / specialty (filtered directory) / this page; then the cities, issue year and privacy note.
+    const page = new DOMParser().parseFromString(html, "text/html");
+    const crumbs = page.querySelector(`nav[aria-label="${t("publicProfile.breadcrumb")}"]`)!;
+    expect([...crumbs.querySelectorAll("a")].map(link => link.getAttribute("href")))
+      .toEqual([`/${locale}/doctors`, `/${locale}/doctors?specialty=ref-cardiology`]);
+    expect(crumbs.querySelector('[aria-current="page"]')?.textContent).toBe("Synthetic Doctor");
+    expect(html).toContain(locale === "sq" ? "skopje" : `${locale}-skopje`);
+    expect(html).toContain(`${t("credentials.issued")}: 2020`);
+    expect(html).toContain("Synthetic board");
+    expect(html).toContain(t("publicProfile.privacyNote"));
     const data = jsonLd(html);
     expect(data).toMatchObject({ "@type": "Physician", name: "Synthetic Doctor", url: `http://localhost:3000/${locale}/doctors/dr-synthetic` });
     expect(JSON.stringify(data)).not.toMatch(/media|image|rating|evil/);

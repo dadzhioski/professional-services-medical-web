@@ -23,6 +23,9 @@
   --color-danger-tint: #fdeeec;
   --color-focus: #1d4ed8;
 
+  /* WEB-M2-009 decision 2: one page container of about 1200 px on every page. */
+  --container-page: 75rem;
+
   --radius-input: 12px;
   --radius-card: 16px;
   --radius-pill: 9999px;
@@ -59,6 +62,18 @@
 :focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 4px;
+}
+
+/* Motion is opt-in (WEB-M2-009): the lift runs only when the visitor has not asked for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .hover-lift {
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hero);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

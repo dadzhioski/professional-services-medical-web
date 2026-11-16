@@ -35,7 +35,7 @@ Use [the task template](../tasks/TASK-TEMPLATE.md) conventions and assign one ta
 
 | Task | Outcome | Dependencies |
 |---|---|---|
-| [WEB-M2-009](../tasks/WEB-M2-009-design-sync.md) | `docs/design` mockups and the current pages agree; every gap is built, assigned, raised with the API owner or rejected | WEB-M1-019 merged |
+| [WEB-M2-009](../tasks/WEB-M2-009-design-sync.md) | `docs/design` mockups and the current pages agree; every gap is built, assigned, raised with the API owner or rejected; final register in [`docs/design/README.md`](../design/README.md#sync-register-final) | WEB-M1-019 merged |
 | [WEB-M2-001](../tasks/WEB-M2-001-appointment-request-decisions.md) | Owner decisions and a Proposed ADR for request data, consent, routes, signed links and abuse boundaries | None (uses the `Request` mockup questions from WEB-M2-009 decision 8) |
 | [WEB-M2-002](../tasks/WEB-M2-002-request-form-and-state-presentation.md) | Accessible request form and request-state components with synthetic content, not routed publicly | WEB-M2-001 experience decisions; WEB-M2-009; WEB-M1-019 merged |
 | [WEB-M2-003](../tasks/WEB-M2-003-appointment-client-adoption.md) | Exact published client with appointment-request capability adopted, with a capability matrix | Published API Milestone 2 client; explicit upgrade approval; WEB-M1-016 merged |
@@ -83,7 +83,16 @@ This repository does not create or edit API tasks. The API owner is asked to cre
 | Signed visitor response to a proposal | WEB-M2-007 |
 | Login return allowlist entries for the new provider request routes | WEB-M2-006 |
 | A published client release containing the above | WEB-M2-003 |
-| Design fields flagged **API** in the WEB-M2-009 sync register (for example name search, accepting new patients, languages, practice contact, opening hours), only if the owner wants them | WEB-M2-009 follow-ups |
+| Free-text doctor name search in the public directory | WEB-M2-009 register (directory); no web task yet |
+| "Accepting new patients" / "waitlist only" status on directory summaries and public profiles, and a directory filter for it | WEB-M2-009 register (directory, profile); no web task yet |
+| Spoken languages, practice name and sub-specialty in the public directory summary and profile | WEB-M2-009 register (directory, profile); no web task yet |
+| Public practice contact (phone, email) for the profile contact card and "Call the practice" | WEB-M2-009 register (profile); no web task yet |
+| Opening hours per published practice location | WEB-M2-009 register (profile); no web task yet |
+| Service duration in the public price list | WEB-M2-009 register (profile, request form); no web task yet |
+| A change summary for a doctor's resubmission ("Changes in this submission") | WEB-M2-009 register (admin); no web task yet |
+| An administrator audit log | WEB-M2-009 register (admin); no web task yet |
+| The public slug in administrator review responses, for a "Preview" link | WEB-M2-009 register (admin); no web task yet |
+| Provider availability for a calendar view (deferred out of Milestone 2, WEB-M2-009 decision 7) | Future milestone |
 
 ## Scope and milestone acceptance
 

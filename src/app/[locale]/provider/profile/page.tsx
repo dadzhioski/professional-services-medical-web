@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
-import { Heading, Notice, buttonClass } from "@/components/ui/presentation";
+import { Heading, Notice, buttonClass, readableMainClass } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { OwnerImage } from "@/features/media/owner-image";
 import { ProfilePresentation } from "@/features/professional-profile/presentation";
@@ -49,7 +49,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const path = `/${locale}/provider/profile`;
   const loginHref = await googleLoginHref(locale);
   if (account.state !== "authenticated") {
-    return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+    return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className={readableMainClass}>
       <Surface className="space-y-6">
         <Heading>{t("profileEditor.heading")}</Heading>
         <Notice>{t(`account.${safeNotice ?? account.state}`)}</Notice>
@@ -78,7 +78,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const photoPath = profile?.state === "ready" ? mediaContentPath(profile.profile.photoMediaId) : null;
   const messages = Object.fromEntries(editorMessageKeys.map(key => [key, t(key)])) as EditorMessages;
   const savedLink = { href: checklistPath(locale), label: t("onboarding.backToChecklist") };
-  return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+  return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className={readableMainClass}>
     <ProviderNavigation locale={locale} current="profile" />
     <Surface className="space-y-6">
       <Heading>{t("profileEditor.heading")}</Heading>

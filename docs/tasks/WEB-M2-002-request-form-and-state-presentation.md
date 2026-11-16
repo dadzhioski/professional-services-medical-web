@@ -5,6 +5,7 @@
 - **Depends on:** WEB-M2-001 decisions 2, 3, 5 and 10; WEB-M1-019 merged (design tokens and primitives)
 - **Related ADRs:** WEB-ADR-0001; WEB-ADR-0007 (Proposed, from WEB-M2-001)
 - **Cross-repository dependency:** None
+- **Design reference:** [`docs/design`](../design/README.md), aligned by WEB-M2-009 on 2026-11-16; `Request.dc.html` for the form fieldsets, radio-input choices, error summary and confirmation (no cancel button; WEB-M2-009 decision 8).
 - **Risk:** Low
 
 ## Goal

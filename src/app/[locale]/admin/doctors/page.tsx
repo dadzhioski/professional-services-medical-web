@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Heading } from "@/components/ui/presentation";
+import { Heading, pillGroupClass, pillLinkClass } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { AdminFrame, adminGate, ReviewFailure } from "@/features/admin-review/page-frame";
 import { formatInstant, linkClass } from "@/features/admin-review/review-parts";
@@ -40,8 +40,8 @@ export default async function DoctorsReviewPage({ params, searchParams }: Props)
       <p>{t("review.doctors.description")}</p>
       <p>{t("review.separation")}</p>
       <nav aria-label={t("review.filter")}>
-        <ul className="flex flex-wrap gap-4">
-          {approvalStates.map(state => <li key={state}><a className={linkClass} href={`${path}?state=${state}`}
+        <ul className={`${pillGroupClass} w-fit`}>
+          {approvalStates.map(state => <li key={state}><a className={pillLinkClass} href={`${path}?state=${state}`}
             aria-current={state === filter ? "page" : undefined}>{t(filterKeys[state])}</a></li>)}
         </ul>
       </nav>
