@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
-import { Button, buttonClass, linkClass as baseLinkClass } from "@/components/ui/presentation";
-import { LanguageLinks } from "@/components/site-shell";
+import { Button, buttonClass, linkClass as baseLinkClass, pageContainerClass } from "@/components/ui/presentation";
+import { LanguageLinks, LogoMark } from "@/components/site-shell";
 import { logout } from "@/features/provider-account/actions";
 import { currentAccount } from "@/lib/api/identity";
 import { incomingSession, sessionCookieName } from "@/lib/api/session-cookie";
@@ -23,21 +23,24 @@ async function signedIn(): Promise<boolean> {
   }
 }
 
-// A full-width band whose inner max-w-3xl column is shared with main and the footer, so their left edges
-// line up (WEB-M1-018).
+// A full-width band whose inner page column is shared with main and the footer, so their left edges
+// line up (WEB-M1-018, widened by WEB-M2-009 decision 2).
 // Without a path (the not-found page) there is no page to switch language on, so no language links.
 export async function SiteHeader({ locale, path, current }: { locale: Locale; path?: string; current?: "directory" | "workspace" }) {
   const t = translator(locale);
   const authenticated = await signedIn();
+  const directory = `/${locale}/doctors`;
   const provider = `/${locale}/provider`;
-  return <header className="mb-8 border-b border-border bg-surface"><div className="mx-auto w-full max-w-3xl px-6 pb-3 pt-1">
+  return <header className="mb-8 border-b border-border bg-surface"><div className={`${pageContainerClass} pb-3 pt-2`}>
     {path && <LanguageLinks locale={locale} path={path} />}
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-      <a href={`/${locale}/doctors`} aria-current={current === "directory" ? "page" : undefined}
-        className="inline-flex min-h-11 items-center rounded text-xl font-semibold tracking-tight text-ink">{t("app.title")}</a>
+      <a href={directory} className="inline-flex min-h-11 items-center gap-2 rounded text-xl font-semibold tracking-tight text-ink">
+        <LogoMark />{t("app.title")}</a>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <nav aria-label={t("navigation.primary")}>
-          <ul className="flex flex-wrap gap-4">
+          <ul className="flex flex-wrap gap-x-6 gap-y-1">
+            <li><a href={directory} aria-current={current === "directory" ? "page" : undefined} className={linkClass}>
+              {t("navigation.findDoctor")}</a></li>
             <li><a href={provider} aria-current={current === "workspace" ? "page" : undefined} className={linkClass}>
               {t(authenticated ? "navigation.workspace" : "navigation.doctors")}</a></li>
           </ul>

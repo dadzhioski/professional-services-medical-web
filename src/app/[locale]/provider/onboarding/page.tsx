@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
-import { Heading, Notice, buttonClass } from "@/components/ui/presentation";
+import { Heading, Notice, buttonClass, readableMainClass } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { outcomeMessage } from "@/features/media/form";
 import { startOnboarding } from "@/features/provider-onboarding/actions";
@@ -43,7 +43,7 @@ export default async function OnboardingPage({ params, searchParams }: Props) {
   const path = `/${locale}/provider/onboarding`;
   if (account.state !== "authenticated") {
     const loginHref = await googleLoginHref(locale);
-    return <><SiteHeader locale={locale} path={path} current="workspace" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+    return <><SiteHeader locale={locale} path={path} current="workspace" /><main id="main-content" tabIndex={-1} className={readableMainClass}>
       <Surface className="space-y-6">
         <Heading>{t("onboarding.heading")}</Heading>
         <Notice>{t(`account.${safeNotice ?? account.state}`)}</Notice>
@@ -62,7 +62,11 @@ export default async function OnboardingPage({ params, searchParams }: Props) {
   const failure = workspace.state !== "ready" && workspace.state !== "notOnboarded" ? workspace.state :
     failedRead?.state ?? safeNotice;
   const approvalMessage = outcomeMessage(approvalOutcomes, approval);
-  return <><SiteHeader locale={locale} path={path} current="workspace" /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+  // The preview link uses data already read above and appears only while the API reports the profile as published.
+  const published = ready && publication.state === "ready" && publication.publication.publicationState === "PUBLISHED";
+  const slug = profile.state === "ready" ? profile.profile.slug : undefined;
+  const previewHref = published && slug ? `/${locale}/doctors/${encodeURIComponent(slug)}` : undefined;
+  return <><SiteHeader locale={locale} path={path} current="workspace" /><main id="main-content" tabIndex={-1} className={readableMainClass}>
     <ProviderNavigation locale={locale} current="onboarding" />
     <Surface className="space-y-6">
       <Heading>{t("onboarding.heading")}</Heading>
@@ -72,7 +76,7 @@ export default async function OnboardingPage({ params, searchParams }: Props) {
         <Notice role={approvalMessage.success ? "status" : "alert"}>{t(approvalMessage.key)}</Notice></div>}
       {ready && workspace.context.suspended && <Notice>{t("workspace.suspended")}</Notice>}
       <OnboardingChecklist locale={locale} steps={steps} context={ready ? workspace.context : undefined}
-        create={startOnboarding.bind(null, locale)} resubmit={resubmitApplication.bind(null, locale)} />
+        create={startOnboarding.bind(null, locale)} resubmit={resubmitApplication.bind(null, locale)} previewHref={previewHref} />
     </Surface>
   </main></>;
 }

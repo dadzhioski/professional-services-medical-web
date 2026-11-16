@@ -74,6 +74,11 @@ for (const locale of localeCodes) {
     expect(result.querySelector(`h2 a[href="/${locale}/doctors/dr-synthetic"]`)?.textContent).toBe("Synthetic Doctor");
     expect(result.textContent).toContain(label(locale, "cardiology"));
     expect(result.textContent).toContain(`${label(locale, "skopje")}, ${label(locale, "sofia")}`);
+    // The whole card is one link target: one link, named by the doctor; "View profile" is a decorative repeat.
+    expect(result.querySelectorAll("a")).toHaveLength(1);
+    expect(result.querySelector('[aria-hidden="true"]:last-child')?.textContent).toContain(t("directory.viewProfile"));
+    expect(page.querySelector("main ul")?.className).toContain("lg:grid-cols-3");
+    expect(page.body.textContent).not.toContain(t("directory.activeFilters"));
     const image = result.querySelector("img")!;
     expect(image.getAttribute("src")).toBe(`/api/v1/public/media/${photoMediaId}/content`);
     expect(image.getAttribute("alt")).toBe("");
@@ -107,6 +112,7 @@ test("valid filters stay selected, are sent to the API and pages are 1-based", a
   expect(nav.querySelector('a[rel="next"]')?.getAttribute("href")).toBe("/en/doctors?specialty=spec-2&city=city-2&page=3");
   expect(nav.querySelector('[aria-current="page"]')?.textContent).toBe(`${t("directory.page")} 2 ${t("directory.of")} 3`);
   expect(resets(page)).toHaveLength(1);
+  expect(page.body.textContent).toContain(`${t("directory.activeFilters")}: ${label("en", "dermatology")}, ${label("en", "sofia")}`);
   expect((await generateMetadata(props("en", { specialty: "spec-2" }))).robots).toEqual({ index: false, follow: true });
   expect((await generateMetadata(props("en", { page: "2" }))).robots).toEqual({ index: false, follow: true });
   expect((await generateMetadata(props("en", { page: "2" }))).alternates?.canonical).toBe("http://localhost:3000/en/doctors");

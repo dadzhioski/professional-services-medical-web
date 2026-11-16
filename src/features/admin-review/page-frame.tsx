@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { SiteHeader } from "@/components/site-header";
-import { Heading, Notice } from "@/components/ui/presentation";
+import { Heading, Notice, readableMainClass } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { SignedOutView } from "@/features/provider-records/page-frame";
 import { currentAccount, googleLoginHref } from "@/lib/api/identity";
@@ -36,7 +36,7 @@ export function AdminNavigation({ locale, current }: { locale: Locale; current: 
 }
 
 export function AdminFrame({ locale, path, current, children }: { locale: Locale; path: string; current?: AdminPage; children: ReactNode }) {
-  return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+  return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className={readableMainClass}>
     {current && <AdminNavigation locale={locale} current={current} />}
     {children}
   </main></>;

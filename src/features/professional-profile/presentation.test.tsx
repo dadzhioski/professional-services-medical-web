@@ -9,7 +9,8 @@ test("profile sections render supplied content safely in every language", () => 
   for (const locale of localeCodes) {
     const html = renderToStaticMarkup(<ProfilePresentation locale={locale} name="Synthetic professional"
       introduction={'<script>alert("synthetic")</script>'} specialties={["Synthetic specialty"]}
-      credentials={["Synthetic qualification"]} services={[{ name: "Synthetic service" }]} locations={["Synthetic location"]} />);
+      credentials={[{ heading: "Synthetic qualification", issuer: "Synthetic issuer", issued: "Issued: 2020" }]}
+      services={[{ name: "Synthetic service" }]} locations={[{ label: "Synthetic clinic", address: "Synthetic location", city: "Synthetic city" }]} />);
     expect(html).toContain(translator(locale)("profile.credentials"));
     expect(html).toContain("Synthetic qualification");
     expect(html).toContain("&lt;script&gt;");

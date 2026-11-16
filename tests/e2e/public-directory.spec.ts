@@ -45,14 +45,14 @@ for (const locale of localeCodes) {
       await page.getByRole("banner").getByRole("link", { name: tl("app.title"), exact: true }).click();
       await expect(page).toHaveURL(`${origin}/${locale}/doctors`);
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
-      await expect(page.getByRole("banner").getByRole("link", { name: tl("app.title"), exact: true }))
+      await expect(page.getByRole("banner").getByRole("link", { name: tl("navigation.findDoctor"), exact: true }))
         .toHaveAttribute("aria-current", "page");
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${tl("directory.heroTitle")} ${tl("directory.heroHighlight")}`);
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `${origin}/${locale}/doctors`);
       await page.getByRole("link", { name: "Dr. Synthetic Public" }).click();
       await expect(page).toHaveURL(`${origin}/${locale}/doctors/${slug}`);
-      await page.getByRole("link", { name: tl("publicProfile.backToDirectory") }).click();
+      await page.getByRole("navigation", { name: tl("publicProfile.breadcrumb") }).getByRole("link", { name: tl("directory.title"), exact: true }).click();
       await expect(page).toHaveURL(`${origin}/${locale}/doctors`);
     });
   });

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { SiteHeader } from "@/components/site-header";
-import { Heading, Notice, buttonClass } from "@/components/ui/presentation";
+import { Heading, Notice, buttonClass, readableMainClass } from "@/components/ui/presentation";
 import { Surface } from "@/components/ui/surface";
 import { ChecklistLink, ProviderNavigation, type ProviderPage } from "@/features/provider-onboarding/workspace";
 import { publicationKey } from "@/features/provider-profile/fields";
@@ -27,7 +27,7 @@ export async function providerGate(locale: Locale) {
 export function ProviderFrame({ locale, path, current, children }: {
   locale: Locale; path: string; current?: ProviderPage; children: ReactNode;
 }) {
-  return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl space-y-6 px-6">
+  return <><SiteHeader locale={locale} path={path} /><main id="main-content" tabIndex={-1} className={readableMainClass}>
     {current && <ProviderNavigation locale={locale} current={current} />}
     {children}
   </main></>;

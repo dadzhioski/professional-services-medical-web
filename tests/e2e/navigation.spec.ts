@@ -41,7 +41,7 @@ for (const locale of ["mk", "en"] as const) {
       await page.goto(`${origin}/${locale}`);
       await expect(page).toHaveURL(`${origin}/${locale}/doctors`);
       const header = page.getByRole("banner");
-      await expect(header.getByRole("link", { name: t("app.title") })).toHaveAttribute("aria-current", "page");
+      await expect(header.getByRole("link", { name: t("navigation.findDoctor") })).toHaveAttribute("aria-current", "page");
       await expect(header.getByRole("navigation", { name: t("navigation.primary") })).toBeVisible();
       await expect(header.getByRole("navigation", { name: t("navigation.language") })).toBeVisible();
       await expect(header.getByRole("link", { name: t("directory.title"), exact: true })).toHaveCount(0);
