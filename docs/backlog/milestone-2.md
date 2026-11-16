@@ -35,8 +35,9 @@ Use [the task template](../tasks/TASK-TEMPLATE.md) conventions and assign one ta
 
 | Task | Outcome | Dependencies |
 |---|---|---|
-| [WEB-M2-001](../tasks/WEB-M2-001-appointment-request-decisions.md) | Owner decisions and a Proposed ADR for request data, consent, routes, signed links and abuse boundaries | None |
-| [WEB-M2-002](../tasks/WEB-M2-002-request-form-and-state-presentation.md) | Accessible request form and request-state components with synthetic content, not routed publicly | WEB-M2-001 experience decisions; WEB-M1-019 merged |
+| [WEB-M2-009](../tasks/WEB-M2-009-design-sync.md) | `docs/design` mockups and the current pages agree; every gap is built, assigned, raised with the API owner or rejected | WEB-M1-019 merged |
+| [WEB-M2-001](../tasks/WEB-M2-001-appointment-request-decisions.md) | Owner decisions and a Proposed ADR for request data, consent, routes, signed links and abuse boundaries | None (uses the `Request` mockup questions from WEB-M2-009 decision 8) |
+| [WEB-M2-002](../tasks/WEB-M2-002-request-form-and-state-presentation.md) | Accessible request form and request-state components with synthetic content, not routed publicly | WEB-M2-001 experience decisions; WEB-M2-009; WEB-M1-019 merged |
 | [WEB-M2-003](../tasks/WEB-M2-003-appointment-client-adoption.md) | Exact published client with appointment-request capability adopted, with a capability matrix | Published API Milestone 2 client; explicit upgrade approval; WEB-M1-016 merged |
 | [WEB-M2-004](../tasks/WEB-M2-004-public-request-submission.md) | A visitor submits a request from a public profile with consent and sees a confirmation state, without JavaScript | WEB-M2-001, 002, 003 (submission capability) |
 | [WEB-M2-005](../tasks/WEB-M2-005-signed-link-status-and-cancellation.md) | A visitor opens an emailed signed link, sees the request status and cancels it safely | WEB-M2-001 signed-link decisions; 002; 003 (signed-link capability) |
@@ -46,6 +47,7 @@ Use [the task template](../tasks/TASK-TEMPLATE.md) conventions and assign one ta
 
 ```mermaid
 flowchart TD
+    Y["WEB-M2-009 Design sync"] --> P
     D["WEB-M2-001 Decisions"] --> P["WEB-M2-002 Presentation"]
     D --> C["WEB-M2-003 Client adoption"]
     P --> S["WEB-M2-004 Submission"]
@@ -62,6 +64,7 @@ flowchart TD
 
 ### Execution paths
 
+- WEB-M2-009 runs first: it settles the visual reference that 002, 004, 005 and 006 build on. It needs no API capability.
 - WEB-M2-001 and WEB-M2-002 need no API capability and can start as soon as the owner authorizes Milestone 2.
 - WEB-M2-003 may be amended for incremental client releases. Each of 004, 005, 006 and 007 is gated only on its own capability, so submission can ship before provider decisions if the API delivers in that order.
 - 004, 005 and 006 are independent of each other after 002 and 003. Only one task at a time may change Caddy or deployment files; none is expected to.
@@ -80,6 +83,7 @@ This repository does not create or edit API tasks. The API owner is asked to cre
 | Signed visitor response to a proposal | WEB-M2-007 |
 | Login return allowlist entries for the new provider request routes | WEB-M2-006 |
 | A published client release containing the above | WEB-M2-003 |
+| Design fields flagged **API** in the WEB-M2-009 sync register (for example name search, accepting new patients, languages, practice contact, opening hours), only if the owner wants them | WEB-M2-009 follow-ups |
 
 ## Scope and milestone acceptance
 
